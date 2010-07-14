@@ -4,6 +4,8 @@ from ACS WFC post-SM4 data.
 
 It is assumed that the data is an ACS/WFC FLT image - with two SCI extensions.
 The program needs access to the flatfield specified in the image header PFLTFILE.
+If PFLTFILE has the value "N/A", as is the case with biases and darks, then the
+program assumes a unity flatfield.
 
 Usage: 
 
@@ -21,7 +23,7 @@ Usage:
 Norman Grogin, STScI, June 2010. """
 
 import os, pyfits, sys
-from numpy import sqrt, empty, unique, zeros, byte, median, average, sum
+from numpy import sqrt, empty, unique, zeros, ones, byte, median, average, sum
 
 def run(image,output):
 ### version Tue Jun 01 2010
@@ -49,17 +51,21 @@ def run(image,output):
     ### read the flatfield filename from the header
     flatfile = hdulist[0].header['PFLTFILE']
 
-    ### resolve the filename into an absolute pathname (if necessary)
-    flatparts = flatfile.partition('$')
-    if flatparts[1] == '$':
-    	flatfile = os.getenv(flatparts[0])+flatparts[2]
+    ### if BIAS or DARK, set flatfield to unity
+    if flatfile == 'N/A':
+         invflat1 = invflat2 = ones(science1.shape)
+    else:     
+    	### resolve the filename into an absolute pathname (if necessary)
+    	flatparts = flatfile.partition('$')
+    	if flatparts[1] == '$':
+    	    flatfile = os.getenv(flatparts[0])+flatparts[2]
 
-    ### open the flatfield
-    hduflat = pyfits.open(flatfile)
+    	### open the flatfield
+    	hduflat = pyfits.open(flatfile)
+    		
+    	invflat1 = 1/hduflat['sci',1].data
+    	invflat2 = 1/hduflat['sci',2].data
     	    
-    invflat1 = 1/hduflat['sci',1].data
-    invflat2 = 1/hduflat['sci',2].data
-	
     ### apply GAIN and flatfield corrections if necessary
     if units == 'COUNTS':
     	### *** NOT YET FLATFIELDED! ***
