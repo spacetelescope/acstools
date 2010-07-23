@@ -10,15 +10,15 @@ __usage__ = """
 Usage: 
 
 - From within Python:
---- make sure this file is on your Python path
+--- make sure this file is on your Python path 
 
 >>> import csc_kill
->>> csc_kill.run('uncorrected_flt.fits','uncorrected_flt_csck.fits',clobber=False,maxiter=15,sigrej=2.0)
+>>> csc_kill.clean('uncorrected_flt.fits','uncorrected_flt_csck.fits',clobber=False,maxiter=15,sigrej=2.0)
 
 - From the command line:
---- make sure this file is on your executable path
+--- the installation should place 'csc_kill' on your executable path
 
-% ./csc_kill.py [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
+% csc_kill [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
 """
 
 __taskname__ = 'csc_kill'
