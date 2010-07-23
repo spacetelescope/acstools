@@ -293,7 +293,9 @@ def getHelpAsString():
 
     return helpString
 
-
+def help():
+    print getHelpAsString()
+    
 def main():
     import getopt
 
