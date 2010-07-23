@@ -294,8 +294,7 @@ def getHelpAsString():
     return helpString
 
 
-if __name__ == '__main__':
-
+def main():
     import getopt
 
     try:
@@ -333,3 +332,8 @@ if __name__ == '__main__':
         print "\t", __version__+'('+__vdate__+')'
     else:    
         clean(args[0],args[1],clobber=clobber,maxiter=maxiter,sigrej=sigrej)
+
+if __name__ == '__main__':
+
+    main()
+    
