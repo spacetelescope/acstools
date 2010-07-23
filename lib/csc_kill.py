@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 """ csc_kill - try to clean out horizontal stripes and crosstalk
-from ACS WFC post-SM4 data.
+               from ACS WFC post-SM4 data.
 
 It is assumed that the data is an ACS/WFC FLT image - with two SCI extensions.
 The program needs access to the flatfield specified in the image header PFLTFILE.
+Norman Grogin, STScI, June 2010. """
 
+__usage__ = """
 Usage: 
 
 - From within Python:
@@ -17,31 +19,40 @@ Usage:
 --- make sure this file is on your executable path
 
 % ./csc_kill.py [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
+"""
 
-Norman Grogin, STScI, June 2010. """
-
+__taskname__ = 'csc_kill'
 __version__ = '0.2.1'
 __vdate__ = '23-Jul-2010'
 
 import os, pyfits, sys
 from numpy import sqrt, empty, unique, zeros, byte, median, average, sum
 
-def run(image,output,clobber=False,maxiter=15,sigrej=2.0):
-### version Tue Jun 01 2010
-### removes row striping (and row-averaged src flux if not amenable to sigma-clipping)
-###
-### example usage: csc_kill.run('striped_flt.fits','striped_flt_csck.fits')
-###
-### !!!expects an flt-format file, not a raw-format file!!!
-
-    if os.path.lexists(output):
-        if (clobber):
-            sys.stdout.write('Warning: Deleting previous output: %s \n'%output)
-            os.remove(output)
-        else:
-            sys.stderr.write('Error: Output file \''+output+'\' must not already exist.\n') 
-            return
-                    
+from pytools import parseinput
+        
+def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
+    ''' Primary user interface for running this task on either single or multiple
+        input images. 
+    '''
+    flist,alist = parseinput.parseinput(input)
+        
+    for image in flist:
+        # generate output filename for each input based on specification
+        # of the output suffix
+        output = image.replace('_flt','_flt_'+suffix)
+        if os.path.lexists(output):
+            if (clobber):
+                sys.stdout.write('Warning: Deleting previous output: %s \n'%output)
+                os.remove(output)
+            else:
+                sys.stderr.write('Error: Skipping processing of ',image,'...Output file \''+output+'\' already exists and needs to be removed.\n') 
+                continue
+        sys.stdout.write('Processing %s ...'%image)
+        sys.stdout.flush()
+        perform_correction(image,output,maxiter=maxiter,sigrej=sigrej)
+        sys.stdout.write("Created corrected image: %s\n"%output)
+        
+def perform_correction(image,output,maxiter=15,sigrej=2.0):
     # Open the input file and find out about it
     hdulist = pyfits.open(image)
 
@@ -240,6 +251,49 @@ def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
 
   return FMean, FSig, FMedian, SaveMask 
 
+#
+#### Interfaces used by TEAL
+#
+def run(configobj=None):
+    ''' Teal interface for running this code. '''
+### version Tue Jun 01 2010
+### removes row striping (and row-averaged src flux if not amenable to sigma-clipping)
+###
+### example usage: csc_kill.run('striped_flt.fits','striped_flt_csck.fits')
+###
+### !!!expects an flt-format file, not a raw-format file!!!
+
+    clean(configobj['input'],configobj['output'],
+        clobber = configobj['clobber'],
+        maxiter= configobj['maxiter'], sigrej = configobj['sigrej'])
+
+def getHelpAsString():
+    # Does NOT work with TEAL/teal.teal()
+    helpString = __doc__+'\n'
+    helpString += 'Version '+__version__+'\n'
+
+    """ 
+    return useful help from a file in the script directory called module.help
+    """
+    #get the local library directory where the code is stored
+    localDir=os.path.split(__file__)
+    helpfile=__taskname__.split(".")
+    
+    helpfile=localDir[0]+"/"+helpfile[0]+".help"
+    
+    if os.access(helpfile,os.R_OK):
+        fh=open(helpfile,'r')
+        ss=fh.readlines()
+        fh.close()
+        #helpString=""
+        for line in ss:
+            helpString+=line
+    else:    
+        helpString=__doc__
+
+    return helpString
+
+
 if __name__ == '__main__':
 
     import getopt
@@ -275,6 +329,7 @@ if __name__ == '__main__':
            
     if (help):
         print __doc__
+        print __usage__
         print "\t", __version__+'('+__vdate__+')'
     else:    
-        run(args[0],args[1],clobber=clobber,maxiter=maxiter,sigrej=sigrej)
+        clean(args[0],args[1],clobber=clobber,maxiter=maxiter,sigrej=sigrej)
