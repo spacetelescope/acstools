@@ -4,8 +4,6 @@ from ACS WFC post-SM4 data.
 
 It is assumed that the data is an ACS/WFC FLT image - with two SCI extensions.
 The program needs access to the flatfield specified in the image header PFLTFILE.
-If PFLTFILE has the value "N/A", as is the case with biases and darks, then the
-program assumes a unity flatfield.
 
 Usage: 
 
@@ -13,19 +11,22 @@ Usage:
 --- make sure this file is on your Python path
 
 >>> import csc_kill
->>> csc_kill.run('uncorrected_flt.fits','uncorrected_flt_csck.fits')
+>>> csc_kill.run('uncorrected_flt.fits','uncorrected_flt_csck.fits',clobber=False,maxiter=15,sigrej=2.0)
 
 - From the command line:
 --- make sure this file is on your executable path
 
-% ./csc_kill.py uncorrected_flt.fits uncorrected_flt_csck.fits
+% ./csc_kill.py [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
 
 Norman Grogin, STScI, June 2010. """
 
-import os, pyfits, sys
-from numpy import sqrt, empty, unique, zeros, ones, byte, median, average, sum
+__version__ = '0.2.1'
+__vdate__ = '23-Jul-2010'
 
-def run(image,output):
+import os, pyfits, sys
+from numpy import sqrt, empty, unique, zeros, byte, median, average, sum
+
+def run(image,output,clobber=False,maxiter=15,sigrej=2.0):
 ### version Tue Jun 01 2010
 ### removes row striping (and row-averaged src flux if not amenable to sigma-clipping)
 ###
@@ -33,6 +34,14 @@ def run(image,output):
 ###
 ### !!!expects an flt-format file, not a raw-format file!!!
 
+    if os.path.lexists(output):
+        if (clobber):
+            sys.stdout.write('Warning: Deleting previous output: %s \n'%output)
+            os.remove(output)
+        else:
+            sys.stderr.write('Error: Output file \''+output+'\' must not already exist.\n') 
+            return
+                    
     # Open the input file and find out about it
     hdulist = pyfits.open(image)
 
@@ -51,129 +60,125 @@ def run(image,output):
     ### read the flatfield filename from the header
     flatfile = hdulist[0].header['PFLTFILE']
 
-    ### if BIAS or DARK, set flatfield to unity
-    if flatfile == 'N/A':
-         invflat1 = invflat2 = ones(science1.shape)
-    else:     
-    	### resolve the filename into an absolute pathname (if necessary)
-    	flatparts = flatfile.partition('$')
-    	if flatparts[1] == '$':
-    	    flatfile = os.getenv(flatparts[0])+flatparts[2]
+    ### resolve the filename into an absolute pathname (if necessary)
+    flatparts = flatfile.partition('$')
+    if flatparts[1] == '$':
+    	flatfile = os.getenv(flatparts[0])+flatparts[2]
 
-    	### open the flatfield
-    	hduflat = pyfits.open(flatfile)
-    		
-    	invflat1 = 1/hduflat['sci',1].data
-    	invflat2 = 1/hduflat['sci',2].data
+    ### open the flatfield
+    hduflat = pyfits.open(flatfile)
     	    
+    invflat1 = 1/hduflat['sci',1].data
+    invflat2 = 1/hduflat['sci',2].data
+
     ### apply GAIN and flatfield corrections if necessary
     if units == 'COUNTS':
     	### *** NOT YET FLATFIELDED! ***
-	
-	### read the gain settings from the header
+
+        ### read the gain settings from the header
         gainA = hdulist[0].header['ATODGNA']
         gainB = hdulist[0].header['ATODGNB']
         gainC = hdulist[0].header['ATODGNC']
         gainD = hdulist[0].header['ATODGND']
 
-	### apply the gains
-	science1[:,:2048] *= gainC
-	science1[:,2048:] *= gainD
-	science2[:,:2048] *= gainA
-	science2[:,2048:] *= gainB
-	err1[:,:2048] *= gainC
-	err1[:,2048:] *= gainD
-	err2[:,:2048] *= gainA
-	err2[:,2048:] *= gainB
-	
-	# Kill the crosstalk (empirical amplitudes) in the SCI and ERR extensions
-	science1 += science1[:,::-1] * 1.0e-4
-	science2 += science2[:,::-1] * 7.0e-5
-	# the following two lines are purposefully odd-looking because a 
-	# direct assignment will break the linkage to the hdulist structure
-	err1 += sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
-	err2 += sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
+        ### apply the gains
+        science1[:,:2048] *= gainC
+        science1[:,2048:] *= gainD
+        science2[:,:2048] *= gainA
+        science2[:,2048:] *= gainB
+        err1[:,:2048] *= gainC
+        err1[:,2048:] *= gainD
+        err2[:,:2048] *= gainA
+        err2[:,2048:] *= gainB
+        
+        # Kill the crosstalk (empirical amplitudes) in the SCI and ERR extensions
+        science1 += science1[:,::-1] * 1.0e-4
+        science2 += science2[:,::-1] * 7.0e-5
+        # the following two lines are purposefully odd-looking because a 
+        # direct assignment will break the linkage to the hdulist structure
+        err1 += sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
+        err2 += sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
 
-	### apply the flatfield
-	science1 *= invflat1
-	science2 *= invflat2
-	err1 *= invflat1
-	err2 *= invflat2
+        ### apply the flatfield
+        science1 *= invflat1
+        science2 *= invflat2
+        err1 *= invflat1
+        err2 *= invflat2
     else:
         ### already flatfielded (and gain-corrected): remove crosstalk pre-flatfield
 
-	### un-apply the flatfield
-	science1 /= invflat1
-	science2 /= invflat2
-	err1 /= invflat1
-	err2 /= invflat2
+        ### un-apply the flatfield
+        science1 /= invflat1
+        science2 /= invflat2
+        err1 /= invflat1
+        err2 /= invflat2
    
-	# Kill the crosstalk (empirical amplitudes) in the SCI and ERR extensions
-	science1 += science1[:,::-1] * 1.0e-4
-	science2 += science2[:,::-1] * 7.0e-5
-	# the following two lines are purposefully odd-looking because a 
-	# direct assignment will break the linkage to the hdulist structure
-	err1 += sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
-	err2 += sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
+        # Kill the crosstalk (empirical amplitudes) in the SCI and ERR extensions
+        science1 += science1[:,::-1] * 1.0e-4
+        science2 += science2[:,::-1] * 7.0e-5
+        # the following two lines are purposefully odd-looking because a 
+        # direct assignment will break the linkage to the hdulist structure
+        err1 += sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
+        err2 += sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
 
-	### re-apply the flatfield
-	science1 *= invflat1
-	science2 *= invflat2
-	err1 *= invflat1
-	err2 *= invflat2
+        ### re-apply the flatfield
+        science1 *= invflat1
+        science2 *= invflat2
+        err1 *= invflat1
+        err2 *= invflat2
 
     # Do the stripe cleaning
-    clean_streak(science1,invflat1,err1)
-    clean_streak(science2,invflat2,err2)
+    clean_streak(science1,invflat1,err1,maxiter=maxiter,sigrej=sigrej)
+    clean_streak(science2,invflat2,err2,maxiter=maxiter,sigrej=sigrej)
 
     # Undo the GAIN and flatfield corrections if applied above
     if units == 'COUNTS':
-	### un-apply the gains
-	science1[:,:2048] /= gainC
-	science1[:,2048:] /= gainD
-	science2[:,:2048] /= gainA
-	science2[:,2048:] /= gainB
-	err1[:,:2048] /= gainC
-	err1[:,2048:] /= gainD
-	err2[:,:2048] /= gainA
-	err2[:,2048:] /= gainB
-	### un-apply the flatfield
-	science1 /= invflat1
-	science2 /= invflat2
-	err1 /= invflat1
-	err2 /= invflat2
+        ### un-apply the gains
+        science1[:,:2048] /= gainC
+        science1[:,2048:] /= gainD
+        science2[:,:2048] /= gainA
+        science2[:,2048:] /= gainB
+        err1[:,:2048] /= gainC
+        err1[:,2048:] /= gainD
+        err2[:,:2048] /= gainA
+        err2[:,2048:] /= gainB
+        ### un-apply the flatfield
+        science1 /= invflat1
+        science2 /= invflat2
+        err1 /= invflat1
+        err2 /= invflat2
 
     # Write the output
     hdulist.writeto(output)
    
-def clean_streak(image,invflat,err):
+def clean_streak(image,invflat,err,maxiter=15,sigrej=2.0):
 
     ### create the array to hold the stripe amplitudes
     corr = empty(2048)
    
     ### loop over rows to fit the stripe amplitude
     for i in range(2048):
-	### row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
-	SMean, SSig, SMedian, SMask = djs_iterstat(image[i],SigRej=2.0,MaxIter=15)
-
-	### SExtractor-esque central value statistic; slightly sturdier against
-	### skewness of pixel histogram due to faint source flux
-	corr[i]=2.5*SMedian-1.5*SMean
-		
+        ### row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
+        SMean, SSig, SMedian, SMask = djs_iterstat(image[i],SigRej=sigrej,MaxIter=maxiter)
+        
+        ### SExtractor-esque central value statistic; slightly sturdier against
+        ### skewness of pixel histogram due to faint source flux
+        corr[i]=2.5*SMedian-1.5*SMean
+    
     ### preserve the original mean level of the image
     corr -= average(corr)
-	
+
     ### apply the correction row-by-row
     for i in range(2048):
         ### stripe is constant along the row, before flatfielding; 
-	### afterwards it has the shape of the inverse flatfield
+        ### afterwards it has the shape of the inverse flatfield
         truecorr = corr[i] * invflat[i] / average(invflat[i])
-	
+
         ### correct the SCI extension
-	image[i] -= truecorr
+        image[i] -= truecorr
 
         ### correct the ERR extension
-	err[i] = sqrt(err[i]**2 - truecorr)
+        err[i] = sqrt(err[i]**2 - truecorr)
 
 def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
                  Max='', Min='', RejVal=''):
@@ -236,9 +241,40 @@ def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
   return FMean, FSig, FMedian, SaveMask 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+
+    import getopt
+
+    try:
+        optlist, args = getopt.getopt(sys.argv[1:], 'hc')
+    except getopt.error, e:
+        print str(e)
+        print __doc__
+        print "\t", __version__
+
+    # initialize default values
+    help = 0
+    clobber = False
+    maxiter = 15
+    sigrej = 2.0
+    
+    # read options
+    for opt, value in optlist:
+        if opt == "-h":
+            help = 1
+        if opt == "-c":
+            clobber = True
+
+    if len(args) < 2:
         sys.stderr.write('Usage: csc_kill.py <input FLT-structured file> <output FLT-structured file>\n')
-    elif os.path.lexists(sys.argv[2]):
-        sys.stderr.write('Error: Output file \''+sys.argv[2]+'\' must not already exist.\n') 
-    else:
-        run(sys.argv[1],sys.argv[2])
+
+    if len(args) > 2:
+        # User provided parameters for maxiter, and possibly sigrej
+        maxiter = int(args[2])
+        if len(args) == 4:
+            sigrej = float(args[3])
+           
+    if (help):
+        print __doc__
+        print "\t", __version__+'('+__vdate__+')'
+    else:    
+        run(args[0],args[1],clobber=clobber,maxiter=maxiter,sigrej=sigrej)
