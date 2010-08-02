@@ -58,8 +58,8 @@
 from __future__ import division
 __docformat__ = 'restructuredtext'
 
-__version__ = '1.0.2'
-__vdate__ = '25-May-2010'
+__version__ = '1.0.3'
+__vdate__ = '2-Aug-2010'
 import os,sys,shutil
 
 import pyfits
@@ -216,10 +216,25 @@ def find_npolfile(flist,detector,filters):
                     npolfile = f
     return npolfile
 
-def help():
-    print 'updatenpol Version ',__version__+__vdate__
-    print update.__doc__
+#
+#### Interfaces used by TEAL
+#
+def run(configobj=None):
+    ''' Teal interface for running this code. '''
+   
+    update(configobj['input'],configobj['refdir'],
+        local=configobj['local'],interactive=configobj['interactive'])
 
+def getHelpAsString():
+    # Does NOT work with TEAL/teal.teal()
+    helpString = 'updatenpol Version '+__version__+__vdate__+'\n'
+    helpString += update.__doc__+'\n'
+
+    return helpString
+
+def help():
+    print getHelpAsString()
+    
 def main():
 
     import getopt
