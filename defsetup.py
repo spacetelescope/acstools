@@ -8,7 +8,7 @@ setupargs = {
     'author' : 		    "Warren Hack",
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
-    'scripts' :         [ 'lib/csc_kill'] ,
+    'scripts' :         [ 'lib/csc_kill', 'lib/updatenpol'] ,
     'platforms' : 	    ["Linux","Solaris","Mac OS X","Win"],
 }
 
