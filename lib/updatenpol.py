@@ -103,15 +103,15 @@ def update(input,refdir="jref$",local=None,interactive=False):
     """ 
     print 'UPDATENPOL Version',__version__+'('+__vdate__+')'
     # expand (as needed) the list of input files
-    files,output = parseinput.parseinput(input)
+    files,fcol = parseinput.parseinput(input)
 
     if not interactive:
         # expand reference directory name (if necessary) to 
         # interpret IRAF or environment variable names
         rdir = fu.osfn(refdir)
-        ngeofiles,ngout = parseinput.parseinput(os.path.join(rdir,'*npl.fits'))
+        ngeofiles,ngcol = parseinput.parseinput(os.path.join(rdir,'*npl.fits'))
         # Find D2IMFILE in refdir for updating input file header as well
-        d2ifiles,d2iout = parseinput.parseinput(os.path.join(rdir,"*d2i.fits"))
+        d2ifiles,d2col = parseinput.parseinput(os.path.join(rdir,"*d2i.fits"))
 
     # Now, build a matched list of input files and DGEOFILE reference files
     # to use for selecting the appropriate new reference file from the 
