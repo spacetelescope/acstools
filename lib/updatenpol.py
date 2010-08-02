@@ -69,17 +69,12 @@ from pytools import parseinput
 def update(input,refdir="jref$",local=None,interactive=False):
     """ 
     Purpose
-    =======    
-    Updates files given in input (as a single filename, a list or any other
-    input recognized by parseinput) to use the new reference files required with
-    the new C version of MultiDrizzle. 
+    -------    
+    Updates headers of files given as input to point to the new reference files 
+    NPOLFILE and D2IMFILE required with the new C version of MultiDrizzle. 
     
-    Example
-    =======
-    >>>import updatenpol
-    >>>updatenpol.update('j8bt06010_asn.fits', 'myref$')
-    
-    :Parameters:
+    Parameters
+    -----------
 
     `input`: string or list
                 Name of input file or files
@@ -99,6 +94,12 @@ def update(input,refdir="jref$",local=None,interactive=False):
                 Specifies whether or not to interactively ask the user for the
                 exact names of the new reference files instead of automatically
                 searching a directory for them.
+
+    Examples
+    --------
+    >>>import updatenpol
+    >>>updatenpol.update('j8bt06010_asn.fits', 'myref$')
+    
     """ 
     print 'UPDATENPOL Version',__version__+'('+__vdate__+')'
     # expand (as needed) the list of input files
