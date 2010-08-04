@@ -37,6 +37,11 @@ def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
     flist,alist = parseinput.parseinput(input)
         
     for image in flist:
+        # Implement check to skip processing sub-array images
+        if (pyfits.getval(image,'subarray') == 'T') or \
+            ((pyfits.getval(image,'ltv1',ext=1) != 0.0) or (pyfits.getval(image,'ltv2',ext=1) != 0.0)):
+            sys.stdout.write('Error: Not processing %s...subarray images not supported!'%image)
+            continue
         # generate output filename for each input based on specification
         # of the output suffix
         output = image.replace('_flt','_flt_'+suffix)
