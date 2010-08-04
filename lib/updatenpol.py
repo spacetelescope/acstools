@@ -227,7 +227,6 @@ def run(configobj=None):
         local=configobj['local'],interactive=configobj['interactive'])
 
 def getHelpAsString():
-    # Does NOT work with TEAL/teal.teal()
     helpString = 'updatenpol Version '+__version__+__vdate__+'\n'
     helpString += update.__doc__+'\n'
 
