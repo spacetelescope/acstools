@@ -74,17 +74,17 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
     ### resolve the filename into an absolute pathname (if necessary)
     flatparts = flatfile.partition('$')
     if flatparts[1] == '$':
-    	flatfile = os.getenv(flatparts[0])+flatparts[2]
+        flatfile = os.getenv(flatparts[0])+flatparts[2]
 
     ### open the flatfield
     hduflat = pyfits.open(flatfile)
-    	    
+        
     invflat1 = 1/hduflat['sci',1].data
     invflat2 = 1/hduflat['sci',2].data
 
     ### apply GAIN and flatfield corrections if necessary
     if units == 'COUNTS':
-    	### *** NOT YET FLATFIELDED! ***
+        ### *** NOT YET FLATFIELDED! ***
 
         ### read the gain settings from the header
         gainA = hdulist[0].header['ATODGNA']
