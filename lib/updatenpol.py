@@ -58,6 +58,7 @@
 from __future__ import division
 __docformat__ = 'restructuredtext'
 
+__taskname__ = "updatenpol"
 __version__ = '1.0.3'
 __vdate__ = '2-Aug-2010'
 import os,sys,shutil
