@@ -59,8 +59,8 @@ from __future__ import division
 __docformat__ = 'restructuredtext'
 
 __taskname__ = "updatenpol"
-__version__ = '1.0.3'
-__vdate__ = '2-Aug-2010'
+__version__ = '1.0.4'
+__vdate__ = '16-Aug-2010'
 import os,sys,shutil
 
 import pyfits
@@ -188,14 +188,10 @@ def find_d2ifile(flist,detector):
     """ Search a list of files for one that matches the detector specified
     """
     d2ifile = None
-    d2idate = None
     for f in flist:
         fdet = pyfits.getval(f,'detector') 
         if fdet == detector:
-            fdate = fu.convertDate(pyfits.getval(f,'DATE'))
-            if d2idate is None or fdate > d2idate:
-                d2idate = fdate
-                d2ifile = f
+            d2ifile = f
     return d2ifile
         
 def find_npolfile(flist,detector,filters):
@@ -203,7 +199,6 @@ def find_npolfile(flist,detector,filters):
         of detector and filters used.
     """      
     npolfile = None
-    npoldate = None
     for f in flist:
         fdet = pyfits.getval(f,'detector')
         if fdet == detector:
@@ -212,10 +207,7 @@ def find_npolfile(flist,detector,filters):
             fdate = pyfits.getval(f,'date')
             if filt1 == 'ANY' or \
              (filt1 == filters[0] and filt2 == filters[1]):
-                ddate = fu.convertDate(fdate)
-                if npoldate is None or ddate > npoldate:
-                    npoldate = ddate
-                    npolfile = f
+                npolfile = f
     return npolfile
 
 #
