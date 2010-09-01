@@ -9,3 +9,9 @@ module.
 """
 import csc_kill
 import updatenpol
+
+# These lines allow TEAL to print out the names of TEAL-enabled tasks 
+# upon importing this package.
+import os
+from pytools import teal
+teal.print_tasknames(__name__, os.path.dirname(__file__))
