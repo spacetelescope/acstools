@@ -118,7 +118,11 @@ def update(input,refdir="jref$",local=None,interactive=False):
     Notes
     -----
 
-    .. note:: This program requires access to the 'jref$' directory in order to evaluate the DGEOFILE specified in the input image header.  This evaluation allows the program to get the information it needs to identify the correct NPOLFILE.
+    .. warning:: 
+        This program requires access to the `jref$` directory in order 
+        to evaluate the DGEOFILE specified in the input image header.  
+        This evaluation allows the program to get the information it 
+        needs to identify the correct NPOLFILE.
 
     The use of this program now requires that a directory be set up with
     all the new NPOLFILE and D2IMFILE reference files for ACS (a single
