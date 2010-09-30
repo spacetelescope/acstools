@@ -7,7 +7,7 @@ module.
 
 
 """
-import csc_kill
+import acs_destripe
 import updatenpol
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks 

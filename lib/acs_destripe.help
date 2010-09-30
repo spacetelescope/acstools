@@ -1,6 +1,3 @@
-*********************
-HELP for acs_destripe        
-*********************
 
 This program tries to clean out horizontal stripes and crosstalk signatures
 found in ACS/WFC post-SM4 data.  
@@ -10,12 +7,20 @@ The program needs access to the flatfield specified in the image header PFLTFILE
 
 :Author: Norman Grogin, STScI, June 2010.
 
+Notes
+-----
+If PFLTFILE has the value "N/A", as is the case with biases and darks, then the
+program assumes a unity flatfield.
+
+This program also expects an `_flt.fits` file as input, **NOT** a `_raw.fits` file.
+
 Parameters
 ----------
 input: str or list of str 
     The name of a single FLT image, or list of FLT images using 
-    either wild-cards (*flt.fits) or an IRAF-style 
-    at-list (@filelist).
+    either wild-cards (`\*flt.fits`) or an IRAF-style 
+    at-list (`@filename`).
+
 output: str 
     The string to use to add to each input file name to
     indicate an output product. This string will be appended
@@ -36,11 +41,6 @@ sigrej: float
     This parameters sets the sigma level for the rejection applied
     during each iteration of statistics computations for the
     row-by-row corrections. 
-   
-Notes
------
-If PFLTFILE has the value "N/A", as is the case with biases and darks, then the
-program assumes a unity flatfield.
- 
+    
 Examples
 --------

@@ -1,4 +1,0 @@
-#! python
-
-import acstools.csk_kill
-acstools.csc_kill.main()

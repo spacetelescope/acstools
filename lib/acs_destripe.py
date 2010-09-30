@@ -1,39 +1,43 @@
 #!/usr/bin/env python
-""" csc_kill - try to clean out horizontal stripes and crosstalk
-               from ACS WFC post-SM4 data.
+""" acs_destripe - try to clean out horizontal stripes and crosstalk
+                   from ACS WFC post-SM4 data.
 
-It is assumed that the data is an ACS/WFC FLT image - with two SCI extensions.
-The program needs access to the flatfield specified in the image header PFLTFILE.
-Norman Grogin, STScI, June 2010. """
-
+"""
+__author__ = "Norman Grogin, STScI, June 2010."
 __usage__ = """
-Usage: 
 
-- From within Python:
---- make sure this file is on your Python path 
+1. To run this task from within Python::
 
->>> import csc_kill
->>> csc_kill.clean('uncorrected_flt.fits','uncorrected_flt_csck.fits',clobber=False,maxiter=15,sigrej=2.0)
+    >>> from acstools import acs_destripe
+    >>> acs_destripe.clean('uncorrected_flt.fits','csck', clobber=False, maxiter=15, sigrej=2.0)
 
-- From the command line:
---- the installation should place 'csc_kill' on your executable path
+.. note:: make sure the `acstools` package is on your Python path
 
-% csc_kill [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
+2.  To run this task using the TEAL GUI to set the parameters under PyRAF::
+
+    >>> import acstools
+    >>> epar acs_destripe  # or `teal acs_destripe`
+        
+3. To run this task from the operating system command line::
+
+    % ./acs_destripe [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
+
+.. note:: make sure the file `acs_destripe.py` is on your executable path
+
 """
 
-__taskname__ = 'csc_kill'
+__taskname__ = 'acs_destripe'
 __version__ = '0.2.1'
 __vdate__ = '23-Jul-2010'
 
 import os, pyfits, sys
-from numpy import sqrt, empty, unique, zeros, byte, median, average, sum
+import numpy as np
+from numpy import sqrt, empty, unique, ones, zeros, byte, median, average, sum, concatenate
 
 from pytools import parseinput
         
 def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
-    ''' Primary user interface for running this task on either single or multiple
-        input images. 
-    '''
+
     flist,alist = parseinput.parseinput(input)
         
     for image in flist:
@@ -76,16 +80,20 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
     ### read the flatfield filename from the header
     flatfile = hdulist[0].header['PFLTFILE']
 
-    ### resolve the filename into an absolute pathname (if necessary)
-    flatparts = flatfile.partition('$')
-    if flatparts[1] == '$':
-        flatfile = os.getenv(flatparts[0])+flatparts[2]
+    ### if BIAS or DARK, set flatfield to unity
+    if flatfile == 'N/A':
+         invflat1 = invflat2 = np.ones(science1.shape)
+    else:     
+    	### resolve the filename into an absolute pathname (if necessary)
+    	flatparts = flatfile.partition('$')
+    	if flatparts[1] == '$':
+    	    flatfile = os.getenv(flatparts[0])+flatparts[2]
 
-    ### open the flatfield
-    hduflat = pyfits.open(flatfile)
-        
-    invflat1 = 1/hduflat['sci',1].data
-    invflat2 = 1/hduflat['sci',2].data
+    	### open the flatfield
+    	hduflat = pyfits.open(flatfile)
+    		
+    	invflat1 = 1/hduflat['sci',1].data
+    	invflat2 = 1/hduflat['sci',2].data
 
     ### apply GAIN and flatfield corrections if necessary
     if units == 'COUNTS':
@@ -108,12 +116,14 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
         err2[:,2048:] *= gainB
         
         # Kill the crosstalk (empirical amplitudes) in the SCI and ERR extensions
-        science1 += science1[:,::-1] * 1.0e-4
-        science2 += science2[:,::-1] * 7.0e-5
+
         # the following two lines are purposefully odd-looking because a 
         # direct assignment will break the linkage to the hdulist structure
-        err1 += sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
-        err2 += sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
+        err1 += np.sqrt(err1**2 + science1[:,::-1] * 7.0e-5) - err1
+        err2 += np.sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
+
+        science1 += science1[:,::-1] * 7.0e-5
+        science2 += science2[:,::-1] * 7.0e-5
 
         ### apply the flatfield
         science1 *= invflat1
@@ -134,8 +144,8 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
         science2 += science2[:,::-1] * 7.0e-5
         # the following two lines are purposefully odd-looking because a 
         # direct assignment will break the linkage to the hdulist structure
-        err1 += sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
-        err2 += sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
+        err1 += np.sqrt(err1**2 + science1[:,::-1] * 1.0e-4) - err1
+        err2 += np.sqrt(err2**2 + science2[:,::-1] * 7.0e-5) - err2
 
         ### re-apply the flatfield
         science1 *= invflat1
@@ -144,8 +154,7 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
         err2 *= invflat2
 
     # Do the stripe cleaning
-    clean_streak(science1,invflat1,err1,maxiter=maxiter,sigrej=sigrej)
-    clean_streak(science2,invflat2,err2,maxiter=maxiter,sigrej=sigrej)
+    clean_streak(science1,invflat1,err1,science2,invflat2,err2,maxiter=maxiter,sigrej=sigrej)
 
     # Undo the GAIN and flatfield corrections if applied above
     if units == 'COUNTS':
@@ -167,34 +176,37 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
     # Write the output
     hdulist.writeto(output)
    
-def clean_streak(image,invflat,err,maxiter=15,sigrej=2.0):
+def clean_streak(iimage1,invflat1,err1,image2,invflat2,err2,maxiter=15,sigrej=2.0):
 
     ### create the array to hold the stripe amplitudes
-    corr = empty(2048)
+    corr = np.empty(2048)
    
     ### loop over rows to fit the stripe amplitude
     for i in range(2048):
         ### row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
-        SMean, SSig, SMedian, SMask = djs_iterstat(image[i],SigRej=sigrej,MaxIter=maxiter)
+        SMean, SSig, SMedian, SMask = djs_iterstat(np.concatenate((image1[i],image2[2047-i])),SigRej=sigrej,MaxIter=maxiter)
         
         ### SExtractor-esque central value statistic; slightly sturdier against
         ### skewness of pixel histogram due to faint source flux
         corr[i]=2.5*SMedian-1.5*SMean
     
     ### preserve the original mean level of the image
-    corr -= average(corr)
+    corr -= np.average(corr)
 
     ### apply the correction row-by-row
     for i in range(2048):
         ### stripe is constant along the row, before flatfielding; 
         ### afterwards it has the shape of the inverse flatfield
-        truecorr = corr[i] * invflat[i] / average(invflat[i])
+        truecorr1 = corr[i] * invflat1[i] / np.average(invflat1[i])
+        truecorr2 = corr[2047-i] * invflat2[i] / np.average(invflat2[i])
 
         ### correct the SCI extension
-        image[i] -= truecorr
+        image1[i] -= truecorr1
+        image2[i] -= truecorr2
 
         ### correct the ERR extension
-        err[i] = sqrt(err[i]**2 - truecorr)
+        err1[i] = np.sqrt(err1[i]**2 - truecorr1)
+        err2[i] = np.sqrt(err2[i]**2 - truecorr2)
 
 def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
                  Max='', Min='', RejVal=''):
@@ -214,21 +226,21 @@ def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
   if Min == '':
     Min = InputArr.min()
  
-  if unique(InputArr).size == 1:
+  if np.unique(InputArr).size == 1:
     return 0, 0, 0, 0
  
 
-  Mask  = zeros(ArrShape, dtype=byte)+1
+  Mask  = np.zeros(ArrShape, dtype=np.byte)+1
   #Reject those above Max and those below Min
   Mask[InputArr > Max] = 0
   Mask[InputArr < Min] = 0
   if RejVal != '' :  Mask[InputArr == RejVal]=0
-  FMean = sum(1.*InputArr*Mask) / NGood
-  FSig  = sqrt(sum((1.*InputArr-FMean)**2*Mask) / (NGood-1))
+  FMean = np.sum(1.*InputArr*Mask) / NGood
+  FSig  = np.sqrt(np.sum((1.*InputArr-FMean)**2*Mask) / (NGood-1))
 
   NLast = -1
   Iter  =  0
-  NGood = sum(Mask)
+  NGood = np.sum(Mask)
   if NGood < 2:
     return -1, -1, -1, -1
 
@@ -240,17 +252,17 @@ def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
 
     Mask[InputArr < LoVal] = 0
     Mask[InputArr > HiVal] = 0
-    NGood = sum(Mask)
+    NGood = np.sum(Mask)
 
     if NGood >= 2:
-      FMean = sum(1.*InputArr*Mask) / NGood
-      FSig  = sqrt(sum((1.*InputArr-FMean)**2*Mask) / (NGood-1))
+      FMean = np.sum(1.*InputArr*Mask) / NGood
+      FSig  = np.sqrt(np.sum((1.*InputArr-FMean)**2*Mask) / (NGood-1))
 
     SaveMask = Mask.copy()
 
     Iter = Iter+1
-  if sum(SaveMask) > 2:
-    FMedian = median(InputArr[SaveMask == 1])
+  if np.sum(SaveMask) > 2:
+    FMedian = np.median(InputArr[SaveMask == 1])
   else:
     FMedian = FMean
 
@@ -260,11 +272,9 @@ def djs_iterstat(InputArr, SigRej=3.0, MaxIter=10, Mask=0,\
 #### Interfaces used by TEAL
 #
 def run(configobj=None):
-    ''' Teal interface for running this code. '''
+    ''' TEAL interface for running this code. '''
 ### version Tue Jun 01 2010
 ### removes row striping (and row-averaged src flux if not amenable to sigma-clipping)
-###
-### example usage: csc_kill.run('striped_flt.fits','striped_flt_csck.fits')
 ###
 ### !!!expects an flt-format file, not a raw-format file!!!
 
@@ -272,9 +282,13 @@ def run(configobj=None):
         clobber = configobj['clobber'],
         maxiter= configobj['maxiter'], sigrej = configobj['sigrej'])
 
-def getHelpAsString():
-    # Does NOT work with TEAL/teal.teal()
-    helpString = __doc__+'\n'
+def getHelpAsString(fulldoc=True):
+
+    if fulldoc:
+        basedoc = __doc__
+    else:
+        basedoc = ""
+    helpString = basedoc+'\n'
     helpString += 'Version '+__version__+'\n'
 
     """ 
@@ -295,8 +309,14 @@ def getHelpAsString():
             helpString+=line
     else:    
         helpString=__doc__
+    
+    helpString += __usage__
 
     return helpString
+
+# Set up doc string without the module level docstring included for
+# use with Sphinx, since Sphinx will already include module level docstring
+clean.__doc__ = getHelpAsString(fulldoc=False)
 
 def help():
     print getHelpAsString()
@@ -325,7 +345,7 @@ def main():
             clobber = True
 
     if len(args) < 2:
-        sys.stderr.write('Usage: csc_kill.py <input FLT-structured file> <output FLT-structured file>\n')
+        sys.stderr.write('Usage: acs_destripe.py <input FLT-structured file> <output FLT-structured file>\n')
 
     if len(args) > 2:
         # User provided parameters for maxiter, and possibly sigrej

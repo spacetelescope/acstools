@@ -1,4 +1,4 @@
-_task_name_ = string_kw(default="csc_kill")
+_task_name_ = string_kw(default="acs_destripe")
 input = string_kw(default="*q_flt.fits", comment="Input files (name, suffix, or @list)")
 output = string_kw(default='csck', comment="Suffix for output cleaned products")
 clobber = boolean_kw(default=True, comment="Delete and replace previous products?")
