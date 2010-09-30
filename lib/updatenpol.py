@@ -1,58 +1,59 @@
 #!/usr/bin/env python
 
-# $Id: readgeis.py 8609 2010-01-19 16:22:48Z dencheva $
+# $Id: updatenpol.py 8609 2010-01-19 16:22:48Z hack $
 
 """
-    updatenpol:  Update the header of ACS file(s) with the names of new
-                NPOLFILE and D2IMFILE reference files for use with the 
-                C version of MultiDrizzle.
-    
-        License: http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE
+**updatenpol--** Update the header of ACS file(s) with the names of new 
+NPOLFILE and D2IMFILE reference files for use with the 
+C version of MultiDrizzle (betadrizzle).
+
+:License: http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE
+
+:Usage: This task can be run from the 
+    operating system command line with::
+
+        updatenpol [options] input [refdir]
+
+:Command-line Options:
+    `input`   
+        the specification of the files to be updated, either as a single filename, 
+        an ASN table name, or wild-card specification
+        of a list of files
+    `refdir`  
+        the name of the directory containing all the new reference files 
+        (`\*_npl.fits` and `\*_d2i.fits` files). 
+        If no directory is given, it will look in `jref$` by default. 
         
-        Usage:
-            updatenpol [options] input [refdir]
-            
-                'input' is the specification of the files to be updated, either
-                as a single filename, an ASN table name, or wild-card specification
-                of a list of files
-                
-                'refdir' is the name of the directory containing all the new
-                reference files (*_npl.fits and *_d2i.fits files). 
-                If no directory is given, it will look in 'jref$' by default. 
-                
-                Option:
+    -h        print the help (this text)
+    -l        if specified, copy NPOLFILEs and D2IMFILEs to
+              local directory for use with the input files
+    -i        if specified, the program will interactively request
+              the exact names of the NPOLFILE and D2IMFILE reference files
+              to be used for updating the header of each file. The value of
+              'refdir' will be ignored in interactive mode.
 
-                -h
-                    print the help (this text)
-                -l
-                    if specified, copy NPOLFILEs and D2IMFILEs to
-                    local directory for use with the input files
-                -i
-                    if specified, the program will interactively request
-                    the exact names of the NPOLFILE and D2IMFILE reference files
-                    to be used for updating the header of each file. The value of
-                    'refdir' will be ignored in interactive mode.
-                    ===> WARNING: 
-                         It will ask for this information for EACH separate INPUT file. 
 
-        Examples:
-            updatenpol *flt.fits myjref$
-            
-            This command will update all the FLT files in the current directory
-            with the new NPOLFILE and D2IMFILE reference files found in the 'myjref' 
-            directory as defined in the environment.  
-    
-        Python Syntax:
-            >>> import updatenpol
-            >>> updatenpol.update('*flt.fits','myjref$')
-            
-            Another use under Python would be to feed it a specific list of files
-            to be updated using:
-            >>> updatenpol.update(['file1_flt.fits','file2_flt.fits'],'myjref$')
-            
-            Files in another directory can also be processed using:
-            >>> updatenpol.update('data$*flt.fits','../new/ref/')
-            
+.. warning:: It will ask for the names of the NPOLFILE and D2IMFILE 
+            for EACH separate INPUT file when the option `-i` has been specified. 
+
+:Example:
+    1. This command will update all the FLT files in the current directory
+    with the new NPOLFILE and D2IMFILE reference files found in the 'myjref' 
+    directory as defined in the environment::
+
+        updatenpol *flt.fits myjref$
+
+
+:Compatability with MultiDrizzle:  
+    The new version of MultiDrizzle (`betadrizzle`) and `updatewcs` 
+    only work with the new NPOLFILE reference file for the DGEO correction 
+    (to replace the use of DGEOFILE).  
+    In fact, betadrizzle has been extensively modified to
+    prompt the user with a very lengthy explanation on whether it should
+    stop and allow the user to update the header or continue without
+    applying the DGEO correction under circumstances when the NPOLFILE
+    keyword can not be found for ACS.
+
 """
 
 from __future__ import division
@@ -69,14 +70,11 @@ from pytools import parseinput
 
 def update(input,refdir="jref$",local=None,interactive=False):
     """ 
-    Purpose
-    -------    
     Updates headers of files given as input to point to the new reference files 
     NPOLFILE and D2IMFILE required with the new C version of MultiDrizzle. 
     
     Parameters
     -----------
-
     `input`: string or list
                 Name of input file or files
                 Acceptable forms: 
@@ -85,12 +83,15 @@ def update(input,refdir="jref$",local=None,interactive=False):
                   - association table
                   - python list of filenames
                   - wildcard specification of filenames
+                
     `refdir`: string
                 path to directory containing new reference files, either 
                 environment variable or full path
+
     `local`: boolean
                 Specifies whether or not to copy new reference files to local
                 directory for use with the input files
+
     `interactive': boolean 
                 Specifies whether or not to interactively ask the user for the
                 exact names of the new reference files instead of automatically
@@ -98,8 +99,41 @@ def update(input,refdir="jref$",local=None,interactive=False):
 
     Examples
     --------
-    >>>import updatenpol
-    >>>updatenpol.update('j8bt06010_asn.fits', 'myref$')
+    1. A set of associated images specified by an ASN file can be updated to use
+       the NPOLFILEs and D2IMFILE found in the local directory defined using 
+       the `myjref$` environment variable under PyRAF using::
+
+            >>>import updatenpol
+            >>>updatenpol.update('j8bt06010_asn.fits', 'myref$')
+
+    2. Another use under Python would be to feed it a specific list of files
+       to be updated using::
+
+          >>> updatenpol.update(['file1_flt.fits','file2_flt.fits'],'myjref$')
+        
+    3. Files in another directory can also be processed using::
+        
+         >>> updatenpol.update('data$*flt.fits','../new/ref/')
+
+    Notes
+    -----
+
+    .. note:: This program requires access to the 'jref$' directory in order to evaluate the DGEOFILE specified in the input image header.  This evaluation allows the program to get the information it needs to identify the correct NPOLFILE.
+
+    The use of this program now requires that a directory be set up with
+    all the new NPOLFILE and D2IMFILE reference files for ACS (a single
+    directory for all files for all ACS detectors will be fine, much like
+    jref).  Currently, all the files generated by the ACS team has initially 
+    been made available at::
+
+        /grp/hst/acs/lucas/new-npl/
+
+    The one known limitation to how this program works comes from
+    confusion if more than 1 file could possibly be used as the new
+    reference file. This would only happen when NPOLFILE reference files
+    have been checked into CDBS multiple times, and there are several
+    versions that apply to the same detector/filter combination.  However,
+    that can be sorted out later if we get into that situation at all.
     
     """ 
     print 'UPDATENPOL Version',__version__+'('+__vdate__+')'

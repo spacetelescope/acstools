@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
    
    acs_destripe
+   updatenpol
 
 Indices and tables
 ==================
