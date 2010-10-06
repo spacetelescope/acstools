@@ -176,7 +176,7 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
     # Write the output
     hdulist.writeto(output)
    
-def clean_streak(iimage1,invflat1,err1,image2,invflat2,err2,maxiter=15,sigrej=2.0):
+def clean_streak(image1,invflat1,err1,image2,invflat2,err2,maxiter=15,sigrej=2.0):
 
     ### create the array to hold the stripe amplitudes
     corr = np.empty(2048)
