@@ -7,8 +7,16 @@ module.
 
 
 """
+
+try:
+    import svn_version
+    __svn_version__ = svn_version.__svn_version__
+except:
+    __svn_version__ = 'Unable to determine SVN revision'
+
 import acs_destripe
 import updatenpol
+import PixCteCorr
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks 
 # upon importing this package.

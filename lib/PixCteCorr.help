@@ -1,0 +1,56 @@
+********************************
+*                              *
+*    HELPFILE for PixCteCorr   *
+*                              *
+********************************
+
+------------------
+Basic Explanation:
+------------------
+
+Pixel-based CTE correction for ACS/WFC. Only parallel CTE loss is corrected for now.
+
+Input: FLT image with CTE tails.
+
+Output: FLT image without CTE tails and optional intermediate files. All outputs are stored in the same directory as the input.
+
+Limitations:
+1. Developed for full-frame GAIN=2 FLT. Not fully tested in other formats.
+2. Assume linear time dependence for a given set of coefficients.
+3. Does not account for traps with very long release timescale but it is not an issue for ACS/WFC.
+4. Does not account for second-exposure effect.
+5. Multi-threading not supported.
+
+See Anderson & Bedin 2010, PASP, 122, 1035
+
+-----------------------------------
+Current User Accessable Parameters:
+-----------------------------------
+
+inFits: FLT image to be corrected. Header needs to be modified to have PCTEFILE keyword pointed to a FITS table with correction coefficients, which can be obtained from the ACS Team. Does not work on RAW. Input image that is already de-striped is desired but not compulsory. Using image with striping will enhance the stripes in output. Calibrations that have been applied to FLT should not significantly affect the result.
+
+outFits: CTE corrected image in the same directory as input. If not given, will use ROOTNAME_cte.fits instead. Existing file will be overwritten. EXT 0 header will be updated. ERR arrays will be added in quadrature with 10% of the correction. DQ not changed.
+
+noise: Noise mitigation algorithm. As CTE loss occurs before noise is added at readout, not removing noise prior to CTE correction will enhance the noise in output image.   
+    0: None.
+    1: Vertical linear, +/- 1 pixel (DEFAULT).
+
+nits: Not used. Future work.
+
+IntermediateFiles: Generate intermediate files in the same directory as input? Default is no. Useful for debugging. These will be created:
+    1. ROOTNAME_cte_rn_tmp.fits - Noise image.
+    2. ROOTNAME_cte_wo_tmp.fits - Noiseless image.
+    3. ROOTNAME_cte_log.txt - Log file.
+
+---------------------------------------------------------------
+How to use the tasks stand alone interface in your own scripts:
+---------------------------------------------------------------
+
+For YCte, the user interface function is "YCte" and has the following input:
+
+def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False)
+
+Basic example of how to call YCte yourself from a python command line, this example will use the default parameter settings:
+
+>from PixCteCorr import YCte
+>YCte('j12345678_flt.fits')
