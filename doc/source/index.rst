@@ -13,6 +13,7 @@ Contents:
    
    acs_destripe
    updatenpol
+   pixctecorr
 
 Indices and tables
 ==================

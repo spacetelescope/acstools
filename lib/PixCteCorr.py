@@ -1,32 +1,43 @@
 """
-Functions to apply pixel-based CTE correction.
+Functions to apply pixel-based CTE correction to ACS images.
 
-See Anderson & Bedin 2010, PASP, 122, 1035
+The algorithm implemented in this code was
+described in detail by [Anderson]_ as available
+online at:
 
-U{http://adsabs.harvard.edu/abs/2010PASP..122.1035A}
+http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-@note: Only works for ACS/WFC but can be modified to
-    work on other detectors.
-@note: Developed for full-frame GAIN=2 FLT.
-    Not fully tested in other formats.
-@note: Assume linear time dependence for a given set
-    of coefficients.
-@note: Does not account for traps with very long
-    release timescale but it is not an issue for
-    ACS/WFC.
-@note: Does not account for second-exposure effect.
-@note: Multi-threading not supported.
+:Authors: P.-L. Lim and W. Hack (Python), J. Anderson (Fortran)
 
-@authors: P. L. Lim and W. Hack (Python),
-    J. Anderson (Fortran)
+:Organization: Space Telescope Science Institute
 
-@organization: Space Telescope Science Institute
+:History: 2010/09/01 PLL created this module.
 
-@change: 2010/09/01 PLL created this module.
+References
+----------
+.. [Anderson] Anderson J. & Bedin, L.R., 2010, PASP, 122, 1035
+
+Notes
+------
+* This code only works for ACS/WFC but can be modified to work on other detectors.
+* It was developed for use with full-frame GAIN=2 FLT images as input.
+* It has not been fully tested with any other formats.
+* This code assumes a linear time dependence for a given set of coefficients.
+* This algorithm does not account for traps with very long release timescale 
+  but it is not an issue for ACS/WFC.
+* This code also does not account for second-exposure effect.
+* Multi-threading support was not implemented in this version as it would 
+  interfere with eventual pipeline operation.
+
 """
 
 # External modules
 import os, shutil, time, numpy, pyfits
+
+try:
+    from pytools import teal
+except:
+    teal = None
 
 # Local modules
 import ImageOpByAmp
@@ -42,12 +53,12 @@ _YCTE_QMAX = 10000
 #--------------------------
 def XCte():
     """
-    B{FUTURE WORK}
+    *FUTURE WORK*
     
     Apply correction to serial CTE loss. This is to
     be done before parallel CTE loss correction.
     
-    Probably easier to call as routine from L{YCte}.
+    Probably easier to call as routine from `YCte()`.
     """
 
     print 'Not yet available'
@@ -63,45 +74,66 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     that have been applied to FLT should not
     significantly affect the result.
 
-    EXT 0 header will be updated. ERR arrays will be
-    added in quadrature with 10% of the correction.
-    DQ not changed.
+    Notes
+    -----
+    * EXT 0 header will be updated. ERR arrays will be
+      added in quadrature with 10% of the correction.
+      DQ not changed.
 
-    EXAMPLE:
+    * Does not work on RAW but can be modified
+      to do so.
 
-    YCte('j12345678_flt.fits')
+    Examples
+    --------
+    1.  This task can be used to correct an image simply with:
 
-    @note: Does not work on RAW but can be modified
-        to do so.
+            >>> import PixCteCorr
+            >>> PixCteCorr.YCte('j12345678_flt.fits')
 
-    @param inFits: FLT image to be corrected.
-    @type inFits: string
+        This will update the image in-place with the CTE corrections.
 
-    @keyword outFits: CTE corrected image in the same
+    2.  The TEAL GUI can be used to run this task using:
+
+            >>> epar PixCteCorr  # under PyRAF only
+
+        or from a general Python command line:
+
+            >>> from pytools import teal
+            >>> teal.teal('PixCteCorr')
+
+    Parameters
+    ----------
+    inFits: string 
+        FLT image to be corrected.
+
+    outFits: string 
+        CTE corrected image in the same
         directory as input. If not given, will use
         ROOTNAME_cte.fits instead. Existing file will
         be overwritten.
-    @type outFits: string
 
-    @keyword noise: Noise mitigation algorithm. As CTE
+    noise: int
+        Noise mitigation algorithm. As CTE
         loss occurs before noise is added at readout,
         not removing noise prior to CTE correction
-        will enhance the noise in output image.   
+        will enhance the noise in output image.  
+         
             - 0: None.
             - 1: Vertical linear, +/- 1 pixel.
-    @type noise: int
 
-    @keyword nits: Not used. B{Future work.}
-    @type nits: int
-
-    @keyword intermediateFiles: Generate intermediate
+    intermediateFiles: bool 
+        Generate intermediate
         files in the same directory as input? Useful
         for debugging. These are:
+            
             1. ROOTNAME_cte_rn_tmp.fits - Noise image.
             2. ROOTNAME_cte_wo_tmp.fits - Noiseless
                image.
             3. ROOTNAME_cte_log.txt - Log file.
-    @type intermediateFiles: bool
+
+    nits: int 
+        Not used. *Future work.*
+
     """
 
     # Start timer
@@ -260,17 +292,21 @@ def _PixCteParams(fitsTable, mjd):
     """
     Read params from PCTEFILE.
 
-    @note: Environment variable pointing to
-        reference file directory must exist.
+    .. note: Environment variable pointing to
+             reference file directory must exist.
 
-    @param fitsTable: PCTEFILE from header.
-    @type fitsTable: string
+    Parameters
+    ----------
+    fitsTable: string 
+        PCTEFILE from header.
 
-    @param mjd: EXPSTART from header.
-    @type mjd: float
+    mjd: float 
+        EXPSTART from header.
 
-    @return: dtde_l, chg_leak, psi_node
-    @rtype: 2 Numpy float arrays, Numpy int array
+    Returns
+    -------
+    dtde_l, chg_leak, psi_node
+        2 Numpy float arrays, Numpy int array
     """
 
     # Resolve path to PCTEFILE
@@ -312,15 +348,19 @@ def _ResolveRefFile(refText, sep='$'):
 
     Assume standard syntax: dir$file.fits
 
-    @param refText: The text to process.
-    @type refText: string
+    Parameters
+    ----------
+    refText: string
+        The text to process.
 
-    @keyword sep: Separator between directory
+    sep: char 
+        Separator between directory
         and file name.
-    @type sep: char
 
-    @return: Full path to reference file.
-    @rtype: string
+    Returns
+    -------
+    refPath: string
+        Full path to reference file.
     """
 
     s = refText.split(sep)
@@ -339,27 +379,32 @@ def _CalcCteFrac(mjd, detector):
     """
     Calculate CTE_FRAC used for linear time
     dependency.
+    .. math::
+    
+        CTE_FRAC = (mjd - C1) / (C2 - C1)
 
-    CTE_FRAC = (mjd - C1) / (C2 - C1)
+    Formula is defined such that `CTE_FRAC` is 0 for
+    `mjd=C1` and 1 for `mjd=C2`.
 
-    Formula is defined such that CTE_FRAC is 0 for
-    mjd=C1 and 1 for mjd=C2.
-
-    WFC: C1 and C2 are MJD equivalents for 2002-03-02
-    (ACS installation) and 2009-10-01 (Anderson's test
+    WFC: `C1` and `C2` are MJD equivalents for ``2002-03-02``
+    (ACS installation) and ``2009-10-01`` (Anderson's test
     data), respectively.
 
-    @note: Only works on ACS/WFC but can be modified
-        to work on other detectors.
+    .. note: Only works on ACS/WFC but can be modified
+             to work on other detectors.
 
-    @param mjd: EXPSTART from header.
-    @type mjd: float
+    Parameters
+    ----------
+     mjd: float
+        EXPSTART from header.
 
-    @param detector: DETECTOR from header.
-    @type detector: string
+    detector: string
+        DETECTOR from header.
 
-    @return: CTE_FRAC
-    @rtype: float
+    Returns
+    -------
+    CTE_FRAC: float
+
     """
 
     c1 = {'WFC':52335.0}
@@ -369,27 +414,32 @@ def _CalcCteFrac(mjd, detector):
 #--------------------------
 def _InterpolatePsi(chg_leak, psi_node):
     """
-    Interpolates the PSI(Q,N) curve at all N from
+    Interpolates the `PSI(Q,N)` curve at all N from
     1 to 100.
 
-    PSI(Q,N) models the CTE tail profile across N
+    `PSI(Q,N)` models the CTE tail profile across N
     pixels from the original pixel for a given
     charge, Q. Up to 100 pixels are tracked. For
     post-SM4 ACS/WFC, CTE loss is within 60 pixels.
     Might be worse for WFPC2 since it is older and
     has faster readout time.
 
-    @note: As this model is refined, future release
-        might only have PSI(N) independent of Q.
+    .. note: As this model is refined, future release
+             might only have PSI(N) independent of Q.
 
-    @param chg_leak: PSI table data from PCTEFILE.
-    @type chg_leak: Numpy float array
+    Parameters
+    ----------
+    chg_leak: Numpy float array
+        PSI table data from PCTEFILE.
 
-    @param psi_node: PSI node data from PCTEFILE.
-    @type psi_node: Numpy int array
+    psi_node: Numpy int array
+        PSI node data from PCTEFILE.
 
-    @return: Interpolated PSI.
-    @rtype: Numpy float array
+    Returns
+    -------
+    chg_leak_kt: Numpy float array
+        Interpolated PSI.
+
     """
 
     max_node = 100
@@ -413,21 +463,25 @@ def _InterpolatePsi(chg_leak, psi_node):
 #--------------------------
 def _InterpolatePhi(dtde_l, cte_frac):
     """
-    Interpolates the PHI(Q) at all Q from 1 to
+    Interpolates the `PHI(Q)` at all Q from 1 to
     49999 (log scale).
 
-    PHI(Q) models the amount of charge in CTE
+    `PHI(Q)` models the amount of charge in CTE
     tail, i.e., probably of an electron being
     grabbed by a charge trap.
     
-    @param dtde_l: PHI data from PCTEFILE.
-    @type dtde_l: Numpy float array
+    Parameters
+    ----------
+    dtde_l: Numpy float array
+        PHI data from PCTEFILE.
 
-    @param cte_frac: Time dependency factor.
-    @type cte_frac: float
+    cte_frac: float
+        Time dependency factor.
 
-    @return: dtde_q, q_pix_array, pix_q_array
-    @rtype: 3 Numpy arrays
+    Returns
+    -------
+    dtde_q, q_pix_array, pix_q_array: numpy arrays
+    
     """
 
     global _YCTE_QMAX
@@ -474,21 +528,24 @@ def _TrackChargeTrap(pix_q_array, chg_leak_kt, pFile=None, psiNode=None):
     worth of traps. Determine what the trails look
     like for each of the traps bring tracked.
 
-    @param pix_q_array: Maps P to cumulative charge.
-    @type pix_q_array: Numpy array
+    Parameters
+    ----------
+    pix_q_array: Numpy array 
+        Maps P to cumulative charge.
 
-    @param chg_leak_kt: Interpolated PSI(Q,N).
-    @type chg_leak_kt: Numpy array
+    chg_leak_kt: Numpy array
+        Interpolated PSI(Q,N).
 
-    @keyword pFile: Optional log file name.
-    @type pFile: string
+    pFile: string, optional 
+        Optional log file name.
 
-    @keyword psiNode: PSI nodes from PCTEFILE. Only
-        used with C{pFile}.
-    @type psiNode: Numpy int array
+    psiNode: Numpy int array
+        PSI nodes from PCTEFILE. Only used with `pFile`.
 
-    @return: chg_leak_tq, chg_open_tq
-    @rtype: 2 Numpy arrays
+    Returns
+    -------
+    chg_leak_tq, chg_open_tq: 2 Numpy arrays
+    
     """
 
     max_node = chg_leak_kt.shape[0]
@@ -550,29 +607,35 @@ def _DecomposeRN(dataDN, readNoise, model=1, sigCut=2.0):
     """
     Separate noise and signal.
     
-    REAL DATA = SIGNAL + NOISE
+        REAL DATA = SIGNAL + NOISE
 
-    @note: Assume data only has 1 amp readout with
-        amp on lower left when displayed with default
-        plot settings.
+    .. note: Assume data only has 1 amp readout with
+             amp on lower left when displayed with default
+             plot settings.
 
-    @param dataDN: SCI data in DN.
-    @type dataDN: Numpy float array
+    Parameters
+    ----------
+    dataDN: Numpy float array
+        SCI data in DN.
 
-    @param readNoise: Read noise in DN.
-    @type readNoise: float
+    readNoise: float
+        Read noise in DN.
 
-    @keyword model: Noise mitigation algorithm.
+    model: int, optional
+        Noise mitigation algorithm.
         Calculations done in Y only.
+
             - 0: None.
             - 1: Vertical linear, +/- 1 pixel.
-    @type model: int
 
-    @keyword sigCut: Read noise sigma cuts.
-    @type sigCut: float
+    sigCut: float, optional
+        Read noise sigma cuts.
 
-    @return: Signal and noise components.
-    @rtype: 2 Numpy float arrays
+    Returns
+    --------
+    sigArr, nseArr: 2 Numpy float arrays
+        Signal and noise components.
+
     """
 
     sigArr = dataDN.copy()
@@ -629,18 +692,23 @@ def _InterpolatePsi_NOT_USED(chg_leak, psi_node):
     Interpolates the PSI(Q,N) curve at all N from
     1 to 100.
 
-    Same as L{_InterpolatePsi} but a slower
+    Same as `_InterpolatePsi()` but a slower
     implementation. Indexing starts from 1 like
     Fortran. Kept for testing only.
 
-    @param chg_leak: PSI table data from PCTEFILE.
-    @type chg_leak: Numpy float array
+    Parameters
+    ----------
+    chg_leak: Numpy float array
+        PSI table data from PCTEFILE.
 
-    @param psi_node: PSI node data from PCTEFILE.
-    @type psi_node: Numpy int array
+    psi_node: Numpy INt array
+        PSI node data from PCTEFILE.
 
-    @return: Interpolated PSI.
-    @rtype: Numpy float array
+    Returns
+    -------
+    chg_leak_kt: Numpy float array
+        Interpolated PSI.
+
     """
 
     max_node = 100
@@ -674,18 +742,22 @@ def _InterpolatePhi_NOT_USED(dtde_l2, cte_frac):
     Interpolates the PHI(Q) at all Q from 1 to
     49999 (log scale).
 
-    Same as L{_InterpolatePhi} but a slower
+    Same as `_InterpolatePhi()` but a slower
     implementation. Indexing starts from 1 like
     Fortran. Kept for testing only.
 
-    @param dtde_l2: PHI data from PCTEFILE.
-    @type dtde_l2: Numpy float array
+    Parameters
+    ----------
+    dtde_l2: Numpy float array
+        PHI data from PCTEFILE.
 
-    @param cte_frac: Time dependency factor.
-    @type cte_frac: float
+    cte_frac: float
+        Time dependency factor.
 
-    @return: dtde_q, q_pix_array, pix_q_array
-    @rtype: 3 Numpy arrays
+    Returns
+    -------
+    dtde_q, q_pix_array, pix_q_array: 3 Numpy arrays
+
     """
 
     global _YCTE_QMAX
@@ -739,25 +811,28 @@ def _TrackChargeTrap_NOT_USED(pix_q_array, chg_leak_kt, pFile=None, psiNode=None
     worth of traps. Determine what the trails look
     like for each of the traps bring tracked.
 
-    Same as L{_TrackChargeTrap} but a slower
+    Same as `_TrackChargeTrap()` but a slower
     implementation. Indexing starts from 1 like
     Fortran. Kept for testing only.
 
-    @param pix_q_array: Maps P to cumulative charge.
-    @type pix_q_array: Numpy array
+    Parameters
+    ----------
+    pix_q_array: Numpy float array
+        Maps P to cumulative charge.
 
-    @param chg_leak_kt: Interpolated PSI(Q,N).
-    @type chg_leak_kt: Numpy array
+    chg_leak_kt: Numpy float array
+        Interpolated PSI(Q,N).
 
-    @keyword pFile: Optional log file name.
-    @type pFile: string
+    pFile: string, optional
+        Optional log file name.
 
-    @keyword psiNode: PSI nodes from PCTEFILE. Only
-        used with C{pFile}.
-    @type psiNode: Numpy int array
+    psiNode: Numpy int array
+        PSI nodes from PCTEFILE. Only used with `pFile`.
 
-    @return: chg_leak_tq, chg_open_tq
-    @rtype: 2 Numpy arrays
+    Returns
+    -------
+    chg_leak_tq, chg_open_tq: 2 Numpy arrays
+
     """
 
     max_node = chg_leak_kt.shape[0]
@@ -829,6 +904,24 @@ def _TrackChargeTrap_NOT_USED(pix_q_array, chg_leak_kt, pFile=None, psiNode=None
     # End if
 
     return chg_leak_tq[1:,1:], chg_open_tq[1:,1:]
+
+#--------------------------
+# TEAL Interface functions
+#--------------------------
+def run(configObj):
+    
+    YCte(configObj['inFits'],outFits=configObj['outFits'],noise=configObj['noise'],
+        intermediateFiles=configObj['debug'],nits=configObj['nits'])
+    
+def getHelpAsString():
+    helpString = ''
+    if teal:
+        helpString += teal.getHelpFileAsString(__taskname__,__file__)
+
+    if helpString.strip() == '':
+        helpString += __doc__+'\n'+YCte.__doc__
+
+    return helpString
 
 #--------------------------
 if __name__ == '__main__':
