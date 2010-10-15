@@ -7,7 +7,7 @@ online at:
 
 http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-:Authors: P.-L. Lim and W. Hack (Python), J. Anderson (Fortran)
+:Authors: P.L. Lim and W. Hack (Python), J. Anderson (Fortran)
 
 :Organization: Space Telescope Science Institute
 
@@ -90,7 +90,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
             >>> import PixCteCorr
             >>> PixCteCorr.YCte('j12345678_flt.fits')
 
-        This will update the image in-place with the CTE corrections.
+        This task will generate a new CTE-corrected image.
 
     2.  The TEAL GUI can be used to run this task using:
 
@@ -467,7 +467,7 @@ def _InterpolatePhi(dtde_l, cte_frac):
     49999 (log scale).
 
     `PHI(Q)` models the amount of charge in CTE
-    tail, i.e., probably of an electron being
+    tail, i.e., probability of an electron being
     grabbed by a charge trap.
     
     Parameters

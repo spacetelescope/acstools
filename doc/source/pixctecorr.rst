@@ -1,7 +1,7 @@
 ************************
 ACS Pixel CTE Correction
 ************************
-This task implements a pixel-based CTE correction for calibrated ACS/WFC, gain=2 images.  
+This task implements a pixel-based CTE correction for calibrated ACS/WFC images.  
 
 .. currentmodule:: acstools.PixCteCorr
 
