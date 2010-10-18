@@ -21,7 +21,7 @@ pkg =  "acstools"
 setupargs = {
     'version' : 		"1.1.0",
     'description' :	    "Python Tools for ACS Data",
-    'author' : 		    "Warren Hack, Norman Grogin, Pey-Lian Lim, Jay Anderson",
+    'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson",
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
     'data_files' :      [( pkg+"/pars", ['lib/pars/*']),( pkg, ['lib/*.help'])],

@@ -7,11 +7,13 @@ online at:
 
 http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-:Authors: P.L. Lim and W. Hack (Python), J. Anderson (Fortran)
+:Authors: P. L. Lim and W. Hack (Python), J. Anderson (Fortran)
 
 :Organization: Space Telescope Science Institute
 
 :History: 2010/09/01 PLL created this module.
+:History: 2010/10/13 WH added/modified documentations.
+:History: 2010/10/15 PLL fixed PCTEFILE lookup logic.
 
 References
 ----------
@@ -311,6 +313,7 @@ def _PixCteParams(fitsTable, mjd):
 
     # Resolve path to PCTEFILE
     refFile = _ResolveRefFile(fitsTable)
+    if not os.path.isfile(refFile): raise NameError, 'PCTEFILE not found: %s' % refFile
 
     # Open FITS table
     pf_ref = pyfits.open(refFile)
@@ -348,6 +351,8 @@ def _ResolveRefFile(refText, sep='$'):
 
     Assume standard syntax: dir$file.fits
 
+    If dir is not defined
+
     Parameters
     ----------
     refText: string
@@ -359,20 +364,24 @@ def _ResolveRefFile(refText, sep='$'):
 
     Returns
     -------
-    refPath: string
+    f: string
         Full path to reference file.
     """
 
     s = refText.split(sep)
     n = len(s)
-
     if n > 1:
-        refPath = os.getenv(s[0])
+        p = os.getenv(s[0])
+        if p:
+            p += os.sep
+        else:
+            p = ''
+        # End if
+        f = p + s[1]
     else:
-        refPath = os.getcwd()
+        f = os.path.abspath(refText)
     # End if
-
-    return refPath + os.sep + s[1]
+    return f
 
 #--------------------------
 def _CalcCteFrac(mjd, detector):
