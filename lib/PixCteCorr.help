@@ -32,7 +32,7 @@ noise: int
     0: None.
     1: Vertical linear, +/- 1 pixel (DEFAULT).
 
-IntermediateFiles: bool 
+intermediateFiles: bool 
     Generate intermediate files in the same directory as input? Default is no. Useful for debugging. These will be created:
     1. ROOTNAME_cte_rn_tmp.fits - Noise image.
     2. ROOTNAME_cte_wo_tmp.fits - Noiseless image.
