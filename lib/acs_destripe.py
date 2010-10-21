@@ -34,7 +34,7 @@ import os, pyfits, sys
 import numpy as np
 from numpy import sqrt, empty, unique, ones, zeros, byte, median, average, sum, concatenate
 
-from pytools import parseinput
+from pytools import parseinput,teal
         
 def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
 
@@ -294,22 +294,8 @@ def getHelpAsString(fulldoc=True):
     """ 
     return useful help from a file in the script directory called module.help
     """
-    #get the local library directory where the code is stored
-    localDir=os.path.split(__file__)
-    helpfile=__taskname__.split(".")
-    
-    helpfile=localDir[0]+"/"+helpfile[0]+".help"
-    
-    if os.access(helpfile,os.R_OK):
-        fh=open(helpfile,'r')
-        ss=fh.readlines()
-        fh.close()
-        #helpString=""
-        for line in ss:
-            helpString+=line
-    else:    
-        helpString=__doc__
-    
+    helpString += teal.getHelpFileAsString(__taskname__,__file__)
+
     helpString += __usage__
 
     return helpString
