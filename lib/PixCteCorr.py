@@ -7,13 +7,15 @@ online at:
 
 http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-:Authors: P. L. Lim and W. Hack (Python), J. Anderson (Fortran)
+:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran)
 
 :Organization: Space Telescope Science Institute
 
-:History: 2010/09/01 PLL created this module.
-:History: 2010/10/13 WH added/modified documentations.
-:History: 2010/10/15 PLL fixed PCTEFILE lookup logic.
+:History:
+    * 2010/09/01 PLL created this module.
+    * 2010/10/13 WH added/modified documentations.
+    * 2010/10/15 PLL fixed PCTEFILE lookup logic.
+    * 2010/10/26 WH added support for multiple file processing
 
 References
 ----------
@@ -41,6 +43,9 @@ try:
 except:
     teal = None
 
+from pytools import parseinput
+from pytools import fileutil as fu
+
 # Local modules
 import ImageOpByAmp
 import PixCte_FixY # C extension
@@ -53,9 +58,83 @@ __vdate__ = "13-Oct-2010"
 _YCTE_QMAX = 10000
 
 #--------------------------
+def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
+    """
+    Run all the CTE corrections on all the input files.
+    
+    This function simply calls `YCte()` on each input image parsed from the 
+    `input` parameter, and passes all remaining parameter values through unchanged.
+    
+    Examples
+    --------
+    1.  This task can be used to correct a set of ACS images simply with:
+
+            >>> import PixCteCorr
+            >>> PixCteCorr.CteCorr('j*q_flt.fits')
+
+        This task will generate a new CTE-corrected image for each of the FLT images.
+
+    2.  The TEAL GUI can be used to run this task using:
+
+            >>> epar PixCteCorr  # under PyRAF only
+
+        or from a general Python command line:
+
+            >>> from pytools import teal
+            >>> teal.teal('PixCteCorr')
+
+    Parameters
+    ----------
+    input: string or list of strings
+        name of FLT image(s) to be corrected. The name(s) can be specified
+        either as:
+         
+          * a single filename ("j1234567q_flt.fits")
+          * a Python list of filenames
+          * a partial filename with wildcards ("\*flt.fits") 
+          * filename of an ASN table ("j12345670_asn.fits")
+          * an at-file ("@input")
+        
+    outFits: string 
+        CTE corrected image in the same
+        directory as input. If not given, will use
+        ROOTNAME_cte.fits instead. Existing file will
+        be overwritten.
+
+    noise: int
+        Noise mitigation algorithm. As CTE
+        loss occurs before noise is added at readout,
+        not removing noise prior to CTE correction
+        will enhance the noise in output image.  
+         
+            - 0: None.
+            - 1: Vertical linear, +/- 1 pixel.
+
+    intermediateFiles: bool 
+        Generate intermediate files in the same directory as input? 
+        Useful for debugging. These are:
+            
+            1. ROOTNAME_cte_rn_tmp.fits - Noise image.
+            2. ROOTNAME_cte_wo_tmp.fits - Noiseless
+               image.
+            3. ROOTNAME_cte_log.txt - Log file.
+
+    nits: int 
+        Not used. *Future work.*
+
+    """
+    # Parse input to get list of filenames to process
+    infiles, output = parseinput.parseinput(input)
+    
+    # Process each file
+    for file in infiles:
+        YCte(fu.osfn(file), outFits=outFits, noise=noise, nits=nits, intermediateFiles=intermediateFiles)
+        
+#--------------------------
 def XCte():
     """
     *FUTURE WORK*
+    Not Implemented yet.
     
     Apply correction to serial CTE loss. This is to
     be done before parallel CTE loss correction.
@@ -87,21 +166,12 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
 
     Examples
     --------
-    1.  This task can be used to correct an image simply with:
+    1.  This task can be used to correct a single FLT image with:
 
             >>> import PixCteCorr
             >>> PixCteCorr.YCte('j12345678_flt.fits')
 
         This task will generate a new CTE-corrected image.
-
-    2.  The TEAL GUI can be used to run this task using:
-
-            >>> epar PixCteCorr  # under PyRAF only
-
-        or from a general Python command line:
-
-            >>> from pytools import teal
-            >>> teal.teal('PixCteCorr')
 
     Parameters
     ----------
@@ -919,7 +989,7 @@ def _TrackChargeTrap_NOT_USED(pix_q_array, chg_leak_kt, pFile=None, psiNode=None
 #--------------------------
 def run(configObj):
     
-    YCte(configObj['inFits'],outFits=configObj['outFits'],noise=configObj['noise'],
+    CteCorr(configObj['inFits'],outFits=configObj['outFits'],noise=configObj['noise'],
         intermediateFiles=configObj['debug'],nits=configObj['nits'])
     
 def getHelpAsString():
