@@ -44,7 +44,6 @@ except:
     teal = None
 
 from pytools import parseinput
-from pytools import fileutil as fu
 
 # Local modules
 import ImageOpByAmp
@@ -128,7 +127,7 @@ def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
     
     # Process each file
     for file in infiles:
-        YCte(fu.osfn(file), outFits=outFits, noise=noise, nits=nits, intermediateFiles=intermediateFiles)
+        YCte(file, outFits=outFits, noise=noise, nits=nits, intermediateFiles=intermediateFiles)
         
 #--------------------------
 def XCte():
