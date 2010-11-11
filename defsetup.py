@@ -24,7 +24,7 @@ setupargs = {
     'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson",
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
-    'data_files' :      [( pkg+"/pars", ['lib/pars/*']),( pkg, ['lib/*.help'])],
+    'data_files' :      [( pkg+"/pars", ['lib/pars/*']),( pkg, ['lib/*.help']),(pkg,['lib/LICENSE.txt'])],
     'scripts' :         [ 'lib/acs_destripe', 'lib/updatenpol'] ,
     'platforms' : 	    ["Linux","Solaris","Mac OS X","Win"],
     'ext_modules' :     ext,
