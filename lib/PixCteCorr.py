@@ -16,6 +16,7 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * 2010/10/13 WH added/modified documentations.
     * 2010/10/15 PLL fixed PCTEFILE lookup logic.
     * 2010/10/26 WH added support for multiple file processing
+    * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
 
 References
 ----------
@@ -26,6 +27,7 @@ Notes
 * This code only works for ACS/WFC but can be modified to work on other detectors.
 * It was developed for use with full-frame GAIN=2 FLT images as input.
 * It has not been fully tested with any other formats.
+* Noise is slightly enhanced in the output (see [Anderson]_).
 * This code assumes a linear time dependence for a given set of coefficients.
 * This algorithm does not account for traps with very long release timescale 
   but it is not an issue for ACS/WFC.
@@ -50,8 +52,8 @@ import ImageOpByAmp
 import PixCte_FixY # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "0.1"
-__vdate__ = "13-Oct-2010"
+__version__ = "0.2"
+__vdate__ = "08-Nov-2010"
 
 # Global variable
 _YCTE_QMAX = 10000
@@ -61,8 +63,9 @@ def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
     """
     Run all the CTE corrections on all the input files.
     
-    This function simply calls `YCte()` on each input image parsed from the 
-    `input` parameter, and passes all remaining parameter values through unchanged.
+    This function simply calls `YCte()` on each input image
+    parsed from the `input` parameter, and passes all remaining
+    parameter values through unchanged.
     
     Examples
     --------
@@ -88,13 +91,14 @@ def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
         name of FLT image(s) to be corrected. The name(s) can be specified
         either as:
          
-          * a single filename ("j1234567q_flt.fits")
+          * a single filename ('j1234567q_flt.fits')
           * a Python list of filenames
-          * a partial filename with wildcards ("\*flt.fits") 
-          * filename of an ASN table ("j12345670_asn.fits")
-          * an at-file ("@input")
+          * a partial filename with wildcards ('\*flt.fits')
+          * filename of an ASN table ('j12345670_asn.fits')
+          * an at-file ('@input')
         
-    outFits: string 
+    outFits: string
+        *USE DEFAULT IF `input` HAS MULTIPLE FILES.*
         CTE corrected image in the same
         directory as input. If not given, will use
         ROOTNAME_cte.fits instead. Existing file will
@@ -132,7 +136,7 @@ def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
 #--------------------------
 def XCte():
     """
-    *FUTURE WORK*
+    *FUTURE WORK.*
     Not Implemented yet.
     
     Apply correction to serial CTE loss. This is to
@@ -237,7 +241,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
 
     # Read CTE params from file
     pctefile = pf_out['PRIMARY'].header['PCTEFILE']
-    dtde_l, chg_leak, psi_node = _PixCteParams(pctefile, expstart)
+    dtde_l, chg_leak, psi_node, rn2_nit = _PixCteParams(pctefile, expstart)
 
     # N in charge tail
     chg_leak_kt = _InterpolatePsi(chg_leak, psi_node)
@@ -252,10 +256,18 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     quadObj = ImageOpByAmp.ImageOpByAmp(pf_out)
     ampList = quadObj.GetAmps()
     gain = quadObj.GetHdrValByAmp('gain')
-    rdns = quadObj.GetHdrValByAmp('noise')
     # DQ needs to be read if new flags are to be added.
     sciQuadData = quadObj.DataByAmp()
     errQuadData = quadObj.DataByAmp(extName='ERR')
+
+    # Optional readnoise from header.
+    # Only needed when NOISE=100, which is hidden from user.
+    if noise != 100:
+        rdns = {}
+        for amp in ampList: rdns[amp] = 0.0 # Dummy
+    else:
+        rdns = quadObj.GetHdrValByAmp('noise')
+    # End if
 
     # Intermediate files
     outLog = ''
@@ -284,21 +296,22 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     for amp in ampList:
         print os.linesep, 'AMP', amp, ', GAIN', gain[amp]
         
-        # Keep a copy of original SCI for error calculations
+        # Keep a copy of original SCI for error calculations.
+        # Assume unit of electrons.
         sciAmpOrig = sciQuadData[amp].copy().astype('float')
         
-        # Convert SCI from electrons to DN.
-        # This is not needed for RAW.
-        sciAmpDN = sciAmpOrig / gain[amp]
-
-        # Separate noise and signal
-        sciAmpSig, sciAmpNse = _DecomposeRN(sciAmpDN, rdns[amp]/gain[amp], model=noise)
+        # Separate noise and signal.
+        # Must be in unit of electrons.
+        sciAmpSig, sciAmpNse = _DecomposeRN(sciAmpOrig, model=noise, nitrn=rn2_nit, readNoise=rdns[amp])
         
         if intermediateFiles:
             mosX1, mosX2, mosY1, mosY2, tCode = quadObj.MosaicPars(amp)
             mosWo[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpSig, tCode, trueCopy=True)
             mosRn[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpNse, tCode, trueCopy=True)
         # End if
+
+        # Convert noiseless image from electrons to DN.
+        sciAmpSig /= gain[amp]
 
         # Only log pre-selected amp.
         if amp == amp2log:
@@ -307,20 +320,20 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
             outLog2 = ''
         # End if
 
-        # CTE correction
+        # CTE correction in DN.
         sciAmpCor = numpy.zeros(sciAmpOrig.shape)
         retCode = PixCte_FixY.FixYCte(sciAmpSig, sciAmpCor, _YCTE_QMAX, q_pix_array, chg_leak_tq, chg_open_tq, amp, outLog2)
         if retCode != 0:
             print 'C-extension call failed for AMP', amp
             continue
 
-        # Add noise back to corrected image.
-        # Put corrected data back to image as electrons.
-        # Gain is not needed for RAW.
-        sciAmpFin = (sciAmpCor + sciAmpNse) * gain[amp]
+        # Convert corrected noiseless data back to electrons.
+        # Add noise in electrons back to corrected image.
+        sciAmpFin = sciAmpCor * gain[amp] + sciAmpNse
         sciQuadData[amp][:,:] = sciAmpFin.astype(sciQuadData[amp].dtype)
 
-        # Apply 10% correction to ERR in quadrature
+        # Apply 10% correction to ERR in quadrature.
+        # Assume unit of electrons.
         dcte = 0.1 * numpy.abs(sciAmpFin - sciAmpOrig)
         errAmpSig = errQuadData[amp].copy().astype('float')
         errAmpFin = numpy.sqrt(errAmpSig**2 + dcte**2)
@@ -376,8 +389,19 @@ def _PixCteParams(fitsTable, mjd):
 
     Returns
     -------
-    dtde_l, chg_leak, psi_node
-        2 Numpy float arrays, Numpy int array
+    dtde_l: array_like
+        PHI(Q).
+
+    chg_leak: array_like
+        PSI(Q,N).
+
+    psi_node: array_like
+        N values for PSI(Q,N).
+
+    rn2_nit: int
+        Number of iterations for `noise`=1 in
+        `_DecomposeRN`.
+
     """
 
     # Resolve path to PCTEFILE
@@ -386,6 +410,9 @@ def _PixCteParams(fitsTable, mjd):
 
     # Open FITS table
     pf_ref = pyfits.open(refFile)
+
+    # Read RN2_NIT value from header
+    rn2_nit = pf_ref['PRIMARY'].header['RN2_NIT']
 
     # Read PHI array from header
     s = pf_ref['PRIMARY'].header['PHI_*']
@@ -409,7 +436,7 @@ def _PixCteParams(fitsTable, mjd):
     # Close FITS table
     pf_ref.close()
 
-    return dtde_l, chg_leak, psi_node.astype('int')
+    return dtde_l, chg_leak, psi_node.astype('int'), rn2_nit
 
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
@@ -420,16 +447,13 @@ def _ResolveRefFile(refText, sep='$'):
 
     Assume standard syntax: dir$file.fits
 
-    If dir is not defined
-
     Parameters
     ----------
     refText: string
         The text to process.
 
     sep: char 
-        Separator between directory
-        and file name.
+        Separator between directory and file name.
 
     Returns
     -------
@@ -455,10 +479,9 @@ def _ResolveRefFile(refText, sep='$'):
 #--------------------------
 def _CalcCteFrac(mjd, detector):
     """
-    Calculate CTE_FRAC used for linear time
-    dependency.
-    .. math::
+    Calculate CTE_FRAC used for linear time dependency.
     
+    .. math::
         CTE_FRAC = (mjd - C1) / (C2 - C1)
 
     Formula is defined such that `CTE_FRAC` is 0 for
@@ -473,7 +496,7 @@ def _CalcCteFrac(mjd, detector):
 
     Parameters
     ----------
-     mjd: float
+    mjd: float
         EXPSTART from header.
 
     detector: string
@@ -482,7 +505,7 @@ def _CalcCteFrac(mjd, detector):
     Returns
     -------
     CTE_FRAC: float
-
+        Time scaling factor.
     """
 
     c1 = {'WFC':52335.0}
@@ -507,15 +530,15 @@ def _InterpolatePsi(chg_leak, psi_node):
 
     Parameters
     ----------
-    chg_leak: Numpy float array
+    chg_leak: array_like
         PSI table data from PCTEFILE.
 
-    psi_node: Numpy int array
+    psi_node: array_like
         PSI node data from PCTEFILE.
 
     Returns
     -------
-    chg_leak_kt: Numpy float array
+    chg_leak_kt: array_like
         Interpolated PSI.
 
     """
@@ -550,7 +573,7 @@ def _InterpolatePhi(dtde_l, cte_frac):
     
     Parameters
     ----------
-    dtde_l: Numpy float array
+    dtde_l: array_like
         PHI data from PCTEFILE.
 
     cte_frac: float
@@ -558,7 +581,11 @@ def _InterpolatePhi(dtde_l, cte_frac):
 
     Returns
     -------
-    dtde_q, q_pix_array, pix_q_array: numpy arrays
+    dtde_q: array_like
+
+    q_pix_array: array_like
+
+    pix_q_array: array_like
     
     """
 
@@ -608,21 +635,23 @@ def _TrackChargeTrap(pix_q_array, chg_leak_kt, pFile=None, psiNode=None):
 
     Parameters
     ----------
-    pix_q_array: Numpy array 
+    pix_q_array: array_like
         Maps P to cumulative charge.
 
-    chg_leak_kt: Numpy array
+    chg_leak_kt: array_like
         Interpolated PSI(Q,N).
 
     pFile: string, optional 
         Optional log file name.
 
-    psiNode: Numpy int array
+    psiNode: array_like
         PSI nodes from PCTEFILE. Only used with `pFile`.
 
     Returns
     -------
-    chg_leak_tq, chg_open_tq: 2 Numpy arrays
+    chg_leak_tq: array_like
+
+    chg_open_tq: array_like
     
     """
 
@@ -681,7 +710,7 @@ def _TrackChargeTrap(pix_q_array, chg_leak_kt, pFile=None, psiNode=None):
     return chg_leak_tq, chg_open_tq
 
 #--------------------------
-def _DecomposeRN(dataDN, readNoise, model=1, sigCut=2.0):
+def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
     """
     Separate noise and signal.
     
@@ -693,11 +722,8 @@ def _DecomposeRN(dataDN, readNoise, model=1, sigCut=2.0):
 
     Parameters
     ----------
-    dataDN: Numpy float array
-        SCI data in DN.
-
-    readNoise: float
-        Read noise in DN.
+    data_e: array_like
+        SCI data in electrons.
 
     model: int, optional
         Noise mitigation algorithm.
@@ -705,62 +731,130 @@ def _DecomposeRN(dataDN, readNoise, model=1, sigCut=2.0):
 
             - 0: None.
             - 1: Vertical linear, +/- 1 pixel.
+            - 100: Simpler version of `model`=1.
+              Not used anymore. Kept for testing.
 
-    sigCut: float, optional
-        Read noise sigma cuts.
+    nitrn: int, optional
+        Only used if `model`=1. Number of iterations
+        for noise mitigation, each one removing one
+        extra electron.
+
+    readNoise: float, optional
+        Only used if `model`=100. Read noise in
+        electrons.
 
     Returns
-    --------
-    sigArr, nseArr: 2 Numpy float arrays
-        Signal and noise components.
+    -------
+    sigArr: array_like
+        Noiseless signal component in electrons.
+
+    nseArr: array_like
+        Noise component in electrons.
 
     """
 
-    sigArr = dataDN.copy()
-    nseArr = numpy.zeros(dataDN.shape)
+    # MODEL=0 as default behavior
+    sigArr = data_e.copy()
+    nseArr = numpy.zeros(data_e.shape)
 
-    # Assume no noise
-    if model == 0: return sigArr, nseArr
+    # MODEL=1
+    # -----
+    # It does a fix as before for each pixel relative to its two neighbors,
+    # but it clips now this fix at 1 electron (before it was clipped at
+    # 2*readnoise, or about 9 electrons). It then repeats, using the
+    # "reanoise-subtracted" image to see if any more adjustment would be
+    # helpful. If so, it removes up to another elecron from each pixel and
+    # puts it into the readnoise image, as before.
+    #
+    # This continues for NITRN iterations, NITRN=7 means that at most 7
+    # electrons of "readnoise" can be removed from a pixel value.
+    #
+    # This works better because now it has a way to determine whether the
+    # "comparison" pixels for a given pixel are systematically high or low.
+    # Previoulsy, it had assumed they were good, whereas in actuality they
+    # were only "better" by root2, and sometimes not better at all.
+    #
+    # If a pixel has more than 100 elecrons, then this adjustment is turned
+    # off, since it has more poisson noise than readnoise. It also turns off
+    # the correction for any neighboring pixels.
+    # -----
+    if model == 1:
+        # Correction thresholds in electrons.
+        nseLo, nseHi = -20, 100
 
-    # ----- model=1 from here onwards
+        # Flag pixels for noise correction. 1=True, 0=False.
+        # Start by assuming all should be corrected, except edge rows.
+        doNsCor = numpy.ones(data_e.shape)
+        doNsCor[0,:] = 0
+        doNsCor[-1,:] = 0
 
-    nseSigLo = sigCut * readNoise # Is noise below this
-    nseSigHi = sigCut * nseSigLo  # Not noise above this
+        # No correction for out-of-bounds pixels and their row neighbors.
+        idx = numpy.where(((data_e < nseLo ) | (data_e > nseHi)) & (doNsCor == 1))
+        doNsCor[idx] = 0
+        idx1 = (idx[0]-1, idx[1]) # Pix below
+        doNsCor[idx1] = 0
+        idx1 = (idx[0]+1, idx[1]) # Pix above
+        doNsCor[idx1] = 0
 
-    # Exclude 1 pix from side near amp, 4 pix from side far from amp
-    y1 = 1
-    y2 = dataDN.shape[0] - 4
+        # Views of regions to use for calculations
+        flgCen = doNsCor[1:-1,:] # Correction flag
+        rowCen = sigArr[1:-1,:]  # Signal
+        rowLow = sigArr[:-2,:]   # Signal - a row
+        rowUpp = sigArr[2:,:]    # Signal + a row
+        idx = numpy.where(flgCen == 1) # Pix needing correction
 
-    # Views of regions to use for calculations
-    sigCen = dataDN[y1:y2,:]
-    sigLow = dataDN[y1-1:y2-1,:]
-    sigUpp = dataDN[y1+1:y2+1,:]
+        # Remove one electron each iteration
+        for nit in range(nitrn):
+            col_dd = numpy.zeros(rowCen.shape) # Assume no adjustment.
+            bar = 0.5 * (rowLow[idx] + rowUpp[idx]) # Look at neighbors.
+            col_dd[idx] = rowCen[idx] - bar    # Find residual.
+            col_dd = numpy.clip(col_dd, -1, 1) # Clip to +/- 1 electron.
+            rowCen -= col_dd     # Signal
+        # End of nit loop
+        nseArr = data_e - sigArr # Noise
+
+    # MODEL=100
+    elif model == 100:
+        sigCut = 2.0
+        nseSigLo = sigCut * readNoise # Is noise below this
+        nseSigHi = sigCut * nseSigLo  # Not noise above this
+
+        # Exclude 1 pix from side near amp, 4 pix from side far from amp
+        y1 = 1
+        y2 = data_e.shape[0] - 4
+
+        # Views of regions to use for calculations
+        sigCen = data_e[y1:y2,:]
+        sigLow = data_e[y1-1:y2-1,:]
+        sigUpp = data_e[y1+1:y2+1,:]
     
-    # Initial model of signal
-    sigArr[y1:y2,:] = 0.333*sigLow + 0.334*sigCen + 0.333*sigUpp
+        # Initial model of signal
+        sigArr[y1:y2,:] = 0.333*sigLow + 0.334*sigCen + 0.333*sigUpp
 
-    # Compute model of noise
-    # -----
-    # 1. If the readnoise image has an amplitude < +/- 5 DN
-    #    (2 sig of GAIN=2 ACS/WFC noise), then it is consistent with
-    #    being pure readnoise, so just leave as is.
-    # 2. If the readnoise image has an amplitude > +/- 10 DN, then
-    #    it is not at all consistent with being readnoise; so assume
-    #    NO readnoise in this pixel.
-    # 3. If the readnoise image has an amplitude between 5 and 10
-    #    (or -5 and -10), then taper from 5 to 0 (or -5 to 0).
-    # 4. End result is that the "readnoise only" image has values
-    #    between -5 and 5, and makes the image smoother.
-    # -----
-    nseArr = dataDN - sigArr
-    nseArrAbs = numpy.abs(nseArr)
-    idx = numpy.where(nseArrAbs > nseSigHi)
-    nseArr[idx] = 0.0
-    idx = numpy.where(nseArrAbs > nseSigLo)
-    nseArr[idx] = (nseSigHi - nseArrAbs[idx]) * numpy.sign(nseArr[idx])
+        # Compute model of noise
+        # -----
+        # 1. If the readnoise image has an amplitude < +/- 5 DN
+        #    (2 sig of GAIN=2 ACS/WFC noise), then it is consistent with
+        #    being pure readnoise, so just leave as is.
+        # 2. If the readnoise image has an amplitude > +/- 10 DN, then
+        #    it is not at all consistent with being readnoise; so assume
+        #    NO readnoise in this pixel.
+        # 3. If the readnoise image has an amplitude between 5 and 10
+        #    (or -5 and -10), then taper from 5 to 0 (or -5 to 0).
+        # 4. End result is that the "readnoise only" image has values
+        #    between -5 and 5, and makes the image smoother.
+        # -----
+        nseArr = data_e - sigArr
+        nseArrAbs = numpy.abs(nseArr)
+        idx = numpy.where(nseArrAbs > nseSigHi)
+        nseArr[idx] = 0.0
+        idx = numpy.where(nseArrAbs > nseSigLo)
+        nseArr[idx] = (nseSigHi - nseArrAbs[idx]) * numpy.sign(nseArr[idx])
 
-    # Final model of signal
-    sigArr = dataDN - nseArr
+        # Final model of signal
+        sigArr = data_e - nseArr
+
+    # End if
 
     return sigArr, nseArr
 
@@ -776,15 +870,15 @@ def _InterpolatePsi_NOT_USED(chg_leak, psi_node):
 
     Parameters
     ----------
-    chg_leak: Numpy float array
+    chg_leak: array_like
         PSI table data from PCTEFILE.
 
-    psi_node: Numpy INt array
+    psi_node: array_like
         PSI node data from PCTEFILE.
 
     Returns
     -------
-    chg_leak_kt: Numpy float array
+    chg_leak_kt: array_like
         Interpolated PSI.
 
     """
@@ -826,7 +920,7 @@ def _InterpolatePhi_NOT_USED(dtde_l2, cte_frac):
 
     Parameters
     ----------
-    dtde_l2: Numpy float array
+    dtde_l2: array_like
         PHI data from PCTEFILE.
 
     cte_frac: float
@@ -834,7 +928,11 @@ def _InterpolatePhi_NOT_USED(dtde_l2, cte_frac):
 
     Returns
     -------
-    dtde_q, q_pix_array, pix_q_array: 3 Numpy arrays
+    dtde_q: array_like
+
+    q_pix_array: array_like
+
+    pix_q_array: array_like
 
     """
 
@@ -895,21 +993,23 @@ def _TrackChargeTrap_NOT_USED(pix_q_array, chg_leak_kt, pFile=None, psiNode=None
 
     Parameters
     ----------
-    pix_q_array: Numpy float array
+    pix_q_array: array_like
         Maps P to cumulative charge.
 
-    chg_leak_kt: Numpy float array
+    chg_leak_kt: array_like
         Interpolated PSI(Q,N).
 
     pFile: string, optional
         Optional log file name.
 
-    psiNode: Numpy int array
+    psiNode: array_like
         PSI nodes from PCTEFILE. Only used with `pFile`.
 
     Returns
     -------
-    chg_leak_tq, chg_open_tq: 2 Numpy arrays
+    chg_leak_tq: array_like
+
+    chg_open_tq: array_like
 
     """
 
@@ -1000,7 +1100,3 @@ def getHelpAsString():
         helpString += __doc__+'\n'+YCte.__doc__
 
     return helpString
-
-#--------------------------
-if __name__ == '__main__':
-    print 'Command line call not supported'
