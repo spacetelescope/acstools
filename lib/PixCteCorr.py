@@ -52,8 +52,8 @@ import ImageOpByAmp
 import PixCte_FixY # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "0.2"
-__vdate__ = "08-Nov-2010"
+__version__ = "0.2.1"
+__vdate__ = "14-Dec-2010"
 
 # Global variable
 _YCTE_QMAX = 10000

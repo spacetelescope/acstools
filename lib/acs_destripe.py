@@ -331,7 +331,7 @@ def main():
             clobber = True
 
     if len(args) < 2:
-        sys.stderr.write('Usage: acs_destripe.py <input FLT-structured file> <output FLT-structured file>\n')
+        sys.stderr.write('Usage: acs_destripe <input FLT-structured file> <output FLT-structured file>\n')
 
     if len(args) > 2:
         # User provided parameters for maxiter, and possibly sigrej

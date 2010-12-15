@@ -356,7 +356,7 @@ static PyObject * FixYCte(PyObject *self, PyObject *args)
     Py_XDECREF(chgleak);
     Py_XDECREF(chgopen);
 
-    Py_XINCREF(outimage);
+    /*Py_XINCREF(outimage); */
     free_Carrayptrs(cout);
 
     return Py_BuildValue("i",0);
