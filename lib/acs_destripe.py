@@ -84,16 +84,16 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
     if flatfile == 'N/A':
          invflat1 = invflat2 = np.ones(science1.shape)
     else:     
-    	### resolve the filename into an absolute pathname (if necessary)
-    	flatparts = flatfile.partition('$')
-    	if flatparts[1] == '$':
-    	    flatfile = os.getenv(flatparts[0])+flatparts[2]
+        ### resolve the filename into an absolute pathname (if necessary)
+        flatparts = flatfile.partition('$')
+        if flatparts[1] == '$':
+            flatfile = os.getenv(flatparts[0])+flatparts[2]
 
-    	### open the flatfield
-    	hduflat = pyfits.open(flatfile)
-    		
-    	invflat1 = 1/hduflat['sci',1].data
-    	invflat2 = 1/hduflat['sci',2].data
+        ### open the flatfield
+        hduflat = pyfits.open(flatfile)
+
+        invflat1 = 1/hduflat['sci',1].data
+        invflat2 = 1/hduflat['sci',2].data
 
     ### apply GAIN and flatfield corrections if necessary
     if units == 'COUNTS':
