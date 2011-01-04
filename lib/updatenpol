@@ -1,4 +1,0 @@
-#! python
-
-import acstools.updatenpol
-acstools.updatenpol.main()

@@ -25,7 +25,7 @@ setupargs = {
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
     'data_files' :      [( pkg+"/pars", ['lib/pars/*']),( pkg, ['lib/*.help']),(pkg,['lib/LICENSE.txt'])],
-    'scripts' :         [ 'lib/acs_destripe', 'lib/updatenpol'] ,
+    'scripts' :         [ 'lib/acs_destripe'] ,
     'platforms' : 	    ["Linux","Solaris","Mac OS X","Win"],
     'ext_modules' :     ext,
 

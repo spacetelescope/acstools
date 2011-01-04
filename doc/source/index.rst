@@ -12,7 +12,6 @@ Contents:
    :maxdepth: 2
    
    acs_destripe
-   updatenpol
    pixctecorr
 
 Indices and tables
