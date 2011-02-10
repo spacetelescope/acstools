@@ -27,8 +27,8 @@ __usage__ = """
 """
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.2.1'
-__vdate__ = '23-Jul-2010'
+__version__ = '0.2.2'
+__vdate__ = '10-Feb-2011'
 
 import os, pyfits, sys
 import numpy as np
@@ -87,7 +87,16 @@ def perform_correction(image,output,maxiter=15,sigrej=2.0):
         ### resolve the filename into an absolute pathname (if necessary)
         flatparts = flatfile.partition('$')
         if flatparts[1] == '$':
-            flatfile = os.getenv(flatparts[0])+flatparts[2]
+            
+            flatdir = os.getenv(flatparts[0])
+            if flatdir is None:
+                errstr = 'Environment variable ',flatparts[0],' not defined!'
+                raise ValueError,errstr
+            
+            flatfile = flatdir+flatparts[2]
+            if not os.path.exists(flatfile):
+                errstr = 'Flat-field file ',flatfile,' could not be found!'
+                raise IOError, errstr
 
         ### open the flatfield
         hduflat = pyfits.open(flatfile)
