@@ -13,15 +13,18 @@ except:
 pythoninc = distutils.sysconfig.get_python_inc()
 numpyinc = numpy.get_include()
 
-ext = [ distutils.core.Extension('acstools.PixCte_FixY',['src/PixCte_FixY.c'],
-        include_dirs = [pythoninc,numpyinc]) ]
+ext = [ distutils.core.Extension('acstools2.PixCte_FixY',
+        ['src/py_PixCteCorr.c',
+         'src/PixCteCorr_funcs.c',
+         'src/FixYCte.c'],
+        include_dirs = ['include',pythoninc,numpyinc]) ]
 
-pkg =  "acstools"
+pkg =  "acstools2"
 
 setupargs = {
-    'version' : 		"1.1.0",
+    'version' : 		"1.2.0",
     'description' :	    "Python Tools for ACS Data",
-    'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson",
+    'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson, Matt Davis",
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
     'data_files' :      [( pkg+"/pars", ['lib/pars/*']),( pkg, ['lib/*.help']),(pkg,['lib/LICENSE.txt'])],
