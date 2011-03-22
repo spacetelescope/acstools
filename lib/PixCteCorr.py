@@ -49,7 +49,7 @@ from pytools import parseinput
 
 # Local modules
 import ImageOpByAmp
-import py_PixCteCorr as pcc # C extension
+import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
 __version__ = "0.3.0"
@@ -235,7 +235,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
 
     # Calculate CTE_FRAC
     if detector == 'WFC':
-      cte_frac = pcc.CalcCteFrac(expstart, 1)
+      cte_frac = pcfy.CalcCteFrac(expstart, 1)
     else:
       raise StandardError('Invalid detector: PixCteCorr only supports ACS WFC.')
 
@@ -244,12 +244,12 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     dtde_l, chg_leak, psi_node, rn2_nit = _PixCteParams(pctefile, expstart)
 
     # N in charge tail
-    chg_leak_kt = pcc.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
+    chg_leak_kt = pcfy.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
 
     # dtde_q: Marginal PHI at a given chg level.
     # q_pix_array: Maps Q (cumulative charge) to P (dependent var).
     # pix_q_array: Maps P to Q.
-    dtde_q, q_pix_array, pix_q_array, ycte_qmax = pcc.InterpolatePhi(dtde_l, cte_frac)
+    dtde_q, q_pix_array, pix_q_array, ycte_qmax = pcfy.InterpolatePhi(dtde_l, cte_frac)
 
     # Extract data for amp quadrants.
     # For each amp, view of image is created with amp on bottom left.
@@ -303,7 +303,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
         
         # Separate noise and signal.
         # Must be in unit of electrons.
-        sciAmpSig, sciAmpNse = pcc.DecomposeRN(sciAmpOrig, noise, rn2_nit, rdns[amp])
+        sciAmpSig, sciAmpNse = pcfy.DecomposeRN(sciAmpOrig, noise, rn2_nit, rdns[amp])
         
         if intermediateFiles:
             mosX1, mosX2, mosY1, mosY2, tCode = quadObj.MosaicPars(amp)
@@ -322,12 +322,8 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
         # End if
 
         # CTE correction in DN.
-        sciAmpCor = numpy.zeros(sciAmpOrig.shape)
-        retCode = pcc.FixYCte(sciAmpSig, sciAmpCor, ycte_qmax, q_pix_array, 
+        sciAmpCor = pcfy.FixYCte(sciAmpSig, ycte_qmax, q_pix_array, 
                               chg_leak_tq, chg_open_tq, amp, outLog2)
-        if retCode != 0:
-            print 'C-extension call failed for AMP', amp
-            continue
 
         # Convert corrected noiseless data back to electrons.
         # Add noise in electrons back to corrected image.
@@ -479,6 +475,115 @@ def _ResolveRefFile(refText, sep='$'):
     return f
 
 #--------------------------
+def _CalcCteFrac(mjd, detector):
+    """
+    Calculate CTE_FRAC used for linear time dependency.
+    
+    .. math::
+        CTE_FRAC = (mjd - C1) / (C2 - C1)
+
+    Formula is defined such that `CTE_FRAC` is 0 for
+    `mjd=C1` and 1 for `mjd=C2`.
+
+    WFC: `C1` and `C2` are MJD equivalents for ``2002-03-02``
+    (ACS installation) and ``2009-10-01`` (Anderson's test
+    data), respectively.
+
+    .. note: Only works on ACS/WFC but can be modified
+             to work on other detectors.
+
+    Parameters
+    ----------
+    mjd: float
+        EXPSTART from header.
+
+    detector: string
+        DETECTOR from header.
+
+    Returns
+    -------
+    CTE_FRAC: float
+        Time scaling factor.
+    """
+    
+    # Calculate CTE_FRAC
+    if detector == 'WFC':
+      cte_frac = pcfy.CalcCteFrac(expstart, 1)
+    else:
+      raise StandardError('Invalid detector: PixCteCorr only supports ACS WFC.')
+      
+    return cte_frac
+    
+#--------------------------
+def _InterpolatePsi(chg_leak, psi_node):
+    """
+    Interpolates the `PSI(Q,N)` curve at all N from
+    1 to 100.
+
+    `PSI(Q,N)` models the CTE tail profile across N
+    pixels from the original pixel for a given
+    charge, Q. Up to 100 pixels are tracked. For
+    post-SM4 ACS/WFC, CTE loss is within 60 pixels.
+    Might be worse for WFPC2 since it is older and
+    has faster readout time.
+
+    .. note: As this model is refined, future release
+             might only have PSI(N) independent of Q.
+
+    Parameters
+    ----------
+    chg_leak: array_like
+        PSI table data from PCTEFILE.
+
+    psi_node: array_like
+        PSI node data from PCTEFILE.
+
+    Returns
+    -------
+    chg_leak_kt: array_like
+        Interpolated PSI.
+
+    """
+    
+    chg_leak_kt = pcfy.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
+    
+    return chg_leak_kt
+    
+#--------------------------
+def _InterpolatePhi(dtde_l, cte_frac):
+    """
+    Interpolates the `PHI(Q)` at all Q from 1 to
+    49999 (log scale).
+
+    `PHI(Q)` models the amount of charge in CTE
+    tail, i.e., probability of an electron being
+    grabbed by a charge trap.
+    
+    Parameters
+    ----------
+    dtde_l: array_like
+        PHI data from PCTEFILE.
+
+    cte_frac: float
+        Time dependency factor.
+
+    Returns
+    -------
+    dtde_q: array_like
+
+    q_pix_array: array_like
+
+    pix_q_array: array_like
+    
+    ycte_qmax: integer
+    
+    """
+    
+    dtde_q, q_pix_array, pix_q_array, ycte_qmax = pcfy.InterpolatePhi(dtde_l, cte_frac)
+    
+    return dtde_q, q_pix_array, pix_q_array, ycte_qmax
+
+#--------------------------
 def _TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax, pFile=None, psiNode=None):
     """
     Calculate the trails (N pix downstream) for each
@@ -510,7 +615,7 @@ def _TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax, pFile=None, psiNode=No
     
     """
 
-    chg_leak_tq, chg_open_tq = pcc.TrackChargeTrap(pix_q_array, chg_leak_tk, ycte_qmax)
+    chg_leak_tq, chg_open_tq = pcfy.TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax)
 
     # Write results to log file
     if pFile:
@@ -533,6 +638,54 @@ def _TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax, pFile=None, psiNode=No
     # End if
 
     return chg_leak_tq, chg_open_tq
+    
+#--------------------------
+def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
+    """
+    Separate noise and signal.
+    
+        REAL DATA = SIGNAL + NOISE
+
+    .. note: Assume data only has 1 amp readout with
+             amp on lower left when displayed with default
+             plot settings.
+
+    Parameters
+    ----------
+    data_e: array_like
+        SCI data in electrons.
+
+    model: int, optional
+        Noise mitigation algorithm.
+        Calculations done in Y only.
+
+            - 0: None.
+            - 1: Vertical linear, +/- 1 pixel.
+            - 100: Simpler version of `model`=1.
+              Not used anymore. Kept for testing.
+
+    nitrn: int, optional
+        Only used if `model`=1. Number of iterations
+        for noise mitigation, each one removing one
+        extra electron.
+
+    readNoise: float, optional
+        Only used if `model`=100. Read noise in
+        electrons.
+
+    Returns
+    -------
+    sigArr: array_like
+        Noiseless signal component in electrons.
+
+    nseArr: array_like
+        Noise component in electrons.
+
+    """
+    
+    sigArr, nseArr = pcfy.DecomposeRN(data_e, model, nitrn, readNoise)
+
+    return sigArr, nseArr
 
 #--------------------------
 # TEAL Interface functions

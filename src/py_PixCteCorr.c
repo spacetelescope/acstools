@@ -371,7 +371,7 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   return Py_BuildValue("O", py_sig_cor);
 }
 
-static PyMethodDef PixCteCorr_methods[] =
+static PyMethodDef PixCte_FixY_methods[] =
 {
   {"CalcCteFrac",  py_CalcCteFrac, METH_VARARGS, "Calculate CTE multiplier."},
   {"InterpolatePsi", py_InterpolatePsi, METH_VARARGS, "Interpolate to full tail profile."},
@@ -383,8 +383,8 @@ static PyMethodDef PixCteCorr_methods[] =
   
 };
 
-PyMODINIT_FUNC initPixCteCorr(void)
+PyMODINIT_FUNC initPixCte_FixY(void)
 {
-  (void) Py_InitModule("PixCteCorr", PixCteCorr_methods);
+  (void) Py_InitModule("PixCte_FixY", PixCte_FixY_methods);
   import_array(); // Must be present for NumPy
 }
