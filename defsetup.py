@@ -13,13 +13,13 @@ except:
 pythoninc = distutils.sysconfig.get_python_inc()
 numpyinc = numpy.get_include()
 
-ext = [ distutils.core.Extension('acstools2.PixCte_FixY',
+ext = [ distutils.core.Extension('acstools.PixCte_FixY',
         ['src/py_PixCteCorr.c',
          'src/PixCteCorr_funcs.c',
          'src/FixYCte.c'],
         include_dirs = ['include',pythoninc,numpyinc]) ]
 
-pkg =  "acstools2"
+pkg =  "acstools"
 
 setupargs = {
     'version' : 		"1.2.0",
