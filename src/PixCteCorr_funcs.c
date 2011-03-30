@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include <PixCteCorr.h>
+#include "PixCteCorr.h"
 
 #define ERROR_RETURN 2
 

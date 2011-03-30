@@ -4,7 +4,7 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 
-#include <PixCteCorr.h>
+#include "PixCteCorr.h"
 
 static PyObject * py_CalcCteFrac(PyObject *self, PyObject *args) {
   /* input variables */
