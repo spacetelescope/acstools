@@ -2,7 +2,7 @@
 #include <math.h>
 #include <string.h>
 
-#include <PixCteCorr.h>
+#include "PixCteCorr.h"
 
 /* constants that come up for optional logfile */
 #define ENDLINE "\n"
