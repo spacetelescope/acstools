@@ -17,7 +17,7 @@ ext = [ distutils.core.Extension('acstools.PixCte_FixY',
         ['src/PixCte_FixY.c',
          'src/PixCteCorr_funcs.c',
          'src/FixYCte.c'],
-        include_dirs = ['include',pythoninc,numpyinc]) ]
+        include_dirs = [pythoninc,numpyinc]) ]
 
 pkg =  "acstools"
 
