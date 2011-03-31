@@ -1,5 +1,5 @@
-#import <stdlib.h>
-#import <stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
@@ -156,6 +156,17 @@ static PyObject * py_TrackChargeTrap(PyObject *self, PyObject *args) {
   PyArrayObject *py_pix_q_array, *py_chg_leak;
   int ycte_qmax;
   
+  /* local variables */
+  int status, i, j;
+  int pix_q_array[MAX_PHI];
+  double chg_leak[MAX_TAIL_LEN*NUM_LOGQ];
+  double * chg_leak_tq, * chg_open_tq;
+  
+  /* return variables */
+  npy_intp * out_dim;
+  PyArrayObject * py_chg_leak_tq;
+  PyArrayObject * py_chg_open_tq;
+  
   /* put arguments into variables */
   if (!PyArg_ParseTuple(args, "OOi", &opy_pix_q_array, &opy_chg_leak, &ycte_qmax)) {
     return NULL;
@@ -167,19 +178,16 @@ static PyObject * py_TrackChargeTrap(PyObject *self, PyObject *args) {
     return NULL;
   }
   
-  /* local variables */
-  int status, i, j;
-  int pix_q_array[MAX_PHI];
-  double chg_leak[MAX_TAIL_LEN*NUM_LOGQ];
-  double chg_leak_tq[MAX_TAIL_LEN*ycte_qmax];
-  double chg_open_tq[MAX_TAIL_LEN*ycte_qmax];
+  /* allocate space for some local arrays */
+  chg_leak_tq = (double *) malloc(MAX_TAIL_LEN * ycte_qmax * sizeof(double));
+  chg_open_tq = (double *) malloc(MAX_TAIL_LEN * ycte_qmax * sizeof(double)); 
   
   /* return variables */
-  npy_intp out_dim[] = {MAX_TAIL_LEN, ycte_qmax};
-  PyArrayObject *py_chg_leak_tq = 
-    (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  PyArrayObject *py_chg_open_tq = 
-    (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
+  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
+  out_dim[0] = (npy_intp) MAX_TAIL_LEN;
+  out_dim[1] = (npy_intp) ycte_qmax;
+  py_chg_leak_tq = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
+  py_chg_open_tq = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
   if (!py_chg_leak_tq || !py_chg_open_tq) {
     return NULL;
   }
@@ -210,6 +218,10 @@ static PyObject * py_TrackChargeTrap(PyObject *self, PyObject *args) {
     }
   }
   
+  free(out_dim);
+  free(chg_leak_tq);
+  free(chg_open_tq);
+  
   Py_DECREF(py_pix_q_array);
   Py_DECREF(py_chg_leak);
   
@@ -223,6 +235,18 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   int model, nitr;
   double readnoise;
   
+  /* local variables */
+  int status, i, j;
+  int arrx, arry;
+  double * data;
+  double * sig;
+  double * noise;
+  
+  /* return variables */
+  npy_intp * out_dim;
+  PyArrayObject * py_sig;
+  PyArrayObject * py_noise;
+  
   /* put arguments into variables */
   if (!PyArg_ParseTuple(args, "Oiid", &opy_data, &model, &nitr, &readnoise)) {
     return NULL;
@@ -233,21 +257,19 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
     return NULL;
   }
   
-  /* local variables */
-  int status, i, j;
-  int arrx = py_data->dimensions[0];
-  int arry = py_data->dimensions[1];
-  double * data;
-  double * sig;
-  double * noise;
+  /* assign/allocate local variables */
+  arrx = py_data->dimensions[0];
+  arry = py_data->dimensions[1];
   data = (double *) malloc(arrx * arry * sizeof(double));
   sig = (double *) malloc(arrx * arry * sizeof(double));
   noise = (double *) malloc(arrx * arry * sizeof(double));
   
   /* return variables */
-  npy_intp out_dim[] = {arrx, arry};
-  PyArrayObject *py_sig = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  PyArrayObject *py_noise = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
+  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
+  out_dim[0] = (npy_intp) arrx;
+  out_dim[1] = (npy_intp) arry;  
+  py_sig = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
+  py_noise = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
   if (!py_sig || !py_noise) {
     return NULL;
   }
@@ -274,6 +296,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
     }
   }
   
+  free(out_dim);
   free(data);
   free(sig);
   free(noise);
@@ -290,6 +313,19 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   int ycte_qmax;
   const char *amp_name, *log_file;
   
+  /* local variables */
+  int status, i, j;
+  int q_pix[MAX_PHI];
+  int arrx, arry;
+  double * sig_cte;
+  double * sig_cor;
+  double * chg_leak;
+  double * chg_open;
+  
+  /* return variables */
+  npy_intp * out_dim;
+  PyArrayObject * py_sig_cor;
+  
   /* put arguments into variables */
   if (!PyArg_ParseTuple(args, "OiOOOss", &opy_sig_cte, &ycte_qmax, &opy_q_pix, 
                         &opy_chg_leak, &opy_chg_open, &amp_name, &log_file)) {
@@ -305,22 +341,18 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   }
   
   /* local variables */
-  int status, i, j;
-  int q_pix[MAX_PHI];
-  int arrx = py_sig_cte->dimensions[0];
-  int arry = py_sig_cte->dimensions[1];
-  double * sig_cte;
-  double * sig_cor;
-  double * chg_leak;
-  double * chg_open;
+  arrx = py_sig_cte->dimensions[0];
+  arry = py_sig_cte->dimensions[1];
   sig_cte = (double *) malloc(arrx * arry * sizeof(double));
   sig_cor = (double *) malloc(arrx * arry * sizeof(double));
   chg_leak = (double *) malloc(MAX_TAIL_LEN * ycte_qmax * sizeof(double));
   chg_open = (double *) malloc(MAX_TAIL_LEN * ycte_qmax * sizeof(double));
   
   /* return variables */
-  npy_intp out_dim[] = {arrx, arry};
-  PyArrayObject *py_sig_cor = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
+  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
+  out_dim[0] = (npy_intp) arrx;
+  out_dim[1] = (npy_intp) arry;
+  py_sig_cor = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
   if (!py_sig_cor) {
     return NULL;
   }
@@ -358,6 +390,7 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
     }
   }
   
+  free(out_dim);
   free(sig_cte);
   free(sig_cor);
   free(chg_leak);
