@@ -41,11 +41,15 @@ static PyObject * py_InterpolatePsi(PyObject *self, PyObject *args) {
   int psi_node[NUM_PSI];
   double chg_leak[NUM_PSI*NUM_LOGQ];
   double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ];
+  double chg_open_interp[MAX_TAIL_LEN*NUM_LOGQ];
   
   /* return variable */
   npy_intp chg_leak_dim[] = {MAX_TAIL_LEN, NUM_LOGQ};
-  PyArrayObject *py_chg_leak_interp = (PyArrayObject *) PyArray_SimpleNew(2, chg_leak_dim, NPY_DOUBLE);
-  if (!py_chg_leak_interp) {
+  PyArrayObject *py_chg_leak_interp = 
+              (PyArrayObject *) PyArray_SimpleNew(2, chg_leak_dim, NPY_DOUBLE);
+  PyArrayObject *py_chg_open_interp = 
+              (PyArrayObject *) PyArray_SimpleNew(2, chg_leak_dim, NPY_DOUBLE);
+  if (!py_chg_leak_interp || !py_chg_open_interp) {
     return NULL;
   }
   
@@ -70,69 +74,67 @@ static PyObject * py_InterpolatePsi(PyObject *self, PyObject *args) {
   }
   
   /* call InterpolatePsi */
-  status = InterpolatePsi(chg_leak, psi_node, chg_leak_interp);
+  status = InterpolatePsi(chg_leak, psi_node, chg_leak_interp, chg_open_interp);
   if (status != 0) {
     PyErr_SetString(PyExc_StandardError, "An error occurred in InterpolatePsi.");
     return NULL;
   }
   
-  /* copy chg_leak_interp to returned PyArrayObject */
+  /* copy chg_leak_interp and chg_open_interp to returned PyArrayObjects */
   for (i = 0; i < MAX_TAIL_LEN; i++) {
     for (j = 0; j < NUM_LOGQ; j++) {
-      *(npy_double *) PyArray_GETPTR2(py_chg_leak_interp, i, j) = chg_leak_interp[i*NUM_LOGQ + j];
+      *(npy_double *) PyArray_GETPTR2(py_chg_leak_interp, i, j) = 
+                                                chg_leak_interp[i*NUM_LOGQ + j];
+      *(npy_double *) PyArray_GETPTR2(py_chg_open_interp, i, j) = 
+                                                chg_open_interp[i*NUM_LOGQ + j];
     }
   }
   
   Py_DECREF(py_psi_node);
   Py_DECREF(py_chg_leak);
   
-  return Py_BuildValue("O",py_chg_leak_interp);
+  return Py_BuildValue("OO",py_chg_leak_interp, py_chg_open_interp);
 }
 
 static PyObject * py_InterpolatePhi(PyObject *self, PyObject *args) {
   /* input variables */
-  PyObject *opy_dtde_l;
-  PyArrayObject *py_dtde_l;
-  double cte_frac;
+  PyObject *opy_dtde_l, *opy_q_dtde;
+  PyArrayObject *py_dtde_l, *py_q_dtde;
+  int shft_nit;
   
   /* local variables */
   int status, p;
   double dtde_l[NUM_PHI];
+  int q_dtde[NUM_PHI];
   double dtde_q[MAX_PHI];
-  int q_pix_array[MAX_PHI];
-  int pix_q_array[MAX_PHI] = {0};
-  int ycte_qmax;
   
   /* return variables */
-  npy_intp phi_dim[] = {NUM_PHI};
   npy_intp phi_max_dim[] = {MAX_PHI};
   PyArrayObject *py_dtde_q = 
     (PyArrayObject *) PyArray_SimpleNew(1, phi_max_dim, NPY_DOUBLE);
-  PyArrayObject *py_q_pix_array = 
-    (PyArrayObject *) PyArray_SimpleNew(1, phi_max_dim, NPY_INT);
-  PyArrayObject *py_pix_q_array = 
-    (PyArrayObject *) PyArray_SimpleNew(1, phi_max_dim, NPY_INT);
-  if (!py_dtde_q || !py_q_pix_array || !py_pix_q_array) {
+  if (!py_dtde_q) {
     return NULL;
   }
  
   /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "Od", &opy_dtde_l, &cte_frac)) {
+  if (!PyArg_ParseTuple(args, "OOi", &opy_dtde_l, &opy_q_dtde, &shft_nit)) {
     return NULL;
   }
    
   py_dtde_l = (PyArrayObject *) PyArray_FROMANY(opy_dtde_l, NPY_DOUBLE, 1, 1, NPY_IN_ARRAY);
-  if (!py_dtde_l) {
+  py_q_dtde = (PyArrayObject *) PyArray_FROMANY(opy_q_dtde, NPY_INT, 1, 1, NPY_IN_ARRAY);
+  if (!py_dtde_l || !py_q_dtde) {
     return NULL;
   }
   
   /* copy input python array to local C array */
   for (p = 0; p < NUM_PHI; p++) {
     dtde_l[p] = *(double *) PyArray_GETPTR1(py_dtde_l, p);
+    q_dtde[p] = *(int *) PyArray_GETPTR1(py_q_dtde, p);
   }
   
   /* call InterpolatePhi */
-  status = InterpolatePhi(dtde_l, cte_frac, dtde_q, q_pix_array, pix_q_array, &ycte_qmax);
+  status = InterpolatePhi(dtde_l, q_dtde, shft_nit, dtde_q);
   if (status != 0) {
     PyErr_SetString(PyExc_StandardError, "An error occurred in InterpolatePhi.");
     return NULL;
@@ -140,14 +142,13 @@ static PyObject * py_InterpolatePhi(PyObject *self, PyObject *args) {
   
   /* copy local C arrays to return variables */
   for (p = 0; p < MAX_PHI; p++) {
-    *(double *) PyArray_GETPTR1(py_dtde_q, p) = dtde_q[p];
-    *(int *) PyArray_GETPTR1(py_q_pix_array, p) = q_pix_array[p];
-    *(int *) PyArray_GETPTR1(py_pix_q_array, p) = pix_q_array[p];
+    *(npy_double *) PyArray_GETPTR1(py_dtde_q, p) = dtde_q[p];
   }
   
   Py_DECREF(py_dtde_l);
+  Py_DECREF(py_q_dtde);
   
-  return Py_BuildValue("OOOi",py_dtde_q, py_q_pix_array, py_pix_q_array, ycte_qmax);
+  return Py_BuildValue("O",py_dtde_q);
 }
 
 static PyObject * py_TrackChargeTrap(PyObject *self, PyObject *args) {
