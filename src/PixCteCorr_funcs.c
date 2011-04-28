@@ -182,6 +182,96 @@ int InterpolatePhi(const double dtde_l[NUM_PHI], const int q_dtde[NUM_PHI],
   return status;
 }
 
+/* In this function we're interpolating the tail arrays over the Q dimension
+ * and reducing the arrays to contain data at only the charge levels
+ * specified in the levels array. */
+int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
+                    const double chg_open_kt[MAX_TAIL_LEN*NUM_LOGQ],
+                    const double dtde_q[MAX_PHI], const int levels[NUM_LEV],
+                    double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
+                    double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
+                    double dpde_l[NUM_LEV],
+                    int tail_len[NUM_LEV]) {
+  
+  /* status variable for return */
+  int status = 0;
+  
+  int l,t;  /* iteration variables for tail and levels */
+  int q;    /* iteration variable for q levels in between those specified in levels */
+  
+  /* container for cumulative dtde_q */
+  double cpde_l[NUM_LEV];
+  
+  /* variable for running sum of dtde_q */
+  double sum = 0.0;
+  
+  int logq_ind; /* index of lower logq used for interpolation */
+  
+  double logq;           /* log of charge level */
+  double logq_min = 1.0; /* min value for logq */
+  double logq_max = 3.999; /* max value for logq */
+  
+  double interp_dist; /* difference between logp and lower logq */
+  
+  dpde_l[0] = 0.0;
+  cpde_l[0] = 0.0;
+  
+  for (t = 0; t < MAX_TAIL_LEN; t++) {
+    chg_leak_lt[t*NUM_LEV] = chg_leak_kt[t*NUM_LOGQ];
+    chg_open_lt[t*NUM_LEV] = chg_open_kt[t*NUM_LOGQ];
+  }
+  
+  for (l = 1; l < NUM_LEV; l++) {
+    for (q = levels[l-1]; q < levels[l]; q++) {
+      sum += dtde_q[q];
+    }
+    
+    cpde_l[l] = sum;
+    dpde_l[l] = cpde_l[l] - cpde_l[l-1];
+    
+    /* calculate logq with min/max clipping */
+    logq = log10((double) levels[q]);
+    if (logq < logq_min) {
+      logq = logq_min;
+    } else if (logq > logq_max) {
+      logq = logq_max;
+    }
+    
+    /* set logq_ind for this logq */
+    if (logq < 2) {
+      logq_ind = 0;
+    } else if (logq < 3) {
+      logq_ind = 1;
+    } else {
+      logq_ind = 2;
+    }
+    
+    interp_dist = logq - floor(logq);
+    
+    for (t = 0; t < MAX_TAIL_LEN; t++) {
+      chg_leak_lt[t*NUM_LEV + l] = ((1.0 - interp_dist) * chg_leak_kt[t*NUM_LOGQ + logq_ind]) +
+                                   (interp_dist * chg_leak_kt[t*NUM_LOGQ + logq_ind+1]);
+      chg_open_lt[t*NUM_LEV + l] = ((1.0 - interp_dist) * chg_open_kt[t*NUM_LOGQ + logq_ind]) +
+                                   (interp_dist * chg_open_kt[t*NUM_LOGQ + logq_ind+1]);
+    }
+  }
+  
+  /* calculate max tail lengths for each level */
+  for (l = 0; l < NUM_LEV; l++) {
+    tail_len[l] = MAX_TAIL_LEN;
+    
+    for (t = MAX_TAIL_LEN-1; t >= 0; t--) {
+      if (chg_leak_lt[t*NUM_LEV + l] == 0) {
+        tail_len[l] = t+1;
+      } else {
+        break;
+      }
+    }
+  }
+  
+  return status;
+}
+
 int TrackChargeTrap(const int pix_q_array[MAX_PHI], 
                     const double chg_leak[MAX_TAIL_LEN*NUM_LOGQ],
                     const int ycte_qmax, 

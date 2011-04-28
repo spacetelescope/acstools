@@ -257,6 +257,15 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     # q_pix_array: Maps Q (cumulative charge) to P (dependent var).
     # pix_q_array: Maps P to Q.
     dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
+ 
+    # finish interpolation along the Q dimension and reduce arrays to contain
+    # only info at the levels specified in the levels array
+    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+      pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
+          
+    # Compute open spaces. Overwrite log file.
+#    chg_leak_tq, chg_open_tq = _TrackChargeTrap(pix_q_array, chg_leak_kt, 
+#                                                ycte_qmax, pFile=outLog, psiNode=psi_node)
 
     # Extract data for amp quadrants.
     # For each amp, view of image is created with amp on bottom left.
@@ -286,10 +295,6 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
         # Log file name
         outLog = rootname + '_cte_log.txt'
     # End if
-
-    # Compute open spaces. Overwrite log file.
-    chg_leak_tq, chg_open_tq = _TrackChargeTrap(pix_q_array, chg_leak_kt, 
-                                                ycte_qmax, pFile=outLog, psiNode=psi_node)
 
     # Choose one amp to log detailed results
     ampPriorityOrder = ['C','D','A','B'] # Might be instrument dependent
@@ -329,8 +334,9 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
         # End if
 
         # CTE correction in DN.
-        sciAmpCor = pcfy.FixYCte(sciAmpSig, ycte_qmax, q_pix_array, 
-                              chg_leak_tq, chg_open_tq, amp, outLog2)
+        sciAmpCor = pcfy.FixYCte(sciAmpSig, cte_frac, sim_nit, shft_nit,
+                                  levels, dpde_l, tail_len,
+                                  chg_leak_lt, chg_open_lt, amp, outLog2)
 
         # Convert corrected noiseless data back to electrons.
         # Add noise in electrons back to corrected image.
