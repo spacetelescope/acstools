@@ -15,12 +15,6 @@
 /* parameters of readout noise decomposition routines */
 #define NOISE_MODEL 1
 
-/* full frame size of an ACS WFC single amp image without bias regions */
-#define MAX_WFC_SIZE 2048
-
-/* temporary so things compile for testing */
-#define NUM_SIM_ITER 5
-
 /* structure to hold CTE parameters from reference file */
 typedef struct {
   int rn2_nit;
@@ -44,11 +38,6 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
                     double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
                     double dpde_l[NUM_LEV],
                     int tail_len[NUM_LEV]);
-int TrackChargeTrap(const int pix_q_array[MAX_PHI], 
-                    const double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ],
-                    const int ycte_qmax, 
-                    double chg_leak_tq[MAX_TAIL_LEN*ycte_qmax],
-                    double chg_open_tq[MAX_TAIL_LEN*ycte_qmax]);
 int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry], 
                 const int model, const int nitr, const double readnoise,
                 double sig_arr[arrx*arry], double noise_arr[arrx*arry]);

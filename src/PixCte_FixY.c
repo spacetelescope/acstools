@@ -243,84 +243,6 @@ static PyObject * py_FillLevelArrays(PyObject *self, PyObject *args) {
   return Py_BuildValue("OOOO",py_chg_leak_lt, py_chg_open_lt, py_dpde_l, py_tail_len);
 }
 
-static PyObject * py_TrackChargeTrap(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_pix_q_array, *opy_chg_leak;
-  PyArrayObject *py_pix_q_array, *py_chg_leak;
-  int ycte_qmax;
-  
-  /* local variables */
-  int status, i, j;
-  int pix_q_array[MAX_PHI];
-  double chg_leak[MAX_TAIL_LEN*NUM_LOGQ];
-  double * chg_leak_tq, * chg_open_tq;
-  
-  /* return variables */
-  npy_intp * out_dim;
-  PyArrayObject * py_chg_leak_tq;
-  PyArrayObject * py_chg_open_tq;
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OOi", &opy_pix_q_array, &opy_chg_leak, &ycte_qmax)) {
-    return NULL;
-  }
-  
-  py_pix_q_array = (PyArrayObject *) PyArray_FROMANY(opy_pix_q_array, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_chg_leak = (PyArrayObject *) PyArray_FROMANY(opy_chg_leak, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  if (!py_pix_q_array || !py_chg_leak) {
-    return NULL;
-  }
-  
-  /* allocate space for some local arrays */
-  chg_leak_tq = (double *) malloc(MAX_TAIL_LEN * ycte_qmax * sizeof(double));
-  chg_open_tq = (double *) malloc(MAX_TAIL_LEN * ycte_qmax * sizeof(double)); 
-  
-  /* return variables */
-  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
-  out_dim[0] = (npy_intp) MAX_TAIL_LEN;
-  out_dim[1] = (npy_intp) ycte_qmax;
-  py_chg_leak_tq = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  py_chg_open_tq = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  if (!py_chg_leak_tq || !py_chg_open_tq) {
-    return NULL;
-  }
-  
-  /* copy input python arrays to local C arrays */
-  for (i = 0; i < MAX_PHI; i++) {
-    pix_q_array[i] = *(int *) PyArray_GETPTR1(py_pix_q_array, i);
-  }
-  
-  for (i = 0; i < MAX_TAIL_LEN; i++) {
-    for (j = 0; j < NUM_LOGQ; j++) {
-      chg_leak[i*NUM_LOGQ + j] = *(double *) PyArray_GETPTR2(py_chg_leak, i, j);
-    }
-  }
-  
-  /* call TrackChargeTrap */
-  status  = TrackChargeTrap(pix_q_array, chg_leak, ycte_qmax, chg_leak_tq, chg_open_tq);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in TrackChargeTrap.");
-    return NULL;
-  }
-  
-  /* copy local C arrays to return variables */
-  for (i = 0; i < MAX_TAIL_LEN; i++) {
-    for (j = 0; j < ycte_qmax; j++) {
-      *(npy_double *) PyArray_GETPTR2(py_chg_leak_tq, i, j) = (npy_double) chg_leak_tq[i*ycte_qmax + j];
-      *(npy_double *) PyArray_GETPTR2(py_chg_open_tq, i, j) = (npy_double) chg_open_tq[i*ycte_qmax + j];
-    }
-  }
-  
-  free(out_dim);
-  free(chg_leak_tq);
-  free(chg_open_tq);
-  
-  Py_DECREF(py_pix_q_array);
-  Py_DECREF(py_chg_leak);
-  
-  return Py_BuildValue("OO",py_chg_leak_tq, py_chg_open_tq);
-}
-
 static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   /* input variables */
   PyObject *opy_data;
@@ -405,7 +327,8 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   PyObject *opy_chg_leak_lt, *opy_chg_open_lt;
   PyArrayObject *py_sig_cte, *py_levels, *py_dpde_l, *py_tail_len;
   PyArrayObject *py_chg_leak_lt, *py_chg_open_lt;
-  int cte_frac, sim_nit, shft_nit;
+  double cte_frac;
+  int sim_nit, shft_nit;
   const char *amp_name, *log_file;
   
   /* local variables */
@@ -513,7 +436,6 @@ static PyMethodDef PixCte_FixY_methods[] =
   {"InterpolatePsi", py_InterpolatePsi, METH_VARARGS, "Interpolate to full tail profile."},
   {"InterpolatePhi", py_InterpolatePhi, METH_VARARGS, "Interpolate charge traps."},
   {"FillLevelArrays", py_FillLevelArrays, METH_VARARGS, "FillLevelArrays."},
-  {"TrackChargeTrap", py_TrackChargeTrap, METH_VARARGS, "TrackChargeTrap."},
   {"DecomposeRN", py_DecomposeRN, METH_VARARGS, "Separate signal and readnoise."},
   {"FixYCte", py_FixYCte, METH_VARARGS, "Perform parallel CTE correction."},
   {NULL, NULL, 0, NULL} /* sentinel */

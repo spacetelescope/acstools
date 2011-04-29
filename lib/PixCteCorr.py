@@ -604,61 +604,6 @@ def _InterpolatePhi(dtde_l, cte_frac):
     
     return dtde_q, q_pix_array, pix_q_array, ycte_qmax
 
-#--------------------------
-def _TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax, pFile=None, psiNode=None):
-    """
-    Calculate the trails (N pix downstream) for each
-    block of charge that amounts to a single electron
-    worth of traps. Determine what the trails look
-    like for each of the traps bring tracked.
-
-    Parameters
-    ----------
-    pix_q_array: array_like
-        Maps P to cumulative charge.
-
-    chg_leak_kt: array_like
-        Interpolated PSI(Q,N).
-        
-    ycte_qmax: integer
-
-    pFile: string, optional 
-        Optional log file name.
-
-    psiNode: array_like
-        PSI nodes from PCTEFILE. Only used with `pFile`.
-
-    Returns
-    -------
-    chg_leak_tq: array_like
-
-    chg_open_tq: array_like
-    
-    """
-
-    chg_leak_tq, chg_open_tq = pcfy.TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax)
-
-    # Write results to log file
-    if pFile:
-        i_open = 100
-        i2 = i_open - 1
-        psinode2 = psiNode - 1
-        fLog = open(pFile,'w') # Overwrite
-
-        fLog.write('%-1s%4s %5s ' % ('#', 'Q', 'P'))
-        for t in psiNode: fLog.write('NODE_%-3i ' % t)
-        fLog.write('OPEN_%-3i%s' % (i_open, os.linesep))
-
-        for q in q_range:
-            fLog.write('%5i %5.0f ' % (q+1, pix_q_array[q]))
-            for t in psinode2: fLog.write('%8.4f ' % chg_leak_tq[t,q])
-            fLog.write('%8.4f%s' % (chg_open_tq[i2,q], os.linesep))
-        # End of q loop
-
-        fLog.close()
-    # End if
-
-    return chg_leak_tq, chg_open_tq
     
 #--------------------------
 def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):

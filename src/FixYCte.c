@@ -20,13 +20,6 @@ int sim_readout_nit(const int arrx, double pix_cur[arrx], double pix_read[arrx],
                     const double dpde_l[NUM_LEV], const int tail_len[NUM_LEV],
                     const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
                     const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]);
-//int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
-//                const int ycte_qmax, const int q_pix_array[MAX_PHI], 
-//                const double chg_leak[MAX_TAIL_LEN*ycte_qmax],
-//                const double chg_open[MAX_TAIL_LEN*ycte_qmax]);
-//double eval_prof(const int ycte_qmax, const double chg[MAX_TAIL_LEN*ycte_qmax],
-//                 const int t, const int q, const double val4tmax);
-//int eval_qpix(const int q_pix_array[MAX_PHI], const double p);
 
 
 int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
@@ -44,9 +37,9 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
   int i, j, n;
   
   /* arrays to hold columns of data */
-  double pix_obs[arry];
-  double pix_cur[arry];
-  double pix_read[arry];
+  double pix_obs[arrx];
+  double pix_cur[arrx];
+  double pix_read[arrx];
   
   /* optional log file */
   int doLog = 0;
@@ -67,11 +60,10 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
   }
   
   /* loop over columns. columns are independent of each other. */
-  for (i = 0; i < arry; i++) {
-    
+  for (i = 0; i < arry; i++) {    
     /* copy column data */
     for (j = 0; j < arrx; j++) {
-      pix_obs[j] = sig_cte[j*arrx + i];
+      pix_obs[j] = sig_cte[j*arry + i];
       pix_cur[j] = pix_obs[j];
       pix_read[j] = 0.0;
     }
@@ -90,7 +82,7 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
     
     /* copy fixed column to output */
     for (j = 0; j < arrx; j++) {
-      sig_cor[j*arrx + i] = pix_cur[j];
+      sig_cor[j*arry + i] = pix_cur[j];
     }
     
     /* Write to log file */
@@ -182,7 +174,7 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
   int tmax;
   
   /* holds some trap info, I guess */
-  double ftrap_lj[arrx*NUM_LEV] = {0.0};  /* all elemnts initialized to 0 */
+  double ftrap_lj[arrx*NUM_LEV];
   
   double pix0;    /* current pixel container */
   double fpix;    /* fraction of this pixel involved */
@@ -193,10 +185,15 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
   /* copy input to output */
   for (i = 0; i < arrx; i++) {
     pix_read[i] = pix_cur[i];
+    
+    /* initialize trap array to zeros */
+    for (l = 0; l < NUM_LEV; l++) {
+      ftrap_lj[i*NUM_LEV + l] = 0.0;
+    }
   }
   
   /* iterate over every pixel in the column */
-  for (i = 0; i < arrx, i++) {
+  for (i = 0; i < arrx; i++) {
     pix0 = pix_read[i];
     
     for (l = 1; l < NUM_LEV; l++) {
@@ -219,141 +216,24 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
       ffil = fpix*fopn;
       
       /* how many electrons can this take? */
-      dpix = cte_frac * dpde_l[l] * ffil * ((double) i / (double) CTE_REF_ROW);
+      dpix = cte_frac * dpde_l[l] * ffil * ((double) (i+1) / (double) CTE_REF_ROW);
       
       /* remove electrons from the pixel */
-      pix_read[i] = pix_read[i] - dpix;
+      pix_read[i] -= dpix;
       
-      /* redistribute pixels in the tail */
-      if (tail_len[l] < arrx - i) {
+      /* redistribute electrons in the tail */
+      if (tail_len[l] < (arrx - i)) {
         tmax = tail_len[l];
       } else {
         tmax = arrx - i;
       }
 
-      for (t = 0; t < tmax; t++) {
-        pix_read[i+t] = pix_read[i+t] + (dpix * chg_leak_lt[t*NUM_LEV + l]);
-        ftrap_lj[i*NUM_LEV + l] = ftrap_lj[(i+t)*NUM_LEV + l] + 
-                                            (ffil * chg_open_lt[t*NUM_LEV + l]);
+      for (t = 1; t < tmax; t++) {
+        pix_read[i+t] += (dpix * chg_leak_lt[t*NUM_LEV + l]);
+        ftrap_lj[(i+t)*NUM_LEV + l] += (ffil * chg_open_lt[t*NUM_LEV + l]);
       }
     }
   }
   
   return status;
-}
-
-/* simulate readout of a column */
-//int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
-//                const int ycte_qmax, const int q_pix_array[MAX_PHI], 
-//                const double chg_leak[MAX_TAIL_LEN*ycte_qmax],
-//                const double chg_open[MAX_TAIL_LEN*ycte_qmax]) {
-//  
-//  /* status variable for return */
-//  int status = 0;
-//  
-//  /* iteration variables */
-//  int i, t, q, qpix;
-//  
-//  int trapq[ycte_qmax];  
-//  int trapq_init = 100;
-//  
-//  double iy, free1, fill;
-//  
-//  /* initialize trapq array */
-//  for (q = 0; q < ycte_qmax; q++) {
-//    trapq[q] = trapq_init;
-//  }
-//  
-//  /* go through readout cycle. read the end pixel first and put it next
-//   * onto the buffer. then shift the others over. do this arrx times .*/
-//  for (i = 0; i < arrx; i++) {
-//    
-//    iy = (i + 1.0) / MAX_WFC_SIZE;
-//    
-//    /* first half of the loop deals with the emptying of traps.
-//     * trapq[q] tells you how long it has been since trap #q
-//     * has released its charge. */
-//    free1 = 0.0;
-//    q = 0;
-//    while (q < ycte_qmax && trapq[q] < trapq_init) {
-//      
-//      t = trapq[q] + 1;
-//      if (t <= trapq_init) {
-//        /* once a trap has given off its electrons for this shift, then
-//         * increment how long it's been since it was filled. */
-//        
-//        free1 += eval_prof(ycte_qmax, chg_leak, t-1, q, 0.0) * iy;
-//        
-//        trapq[q]++;
-//      }
-//      
-//      q++;
-//    } /* end loop emptying traps */
-//    
-//    pix_read[i] = pix_cur[i] + free1;
-//    
-//    /* second half of the loop deals with the filling of traps.
-//     * it is easier to confine fewer electrons. a larger electron
-//     * cloud sees more traps as a cloud but less traps per electron.
-//     * trap density is probably uniform but electron cloud is not.*/
-//    fill = 0.0;
-//    qpix = eval_qpix(q_pix_array, pix_read[i]);
-//    for (q = 0; q < qpix; q++) {
-//      t = trapq[q];
-//      fill += eval_prof(ycte_qmax, chg_open, t-1, q, 1.0) * iy;
-//      trapq[q] = 0;
-//    } /* end loop filling traps */
-//    
-//    pix_read[i] -= fill;
-//  } /* end loop over columns */
-//  
-//  return status;
-//}
-
-double eval_prof(const int ycte_qmax, const double chg[MAX_TAIL_LEN*ycte_qmax],
-                 const int t, const int q, const double val4tmax) {
-  
-  double rval = 0.0;
-  
-  int qu = q;
-  int qu_max = ycte_qmax - 1;
-  int t_max = MAX_TAIL_LEN - 1;
-  
-  if (t < 0) {
-    return rval;
-  } else if (t > t_max) {
-    return val4tmax;
-  } else if (q < 0) {
-    return rval;
-  }
-  
-  if (q > qu_max) {
-    qu = qu_max;
-  }
-  
-  rval = chg[t*ycte_qmax + qu];
-  
-  return rval;
-}
-
-int eval_qpix(const int q_pix_array[MAX_PHI], const double p) {
-  
-  int rval = 0;
-  
-  int ip;
-  int ip_max = MAX_PHI - 1;
-  
-  if (p < 1) {
-    return rval;
-  }
-  
-  ip = ((int) p) - 1;
-  
-  if (ip > ip_max) {
-    ip = ip_max;
-  }
-  
-  rval = q_pix_array[ip];
-  
-  return rval;
 }
