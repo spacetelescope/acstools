@@ -354,6 +354,9 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     # Update header
     pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
     pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac)
+    pf_out['PRIMARY'].header.update('PCTERNIT', rn2_nit)
+    pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
+    pf_out['PRIMARY'].header.update('PCTESFIT', shft_nit)
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
     pf_out['PRIMARY'].header.add_history('PCTE NITS is %i' % nits)
     pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
