@@ -271,7 +271,6 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     # For each amp, view of image is created with amp on bottom left.
     quadObj = ImageOpByAmp.ImageOpByAmp(pf_out)
     ampList = quadObj.GetAmps()
-    gain = quadObj.GetHdrValByAmp('gain')
     # DQ needs to be read if new flags are to be added.
     sciQuadData = quadObj.DataByAmp()
     errQuadData = quadObj.DataByAmp(extName='ERR')
@@ -307,7 +306,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
 
     # Process each amp readout
     for amp in ampList:
-        print os.linesep, 'AMP', amp, ', GAIN', gain[amp]
+        print os.linesep, 'AMP', amp
         
         # Keep a copy of original SCI for error calculations.
         # Assume unit of electrons.
@@ -323,9 +322,6 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
             mosRn[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpNse, tCode, trueCopy=True)
         # End if
 
-        # Convert noiseless image from electrons to DN.
-        sciAmpSig /= gain[amp]
-
         # Only log pre-selected amp.
         if amp == amp2log:
             outLog2 = outLog
@@ -338,9 +334,8 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
                                   levels, dpde_l, tail_len,
                                   chg_leak_lt, chg_open_lt, amp, outLog2)
 
-        # Convert corrected noiseless data back to electrons.
         # Add noise in electrons back to corrected image.
-        sciAmpFin = sciAmpCor * gain[amp] + sciAmpNse
+        sciAmpFin = sciAmpCor + sciAmpNse
         sciQuadData[amp][:,:] = sciAmpFin.astype(sciQuadData[amp].dtype)
 
         # Apply 10% correction to ERR in quadrature.
