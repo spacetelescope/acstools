@@ -195,9 +195,6 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
   /* iterate over every pixel in the column */
   for (i = 0; i < arrx; i++) {
     pix0 = pix_read[i];
-    if (pix0 != 0) {
-      printf("%i %f\n",i,pix0);
-    }
     
     for (l = 1; l < NUM_LEV; l++) {
       /* skip the rest of the levels if we don't have enough charge to reach
