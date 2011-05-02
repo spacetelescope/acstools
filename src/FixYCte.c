@@ -195,6 +195,9 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
   /* iterate over every pixel in the column */
   for (i = 0; i < arrx; i++) {
     pix0 = pix_read[i];
+    if (pix0 != 0) {
+      printf("%i %f\n",i,pix0);
+    }
     
     for (l = 1; l < NUM_LEV; l++) {
       /* skip the rest of the levels if we don't have enough charge to reach
@@ -222,15 +225,15 @@ int sim_readout(const int arrx, double pix_cur[arrx], double pix_read[arrx],
       pix_read[i] -= dpix;
       
       /* redistribute electrons in the tail */
-      if (tail_len[l] < (arrx - i)) {
+      if ((i + tail_len[l]) < arrx) {
         tmax = tail_len[l];
       } else {
-        tmax = arrx - i;
+        tmax = arrx - i - 1;
       }
 
-      for (t = 1; t < tmax; t++) {
-        pix_read[i+t] += (dpix * chg_leak_lt[t*NUM_LEV + l]);
-        ftrap_lj[(i+t)*NUM_LEV + l] += (ffil * chg_open_lt[t*NUM_LEV + l]);
+      for (t = 1; t <= tmax; t++) {
+        pix_read[i+t] += (dpix * chg_leak_lt[(t-1)*NUM_LEV + l]);
+        ftrap_lj[(i+t)*NUM_LEV + l] += (ffil * chg_open_lt[(t-1)*NUM_LEV + l]);
       }
     }
   }
