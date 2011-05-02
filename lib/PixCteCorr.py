@@ -53,8 +53,8 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "0.3.0"
-__vdate__ = "21-Mar-2011"
+__version__ = "0.4.0"
+__vdate__ = "03-May-2011"
 
 # general error for things related to his module
 class PixCteError(Exception):
