@@ -30,8 +30,8 @@ double CalcCteFrac(const double mjd, const int instrument) {
   if (instrument == ACSWFC) {
     cte_pt1 = 0.0;
     cte_pt2 = 1.0;
-    mjd_pt1 = 52335.0;
-    mjd_pt2 = 55105.0;
+    mjd_pt1 = 52335.0;  /* March 2, 2002 */
+    mjd_pt2 = 55263.0;  /* March 8, 2010 */
   } else {
     printf("Instrument not found: %i\n",instrument);
     return -9999.0;
@@ -53,7 +53,8 @@ double CalcCteFrac(const double mjd, const int instrument) {
  * chg_leak has none.
  */
 int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[NUM_PSI],
-                   double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ]) {
+                   double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ],
+                   double chg_open_interp[MAX_TAIL_LEN*NUM_LOGQ]) {
   
   /* status variable for return */
   int status = 0;
@@ -66,6 +67,9 @@ int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[N
   
   double interp_frac; /* the fraction of the distance between psi_node1 and
                        * psi_node2 are we interpolating at */
+  
+  double sum_rel;     /* total probability of release */
+  double sum_cum;     /* running total probability of release */
   
   /* iteration variables */
   int i, j;
@@ -82,7 +86,7 @@ int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[N
     } else {
       /* no match, need to interpolate */
       interp_frac = ((double) (i+1 - psi_node[pn_i1])) / 
-      ((double) (psi_node[pn_i2] - psi_node[pn_i1]));
+                    ((double) (psi_node[pn_i2] - psi_node[pn_i1]));
       /* loop over each q column */
       for (j = 0; j < NUM_LOGQ; j++) {
         chg_leak_interp[i*NUM_LOGQ + j] = chg_leak[pn_i1*NUM_LOGQ + j] + 
@@ -98,6 +102,29 @@ int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[N
     }
   }
   
+  /* perform tail normalization and cumulative release probability calculation */
+  for (i = 0; i < NUM_LOGQ; i++) {
+    sum_rel = 0.0;
+    
+    /* get total in this Q column */
+    for (j = 0; j < MAX_TAIL_LEN; j++) {
+      sum_rel += chg_leak_interp[j*NUM_LOGQ + i];
+    }
+    
+    /* normalize chg_leak_interp by total */
+    for (j = 0; j < MAX_TAIL_LEN; j++) {
+      chg_leak_interp[j*NUM_LOGQ + i] = chg_leak_interp[j*NUM_LOGQ + i]/sum_rel;
+    }
+    
+    /* calculate cumulative probability of release */
+    sum_cum = 0.0;
+    
+    for (j = 0; j < MAX_TAIL_LEN; j++) {
+      sum_cum += chg_leak_interp[j*NUM_LOGQ + i];
+      chg_open_interp[j*NUM_LOGQ + i] = 1.0 - sum_cum;
+    }
+  }
+  
   return status;
 }
 
@@ -109,124 +136,136 @@ int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[N
  * Input dtde_l is read from the CTE parameters file and cte_frac is calculated
  * from the observation start date by CalcCteFrac.
  * Outputs dtde_q, q_pix_array, and pix_q_array are arrays MAX_PHI long (should
- * be 49999) and ycte_qmax is an integer.
+ * be 99999) and ycte_qmax is an integer.
  */
-int InterpolatePhi(const double dtde_l[NUM_PHI], const double cte_frac,
-                   double dtde_q[MAX_PHI], int q_pix_array[MAX_PHI],
-                   int pix_q_array[MAX_PHI], int *ycte_qmax) {
+int InterpolatePhi(const double dtde_l[NUM_PHI], const int q_dtde[NUM_PHI],
+                   const int shft_nit, double dtde_q[MAX_PHI]) {
   
   /* status variable for return */
   int status = 0;
   
-  double sum = 0.0; /* running sum of charge up to and including phi node p */
-  
-  int p; /* iteration variable over phi nodes */
+  int p; /* iteration variable over phi nodes in reference file */
+  int q; /* iteration variable over single phi values between nodes in ref file */
   
   /* interpolation calculation variables */
-  int hi_node;       /* index of higher phi node we're using for interpolation.
-                      * (i.e. one of the values from the CTE params file) */
   double interp_pt;   /* point at which we're interpolating data */
   double interp_dist; /* difference between interp_pt and low_node */
+  double interp_val;  /* interpolated value */
   
-  for (p = 0; p < MAX_PHI; p++) {
+  /* upper and lower bounds of interpolation range */
+  double log_qa, log_qb;
+  double log_da, log_db;
+  
+  /* something for holding intermediate calculation results */
+  double qtmp;
+  
+  for (p = 0; p < NUM_PHI-1; p++) {
+    log_qa = log10((double) q_dtde[p]);
+    log_qb = log10((double) q_dtde[p+1]);
+    log_da = log10(dtde_l[p]);
+    log_db = log10(dtde_l[p+1]);
     
-    /* calculate interpolation variables */
-    interp_pt = 1.0 + (2.0 * log10(p+1));
-    hi_node = (int) floor(interp_pt);
-    interp_dist = interp_pt - (double) hi_node;
-    
-    /* interpolate dtde */
-    dtde_q[p] = cte_frac * (dtde_l[hi_node-1] + 
-                            (interp_dist * (dtde_l[hi_node] - dtde_l[hi_node-1])));
-    
-    /* add phi p charge to cumulative total */
-    sum += dtde_q[p];
-    
-    /* store cumulative total */
-    if (sum < 1) {
-      q_pix_array[p] = 1;
-    } else {
-      q_pix_array[p] = (int) floor(sum);
-    }
-    
-    /* store phi node with this sum */
-    if (q_pix_array[p] < MAX_PHI) {
-      pix_q_array[q_pix_array[p]-1] = p+1;
-    } else {
-      printf("Phi node %i has q = %i greater than MAX_PHI.",p+1, q_pix_array[p]);
-      status = ERROR_RETURN;
-      return status;
+    for (q = q_dtde[p]; q < q_dtde[p+1]; q++) {
+      interp_pt = log10((double) q);
+      interp_dist = (interp_pt - log_qa) / (log_qb - log_qa);
+      interp_val = log_da + (interp_dist * (log_db - log_da));
+      
+      qtmp = pow(10, interp_val)/(double) CTE_REF_ROW;
+      qtmp = pow((1.0 - qtmp), (double) CTE_REF_ROW/ (double) shft_nit);
+      dtde_q[q-1] = 1.0 - qtmp;
     }
   }
   
-  *ycte_qmax = (int) floor(sum);
+  qtmp = pow((1.0 - (dtde_l[NUM_PHI-1]/CTE_REF_ROW)),CTE_REF_ROW/shft_nit);
+  dtde_q[MAX_PHI-1] = 1.0 - qtmp;
   
   return status;
 }
 
-int TrackChargeTrap(const int pix_q_array[MAX_PHI], 
-                    const double chg_leak[MAX_TAIL_LEN*NUM_LOGQ],
-                    const int ycte_qmax, 
-                    double chg_leak_tq[MAX_TAIL_LEN*ycte_qmax],
-                    double chg_open_tq[MAX_TAIL_LEN*ycte_qmax]) {
+/* In this function we're interpolating the tail arrays over the Q dimension
+ * and reducing the arrays to contain data at only the charge levels
+ * specified in the levels array. */
+int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
+                    const double chg_open_kt[MAX_TAIL_LEN*NUM_LOGQ],
+                    const double dtde_q[MAX_PHI], const int levels[NUM_LEV],
+                    double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
+                    double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
+                    double dpde_l[NUM_LEV],
+                    int tail_len[NUM_LEV]) {
   
   /* status variable for return */
   int status = 0;
   
-  int q; /* iteration variable for looping over charge */
-  int p; /* variable for phi node at each q */
-  int t; /* iteration variable for looping over pixels in tail */
+  int l,t;  /* iteration variables for tail and levels */
+  int q;    /* iteration variable for q levels in between those specified in levels */
   
-  double logp;           /* log of phi node */
-  double logp_min = 1.0; /* min value for logp */
-  double logp_max = 4.0; /* max value for logp */
+  /* container for cumulative dtde_q */
+  double cpde_l[NUM_LEV];
+  
+  /* variable for running sum of dtde_q */
+  double sum = 0.0;
   
   int logq_ind; /* index of lower logq used for interpolation */
   
-  double interp_dist; /* difference between logp and lower logq */
-  double sum;         /* running sum of charge in tail */
+  double logq;           /* log of charge level */
+  double logq_min = 1.0; /* min value for logq */
+  double logq_max = 3.999; /* max value for logq */
   
-  for (q = 0; q < ycte_qmax; q++) {
-    p = pix_q_array[q];
-    
-    /* calculate logp with min/max clipping */
-    logp = log10(p);
-    if (logp < logp_min) {
-      logp = logp_min;
-    } else if (logp > logp_max) {
-      logp = logp_max;
+  double interp_dist; /* difference between logp and lower logq */
+  
+  dpde_l[0] = 0.0;
+  cpde_l[0] = 0.0;
+  
+  for (t = 0; t < MAX_TAIL_LEN; t++) {
+    chg_leak_lt[t*NUM_LEV] = chg_leak_kt[t*NUM_LOGQ];
+    chg_open_lt[t*NUM_LEV] = chg_open_kt[t*NUM_LOGQ];
+  }
+  
+  for (l = 1; l < NUM_LEV; l++) {
+    for (q = levels[l-1]; q < levels[l]; q++) {
+      sum += dtde_q[q];
     }
     
-    /* set logq_ind for this logp */
-    if (logp < 2) {
+    cpde_l[l] = sum;
+    dpde_l[l] = cpde_l[l] - cpde_l[l-1];
+    
+    /* calculate logq with min/max clipping */
+    logq = log10((double) q);
+    if (logq < logq_min) {
+      logq = logq_min;
+    } else if (logq > logq_max) {
+      logq = logq_max;
+    }
+    
+    /* set logq_ind for this logq */
+    if (logq < 2) {
       logq_ind = 0;
-    } else if (logp < 3) {
+    } else if (logq < 3) {
       logq_ind = 1;
     } else {
       logq_ind = 2;
     }
     
-    /* loop over all the pixels in the tail to interpolate */
-    interp_dist = logp - 1.0 - (double) logq_ind;
-    sum = 0.0;
-    for (t = 0; t < MAX_TAIL_LEN; t++) {
-      chg_leak_tq[t*ycte_qmax + q] = chg_leak[t*NUM_LOGQ + logq_ind] + 
-      (interp_dist * (chg_leak[t*NUM_LOGQ + logq_ind+1] - 
-                      chg_leak[t*NUM_LOGQ + logq_ind]));
-      sum += chg_leak_tq[t*ycte_qmax + q];
-    }
+    interp_dist = logq - floor(logq);
     
-    /* loop over all pixels in the tail to normalize so that sum is 1 */
     for (t = 0; t < MAX_TAIL_LEN; t++) {
-      chg_leak_tq[t*ycte_qmax + q] /= sum;
+      chg_leak_lt[t*NUM_LEV + l] = ((1.0 - interp_dist) * chg_leak_kt[t*NUM_LOGQ + logq_ind]) +
+                                   (interp_dist * chg_leak_kt[t*NUM_LOGQ + logq_ind+1]);
+      chg_open_lt[t*NUM_LEV + l] = ((1.0 - interp_dist) * chg_open_kt[t*NUM_LOGQ + logq_ind]) +
+                                   (interp_dist * chg_open_kt[t*NUM_LOGQ + logq_ind+1]);
     }
+  }
+  
+  /* calculate max tail lengths for each level */
+  for (l = 0; l < NUM_LEV; l++) {
+    tail_len[l] = MAX_TAIL_LEN;
     
-    /* loop over all pixels in the tail to calculate cumulative of the curve */
-    /* not sure what that means */
-    sum = 0.0;
-    for (t = 0; t < MAX_TAIL_LEN; t++) {
-      sum += chg_leak_tq[t*ycte_qmax + q];
-      chg_open_tq[t*ycte_qmax + q] = sum;
+    for (t = MAX_TAIL_LEN-1; t >= 0; t--) {
+      if (chg_leak_lt[t*NUM_LEV + l] == 0) {
+        tail_len[l] = t+1;
+      } else {
+        break;
+      }
     }
   }
   

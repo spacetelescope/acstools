@@ -17,7 +17,7 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * 2010/10/15 PLL fixed PCTEFILE lookup logic.
     * 2010/10/26 WH added support for multiple file processing
     * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
-    * 2011/03/28 MRD updated to use C extension functions
+    * 2011/04/26 MRD Began updates for new CTE algorithm.
 
 References
 ----------
@@ -53,8 +53,12 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "0.3.0"
-__vdate__ = "21-Mar-2011"
+__version__ = "0.4.0"
+__vdate__ = "03-May-2011"
+
+# general error for things related to his module
+class PixCteError(Exception):
+    pass
 
 #--------------------------
 def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
@@ -220,7 +224,8 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     rootname = outPath + rootname
     
     # Construct output filename
-    if not outFits: outFits = rootname + '_cte.fits'
+    if not outFits: 
+        outFits = rootname + '_cte.fits'
 
     # Copy input to output
     shutil.copyfile(inFits, outFits)
@@ -238,19 +243,29 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     if detector == 'WFC':
       cte_frac = pcfy.CalcCteFrac(expstart, 1)
     else:
-      raise StandardError('Invalid detector: PixCteCorr only supports ACS WFC.')
+      raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
 
     # Read CTE params from file
     pctefile = pf_out['PRIMARY'].header['PCTEFILE']
-    dtde_l, chg_leak, psi_node, rn2_nit = _PixCteParams(pctefile, expstart)
+    sim_nit, shft_nit, rn2_nit, q_dtde, dtde_l, psi_node, chg_leak, levels = \
+      _PixCteParams(pctefile)
 
     # N in charge tail
-    chg_leak_kt = pcfy.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
+    chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
 
     # dtde_q: Marginal PHI at a given chg level.
     # q_pix_array: Maps Q (cumulative charge) to P (dependent var).
     # pix_q_array: Maps P to Q.
-    dtde_q, q_pix_array, pix_q_array, ycte_qmax = pcfy.InterpolatePhi(dtde_l, cte_frac)
+    dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
+ 
+    # finish interpolation along the Q dimension and reduce arrays to contain
+    # only info at the levels specified in the levels array
+    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+      pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
+          
+    # Compute open spaces. Overwrite log file.
+#    chg_leak_tq, chg_open_tq = _TrackChargeTrap(pix_q_array, chg_leak_kt, 
+#                                                ycte_qmax, pFile=outLog, psiNode=psi_node)
 
     # Extract data for amp quadrants.
     # For each amp, view of image is created with amp on bottom left.
@@ -280,10 +295,6 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
         # Log file name
         outLog = rootname + '_cte_log.txt'
     # End if
-
-    # Compute open spaces. Overwrite log file.
-    chg_leak_tq, chg_open_tq = _TrackChargeTrap(pix_q_array, chg_leak_kt, 
-                                                ycte_qmax, pFile=outLog, psiNode=psi_node)
 
     # Choose one amp to log detailed results
     ampPriorityOrder = ['C','D','A','B'] # Might be instrument dependent
@@ -323,8 +334,9 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
         # End if
 
         # CTE correction in DN.
-        sciAmpCor = pcfy.FixYCte(sciAmpSig, ycte_qmax, q_pix_array, 
-                              chg_leak_tq, chg_open_tq, amp, outLog2)
+        sciAmpCor = pcfy.FixYCte(sciAmpSig, cte_frac, sim_nit, shft_nit,
+                                  levels, dpde_l, tail_len,
+                                  chg_leak_lt, chg_open_lt, amp, outLog2)
 
         # Convert corrected noiseless data back to electrons.
         # Add noise in electrons back to corrected image.
@@ -342,6 +354,9 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     # Update header
     pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
     pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac)
+    pf_out['PRIMARY'].header.update('PCTERNIT', rn2_nit)
+    pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
+    pf_out['PRIMARY'].header.update('PCTESFIT', shft_nit)
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
     pf_out['PRIMARY'].header.add_history('PCTE NITS is %i' % nits)
     pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
@@ -371,7 +386,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     print os.linesep, 'Run time:', timeEnd - timeBeg, 'secs'
 
 #--------------------------
-def _PixCteParams(fitsTable, mjd):
+def _PixCteParams(fitsTable):
     """
     Read params from PCTEFILE.
 
@@ -383,59 +398,67 @@ def _PixCteParams(fitsTable, mjd):
     fitsTable: string 
         PCTEFILE from header.
 
-    mjd: float 
-        EXPSTART from header.
-
     Returns
     -------
-    dtde_l: array_like
-        PHI(Q).
-
-    chg_leak: array_like
-        PSI(Q,N).
-
-    psi_node: array_like
-        N values for PSI(Q,N).
-
+    sim_nit: integer
+        Number of readout simulations to do for each column of data
+        
+    shft_nit: integer
+        Number of shifts to break each readout simulation into
+        
     rn2_nit: int
         Number of iterations for `noise`=1 in
         `_DecomposeRN`.
+        
+    dtde_q: array
+        Charge levels at which dtde_l is parameterized
+    
+    dtde_l: array
+        PHI(Q).
+
+    psi_node: array
+        N values for PSI(Q,N).
+
+    chg_leak: array
+        PSI(Q,N).
+        
+    levels: array
+        Charge levels at which to do CTE evaluation
 
     """
 
     # Resolve path to PCTEFILE
     refFile = _ResolveRefFile(fitsTable)
-    if not os.path.isfile(refFile): raise NameError, 'PCTEFILE not found: %s' % refFile
+    if not os.path.isfile(refFile): 
+        raise IOError, 'PCTEFILE not found: %s' % refFile
 
     # Open FITS table
     pf_ref = pyfits.open(refFile)
 
     # Read RN2_NIT value from header
     rn2_nit = pf_ref['PRIMARY'].header['RN2_NIT']
+    
+    # read SIM_NIT value from header
+    sim_nit = pf_ref['PRIMARY'].header['SIM_NIT']
+    
+    # read SHFT_NIT value from header
+    shft_nit = pf_ref['PRIMARY'].header['SHFT_NIT']
 
-    # Read PHI array from header
-    s = pf_ref['PRIMARY'].header['PHI_*']
-    dtde_l = numpy.array( s.values() )
-
-    # Find matching extension with MJD
-    chg_leak = numpy.array([])
-    psiKey = ('PSIMJD1', 'PSIMJD2')
-    for ext in pf_ref:
-        if chg_leak.size > 0: break
-        if not ext.header.has_key(psiKey[0]): continue
-
-        # Read PSI from table, skip first column
-        if mjd >= ext.header[psiKey[0]] and mjd < ext.header[psiKey[1]]:
-            s = numpy.array( ext.data.tolist() )
-            psi_node = s[:,0]
-            chg_leak = s[:,1:]
-        # End if
-    # End of ext loop
+    # read dtde data from DTDE extension
+    dtde_l = pf_ref['DTDE'].data['DTDE']
+    q_dtde = pf_ref['DTDE'].data['Q']
+    
+    # read chg_leak data from CHG_LEAK extension
+    psi_node = pf_ref['CHG_LEAK'].data['NODE']
+    chg_leak = numpy.array(pf_ref['CHG_LEAK'].data.tolist(), dtype=numpy.float32)[:,1:]
+    
+    # read levels data from LEVELS extension
+    levels = pf_ref['LEVELS'].data['LEVEL']
 
     # Close FITS table
     pf_ref.close()
 
-    return dtde_l, chg_leak, psi_node.astype('int'), rn2_nit
+    return sim_nit, shft_nit, rn2_nit, q_dtde, dtde_l, psi_node, chg_leak, levels
 
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
@@ -584,61 +607,6 @@ def _InterpolatePhi(dtde_l, cte_frac):
     
     return dtde_q, q_pix_array, pix_q_array, ycte_qmax
 
-#--------------------------
-def _TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax, pFile=None, psiNode=None):
-    """
-    Calculate the trails (N pix downstream) for each
-    block of charge that amounts to a single electron
-    worth of traps. Determine what the trails look
-    like for each of the traps bring tracked.
-
-    Parameters
-    ----------
-    pix_q_array: array_like
-        Maps P to cumulative charge.
-
-    chg_leak_kt: array_like
-        Interpolated PSI(Q,N).
-        
-    ycte_qmax: integer
-
-    pFile: string, optional 
-        Optional log file name.
-
-    psiNode: array_like
-        PSI nodes from PCTEFILE. Only used with `pFile`.
-
-    Returns
-    -------
-    chg_leak_tq: array_like
-
-    chg_open_tq: array_like
-    
-    """
-
-    chg_leak_tq, chg_open_tq = pcfy.TrackChargeTrap(pix_q_array, chg_leak_kt, ycte_qmax)
-
-    # Write results to log file
-    if pFile:
-        i_open = 100
-        i2 = i_open - 1
-        psinode2 = psiNode - 1
-        fLog = open(pFile,'w') # Overwrite
-
-        fLog.write('%-1s%4s %5s ' % ('#', 'Q', 'P'))
-        for t in psiNode: fLog.write('NODE_%-3i ' % t)
-        fLog.write('OPEN_%-3i%s' % (i_open, os.linesep))
-
-        for q in q_range:
-            fLog.write('%5i %5.0f ' % (q+1, pix_q_array[q]))
-            for t in psinode2: fLog.write('%8.4f ' % chg_leak_tq[t,q])
-            fLog.write('%8.4f%s' % (chg_open_tq[i2,q], os.linesep))
-        # End of q loop
-
-        fLog.close()
-    # End if
-
-    return chg_leak_tq, chg_open_tq
     
 #--------------------------
 def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
