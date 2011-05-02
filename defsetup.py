@@ -13,16 +13,16 @@ except:
 pythoninc = distutils.sysconfig.get_python_inc()
 numpyinc = numpy.get_include()
 
-ext = [ distutils.core.Extension('acstools.PixCte_FixY',
+pkg =  "acstools"
+
+ext = [ distutils.core.Extension(pkg + '.PixCte_FixY',
         ['src/PixCte_FixY.c',
          'src/PixCteCorr_funcs.c',
          'src/FixYCte.c'],
         include_dirs = [pythoninc,numpyinc]) ]
 
-pkg =  "acstools"
-
 setupargs = {
-    'version' : 		"1.2.0",
+    'version' : 		"1.3.0",
     'description' :	    "Python Tools for ACS Data",
     'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson, Matt Davis",
     'author_email' : 	"help@stsci.edu",
