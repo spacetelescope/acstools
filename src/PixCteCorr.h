@@ -15,16 +15,7 @@
 /* parameters of readout noise decomposition routines */
 #define NOISE_MODEL 1
 
-/* structure to hold CTE parameters from reference file */
-typedef struct {
-  int rn2_nit;
-  double dtde_l[NUM_PHI];
-  int psi_node[NUM_PSI];
-  double chg_leak[NUM_PSI * NUM_LOGQ];
-} CTEParams;
-
 /* function prototypes */
-int PixCteParams (const char *filename, const double mjd, CTEParams * pars);
 double CalcCteFrac(const double mjd, const int instrument);
 int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[],
                    double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ],
@@ -54,3 +45,9 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
             const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
             const char *amp_name, const char *log_file);
+int AddYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
+            double sig_cor[arrx*arry], const double cte_frac,
+            const int shft_nit, const int levels[NUM_LEV],
+            const double dpde_l[NUM_LEV], const int tail_len[NUM_LEV],
+            const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
+            const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]);
