@@ -351,7 +351,7 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac)
     pf_out['PRIMARY'].header.update('PCTERNIT', rn2_nit)
     pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
-    pf_out['PRIMARY'].header.update('PCTESFIT', shft_nit)
+    pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit)
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
     pf_out['PRIMARY'].header.add_history('PCTE NITS is %i' % nits)
     pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
@@ -494,7 +494,7 @@ def _ResolveRefFile(refText, sep='$'):
     return f
 
 #--------------------------
-def _CalcCteFrac(mjd, detector):
+def _CalcCteFrac(detector):
     """
     Calculate CTE_FRAC used for linear time dependency.
     
@@ -513,11 +513,10 @@ def _CalcCteFrac(mjd, detector):
 
     Parameters
     ----------
-    mjd: float
-        EXPSTART from header.
 
     detector: string
         DETECTOR from header.
+        Currently only 'WFC' is supported.
 
     Returns
     -------
@@ -529,7 +528,7 @@ def _CalcCteFrac(mjd, detector):
     if detector == 'WFC':
       cte_frac = pcfy.CalcCteFrac(expstart, 1)
     else:
-      raise StandardError('Invalid detector: PixCteCorr only supports ACS WFC.')
+      raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
       
     return cte_frac
     
@@ -559,20 +558,23 @@ def _InterpolatePsi(chg_leak, psi_node):
 
     Returns
     -------
-    chg_leak_kt: array_like
+    chg_leak: array_like
         Interpolated PSI.
+        
+    chg_open: array_like
+        
 
     """
     
-    chg_leak_kt = pcfy.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
+    chg_leak, chg_open = pcfy.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
     
-    return chg_leak_kt
+    return chg_leak, chg_open
     
 #--------------------------
-def _InterpolatePhi(dtde_l, cte_frac):
+def _InterpolatePhi(dtde_l, q_dtde, shft_nit):
     """
     Interpolates the `PHI(Q)` at all Q from 1 to
-    49999 (log scale).
+    99999 (log scale).
 
     `PHI(Q)` models the amount of charge in CTE
     tail, i.e., probability of an electron being
@@ -583,25 +585,63 @@ def _InterpolatePhi(dtde_l, cte_frac):
     dtde_l: array_like
         PHI data from PCTEFILE.
 
-    cte_frac: float
-        Time dependency factor.
+    q_dtde: array_like
+        Q levels at which dtde_l is defined, read from PCTEFILE
+        
+    shft_int: integer
+        Number of shifts performed reading out CCD
 
     Returns
     -------
     dtde_q: array_like
-
-    q_pix_array: array_like
-
-    pix_q_array: array_like
-    
-    ycte_qmax: integer
+        dtde_l interpolated at all PHI levels
     
     """
     
-    dtde_q, q_pix_array, pix_q_array, ycte_qmax = pcfy.InterpolatePhi(dtde_l, cte_frac)
+    dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
     
-    return dtde_q, q_pix_array, pix_q_array, ycte_qmax
-
+    return dtde_q
+    
+def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
+    """
+    Interpolates CTE parameters to the charge levels specified in levels.
+    
+    Parameters
+    ----------
+    chg_leak: array
+        Interpolated chg_leak tail profile data returned by _InterpolatePsi.
+        
+    chg_open: array
+        Interpolated chg_open tail profile data returned by _InterpolatePsi.
+        
+    dtde_q: array
+        PHI data interpolated at all PHI levels as returned by
+        _InterpolatePhi.
+        
+    levels: array
+        Charge levels at which output arrays will be interpolated.
+        Read from PCTEFILE.
+        
+    Returns
+    -------
+    chg_leak_lt: array
+        chg_leak tail profile data interpolated at the specified charge levels.
+        
+    chg_open_lt: array
+        chg_open tail profile data interpolated at the specified charge levels.
+        
+    dpde_l: array
+        dtde_q interpolated and summed for the specified charge levels.
+        
+    tail_len: array
+        Array of maximum tail lengths for the specified charge levels.
+    
+    """
+    
+    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+      pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
+      
+    return chg_leak_lt, chg_open_lt, dpde_l, tail_len
     
 #--------------------------
 def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
@@ -650,6 +690,140 @@ def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
     sigArr, nseArr = pcfy.DecomposeRN(data_e, model, nitrn, readNoise)
 
     return sigArr, nseArr
+    
+def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l, 
+              tail_len, chg_leak_lt, chg_open_lt, amp='', outLog2=''):
+    """
+    Perform CTE correction on input data. It is best to perform some kind
+    of readnoise smoothing on the data, otherwise the CTE algorithm will
+    amplify the read noise. (In the read out process readnoise is added to
+    the data after CTE blurring.)
+    
+    Parameters
+    ----------
+    detector: string
+        DETECTOR from header.
+        Currently only 'WFC' is supported.
+        
+    cte_data: array
+        Data in need of CTE correction. For proper results cte_data[0,x] should
+        be next to the readout register and cte_data[-1,x] should be furthest.
+        Data are processed a column at a time, e.g. cte_data[:,x] is corrected,
+        then cte_data[:,x+1] and so on.
+        
+    cte_frac: float
+        Time dependent CTE scaling parameter.
+        
+    sim_nit: integer
+        Number of readout simulation iterations to perform.
+        
+    shft_nit: integer
+        Number of readout shifts to do.
+        
+    levels: array
+        Levels at which CTE is evaluated as read from PCTEFILE.
+        
+    dpde_l: array
+        Parameterized amount of charge in CTE trails as a function of
+        specific charge levels, as returned by _FillLevelArrays.
+        
+    tail_len: array
+        Maximum tail lengths for CTE tails at the specific charge levels
+        specified by levels, as returned by _FillLevelArrays.
+        
+    chg_leak_lt: array
+        Tail profile data at charge levels specified by levels, as returned
+        by _FillLevelArrays.
+        
+    chg_open_lt: array
+        Tail profile data at charge levels specified by levels, as returned
+        by _FillLevelArrays.
+        
+    amp: character
+        Amp name for this data, used in log file.
+        Optional, but must be specified if outLog2 is specified.
+        
+    outLog2: string
+        Name of optional log file.
+        
+    Returns
+    -------
+    corrected: array
+        Data CTE correction algorithm applied. Same size and shape as input
+        cte_data.
+    
+    """
+    
+    if outLog2 != '' and amp == '':
+        raise PixCteError('amp argument must be specified if log file is specified.')
+
+    if detector == 'WFC':
+        corrected = pcfy.FixYCte(cte_data, cte_frac, sim_nit, shft_nit,
+                                levels, dpde_l, tail_len,
+                                chg_leak_lt, chg_open_lt, amp, outLog2)
+    else:
+        raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
+                              
+    return corrected
+    
+def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l, 
+              tail_len, chg_leak_lt, chg_open_lt):
+    """
+    Apply ACS CTE blurring to input data.
+    
+    Parameters
+    ----------
+    detector: string
+        DETECTOR from header.
+        Currently only 'WFC' is supported.
+        
+    input_data: array
+        Data in need of CTE correction. For proper results cte_data[0,x] should
+        be next to the readout register and cte_data[-1,x] should be furthest.
+        Data are processed a column at a time, e.g. cte_data[:,x] is corrected,
+        then cte_data[:,x+1] and so on.
+        
+    cte_frac: float
+        Time dependent CTE scaling parameter.
+        
+    shft_nit: integer
+        Number of readout shifts to do.
+        
+    levels: array
+        Levels at which CTE is evaluated as read from PCTEFILE.
+        
+    dpde_l: array
+        Parameterized amount of charge in CTE trails as a function of
+        specific charge levels, as returned by _FillLevelArrays.
+        
+    tail_len: array
+        Maximum tail lengths for CTE tails at the specific charge levels
+        specified by levels, as returned by _FillLevelArrays.
+        
+    chg_leak_lt: array
+        Tail profile data at charge levels specified by levels, as returned
+        by _FillLevelArrays.
+        
+    chg_open_lt: array
+        Tail profile data at charge levels specified by levels, as returned
+        by _FillLevelArrays.
+        
+    Returns
+    -------
+    blurred: array
+        Data CTE correction algorithm applied. 
+        Same size and shape as input_data.
+    
+    """
+    
+    if detector == 'WFC':
+        blurred = pcfy.AddYCte(input_data, cte_frac,shft_nit,
+                                levels, dpde_l, tail_len,
+                                chg_leak_lt, chg_open_lt)
+    else:
+        raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
+                              
+    return blurred
 
 #--------------------------
 # TEAL Interface functions

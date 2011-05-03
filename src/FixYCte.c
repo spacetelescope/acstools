@@ -120,6 +120,49 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
   return status;
 }
 
+int AddYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
+            double sig_cor[arrx*arry], const double cte_frac,
+            const int shft_nit, const int levels[NUM_LEV],
+            const double dpde_l[NUM_LEV], const int tail_len[NUM_LEV],
+            const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
+            const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]) {
+  
+  /* status variable for return */
+  int status = 0;
+  
+  /* iteration variables */
+  int i, j, n;
+  
+  /* arrays to hold columns of data */
+  double pix_obs[arrx];
+  double pix_cur[arrx];
+  double pix_read[arrx];
+  
+  /* loop over columns. columns are independent of each other. */
+  for (i = 0; i < arry; i++) {    
+    /* copy column data */
+    for (j = 0; j < arrx; j++) {
+      pix_obs[j] = sig_cte[j*arry + i];
+      pix_cur[j] = pix_obs[j];
+      pix_read[j] = pix_obs[j];
+    }
+    
+    status = sim_readout_nit(arrx, pix_cur, pix_read, cte_frac, shft_nit,
+                             levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt);
+    if (status != 0) {
+      return status;
+    }
+    
+    /* copy blurred column to output */
+    for (j = 0; j < arrx; j++) {
+      sig_cor[j*arry + i] = pix_read[j];
+    }
+    
+  } /* end loop over columns */
+  
+  return status;
+}
+
 /* call sim_readout shft_nit times as per Jay's new algorithm */
 int sim_readout_nit(const int arrx, double pix_cur[arrx], double pix_read[arrx],
                     const double cte_frac, const int shft_nit, const int levels[NUM_LEV],
