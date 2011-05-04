@@ -150,7 +150,7 @@ def XCte():
     print 'Not yet available'
 
 #--------------------------
-def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
+def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     """
     Apply correction for parallel CTE loss.
 
@@ -207,9 +207,6 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
             2. ROOTNAME_cte_wo_tmp.fits - Noiseless
                image.
             3. ROOTNAME_cte_log.txt - Log file.
-
-    nits: int 
-        Not used. *Future work.*
 
     """
 
@@ -353,7 +350,6 @@ def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False):
     pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
     pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit)
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
-    pf_out['PRIMARY'].header.add_history('PCTE NITS is %i' % nits)
     pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
 
     # Close output file
@@ -494,7 +490,7 @@ def _ResolveRefFile(refText, sep='$'):
     return f
 
 #--------------------------
-def _CalcCteFrac(detector):
+def _CalcCteFrac(expstart,detector):
     """
     Calculate CTE_FRAC used for linear time dependency.
     
@@ -513,6 +509,8 @@ def _CalcCteFrac(detector):
 
     Parameters
     ----------
+    expstart: float
+      EXPSTART from header.
 
     detector: string
         DETECTOR from header.
@@ -639,7 +637,7 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     """
     
     chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
-      pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
+      pcfy.FillLevelArrays(chg_leak, chg_open, dtde_q, levels)
       
     return chg_leak_lt, chg_open_lt, dpde_l, tail_len
     
@@ -831,7 +829,7 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
 def run(configObj):
     
     CteCorr(configObj['inFits'],outFits=configObj['outFits'],noise=configObj['noise'],
-        intermediateFiles=configObj['debug'],nits=configObj['nits'])
+        intermediateFiles=configObj['debug'])
     
 def getHelpAsString():
     helpString = ''
