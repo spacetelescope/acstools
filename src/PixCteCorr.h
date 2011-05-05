@@ -29,15 +29,8 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
                     double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
                     double dpde_l[NUM_LEV],
                     int tail_len[NUM_LEV]);
-int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry], 
-                const int model, const int nitr, const double readnoise,
-                double sig_arr[arrx*arry], double noise_arr[arrx*arry]);
-int DecomposeRNModel1(const int arrx, const int arry, 
-                      const double data[arrx*arry], const int nitr,
-                      double sig[arrx*arry], double noise[arrx*arry]);
-int DecomposeRNModel100(const int arrx, const int arry, const double readnoise,
-                        const double data[arrx*arry],
-                        double sig[arrx*arry], double noise[arrx*arry]);
+int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
+                const double pclip, double sig_arr[arrx*arry], double noise_arr[arrx*arry]);
 int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             double sig_cor[arrx*arry], const double cte_frac, const int sim_nit,
             const int shft_nit, const int levels[NUM_LEV],

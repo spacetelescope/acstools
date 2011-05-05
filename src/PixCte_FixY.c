@@ -247,8 +247,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   /* input variables */
   PyObject *opy_data;
   PyArrayObject *py_data;
-  int model, nitr;
-  double readnoise;
+  double pclip;
   
   /* local variables */
   int status, i, j;
@@ -263,7 +262,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   PyArrayObject * py_noise;
   
   /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "Oiid", &opy_data, &model, &nitr, &readnoise)) {
+  if (!PyArg_ParseTuple(args, "Od", &opy_data, &pclip)) {
     return NULL;
   }
   
@@ -292,12 +291,12 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   /* copy input Python arrays to local C arrays */
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      data[i*arry + j] = *(double *) PyArray_GETPTR2(py_data, i, j);
+      data[i*arry + j] = (double) *(npy_double *) PyArray_GETPTR2(py_data, i, j);
     }
   }
   
   /* call DecomposeRN */
-  status = DecomposeRN(arrx, arry, data, model, nitr, readnoise, sig, noise);
+  status = DecomposeRN(arrx, arry, data, pclip, sig, noise);
   if (status != 0) {
     PyErr_SetString(PyExc_StandardError, "An error occurred in DecomposeRN.");
     return NULL;
@@ -306,8 +305,8 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   /* copy local C arrays to return Python arrays */
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      *(double *) PyArray_GETPTR2(py_sig, i, j) = sig[i*arry + j];
-      *(double *) PyArray_GETPTR2(py_noise, i, j) = noise[i*arry + j];
+      *(npy_double *) PyArray_GETPTR2(py_sig, i, j) = (npy_double) sig[i*arry + j];
+      *(npy_double *) PyArray_GETPTR2(py_noise, i, j) = (npy_double) noise[i*arry + j];
     }
   }
   

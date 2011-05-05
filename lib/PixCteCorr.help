@@ -68,9 +68,6 @@ debug (Yes/No)
         2. ROOTNAME_cte_wo_tmp.fits - Noiseless image.
         3. ROOTNAME_cte_log.txt - Log file.
 
-nits (int)
-    Not used. Future work.
-
 How to use the tasks stand alone interface in your own scripts:
 ===============================================================
 For general use in a script, the function CteCorr() should be used with the following syntax:

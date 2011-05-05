@@ -276,20 +276,11 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
  * Attempt to separate readout noise from signal, since CTI happens before
  * readout noise is added to the signal.
  *
- * The model parameter can be 0, 1, or 100:
- *   0: no separation
- *   1: linear smoothing along columns (this should be the default)
- *   100: version of 1 that uses the reported readout noise and no iteration
- *
- * The nitr parameters controls the number of iterations of smoothing applied in
- * in model #1. It is one of the parameters read from the CTE parameters file.
- * 
- * The readnoise parameter is the readout noise from the CCDTAB for this amp
- * and is only used in model 100.
+ * The clipping parameter pclip controls the maximum amount by which a pixel
+ * will be modified, or the maximum amplitude of the read noise.
  */
-int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry], 
-                const int model, const int nitr, const double readnoise,
-                double sig_arr[arrx*arry], double noise_arr[arrx*arry]) {
+int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
+                const double pclip, double sig_arr[arrx*arry], double noise_arr[arrx*arry]) {
   
   /* status variable for return */
   int status = 0;
@@ -297,173 +288,115 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
   /* iteration variables */
   int i, j;
   
-  /* copy the science data to the signal array and make sure noise array is 0*/
+  /* array to hold pixel means from 20 surrounding pixels */
+  double * means;
+  
+  /* array to hold clipped difference between data and means */
+  double * diffs;
+  double diff;
+  
+  /* array to hold smoothed diffs */
+  double * sm_diffs;
+  
+  /* index variables */
+  int iind, jind;
+  
+  /* get space for arrays */
+  means = (double *) malloc(arrx * arry * sizeof(double));
+  diffs = (double *) malloc(arrx * arry * sizeof(double));
+  sm_diffs = (double *) malloc(arrx * arry * sizeof(double));
+  
+  /* calculate means array as average of 20 surrounding pixel, not including
+   * central pixel. */
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      sig_arr[i*arry + j] = data[i*arry + j];
-      noise_arr[i*arry + j] = 0.0;
-    }
-  }
-  
-  if (model == 1) {
-    status = DecomposeRNModel1(arrx, arry, data, nitr, sig_arr, noise_arr);
-  } else if (model == 100) {
-    status = DecomposeRNModel100(arrx, arry, readnoise, data, sig_arr, noise_arr);
-  }
-  
-  return status;
-}
-
-/*
- * Separate the readout noise and signal using smoothing along the columns.
- *
- * nitr controls the number of iterations of smoothing.
- */
-int DecomposeRNModel1(const int arrx, const int arry, 
-                      const double data[arrx*arry], const int nitr,
-                      double sig[arrx*arry], double noise[arrx*arry]) {
-  
-  /* status variable for return */
-  int status = 0;
-  
-  /* iteration variables */
-  int i, j, n;
-  
-  /* only do corrections between these thresholds */
-  int noiseLo = -20;
-  int noiseHi = 100;
-  
-  /* variable to hold residuals */
-  double res;
-  
-  double * sig_temp;
-  
-  int * doNsCor;
-  
-  /* make a temporary array to hold the signal while doing the smoothing
-   * calculations. this way we can keep the rows in their old values while
-   * doing calculations on adjacent rows. */
-  sig_temp = (double *) calloc(arrx * arry, sizeof(double));
-  
-  /* set up array of flags for which pixels should be noise corrected */
-  doNsCor = (int *) malloc(arrx * arry * sizeof(int));
-  
-  /* let's start with all ones */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      doNsCor[i*arry + j] = 1;
-    }
-  }
-  
-  /* then turn off any pixels we shouldn't change */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      if (i == 0 || i == arrx-1) {
-        doNsCor[i*arry + j] = 0;
-      } else if (data[i*arry + j] < noiseLo || data[i*arry + j] > noiseHi) {
-        doNsCor[i*arry + j] = 0;
-        doNsCor[(i-1)*arry + j] = 0;
-        doNsCor[(i+1)*arry + j] = 0;
+      /* if this pixel is within 2 rows/columns of the edge get the median
+       * from the pixel in the third row/column from the edge. */
+      iind = i;
+      if (iind <= 1) {
+        iind = 2;
+      } else if (iind >= arrx-2) {
+        iind = arrx - 3;
       }
-    }
-  }
-  
-  /* loop over number of iterations */
-  for (n = 0; n < nitr; n++) {
-    for (i = 1; i < arrx-1; i++) {
-      for (j = 0; j < arry; j++) {
-        if (doNsCor[i*arry + j] == 1) {
-          
-          /* compute residual as center pixel - mean of neighbors */
-          res = sig[i*arry + j] - (0.5 * (sig[(i-1)*arry + j] + sig[(i+1)*arry + j]));
-          
-          /* clip residual to +/- 1 electron */
-          if (res < -1) {
-            res = -1;
-          } else if (res > 1) {
-            res = 1;
-          }
-          
-          /* subtract residual from signal */
-          sig_temp[i*arry + j] = sig[i*arry + j] - res;
-        }
-      }
-    }
-    
-    /* now that we're done with this iteration copy sig_temp back to sig */
-    for (i = 1; i < arrx-1; i++) {
-      for (j = 0; j < arry; j++) {
-        if (doNsCor[i*arry + j] == 1) {
-          sig[i*arry + j] = sig_temp[i*arry + j];
-        }
-      }
-    }
-  }
-  
-  free(doNsCor);
-  free(sig_temp);
-  
-  /* compute the readnoise as the difference between the original data and
-   * the corrected data. */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      noise[i*arry + j] = data[i*arry + j] - sig[i*arry + j];
-    }
-  }
-  
-  return status;
-}
-
-/*
- * Separate readout noise from signal using the READNSE parameter from CCDTAB
- * and no iterative smoothing.
- */
-int DecomposeRNModel100(const int arrx, const int arry, const double readnoise,
-                        const double data[arrx*arry],
-                        double sig[arrx*arry], double noise[arrx*arry]) {
-  
-  /* status variable for return */
-  int status = 0;
-  
-  /* iteration variables */
-  int i, j;
-  
-  /* only do corrections between these thresholds */
-  double sigCut = 2;
-  double noiseLo = sigCut * readnoise;
-  double noiseHi = sigCut * noiseLo;
-  
-  /* exclude pixels on the near and far sides relative to the amp */
-  int near = 1;
-  int far = 4;
-  
-  double noise_abs;
-  
-  /* calculate initial model of signal */
-  for (i = near; i < arrx-far; i++) {
-    for (j = 0; j < arry; j++) {
-      sig[i*arry + j] = (0.333 * data[(i-1)*arry + j]) + 
-      (0.334 * data[i*arry + j]) + 
-      (0.333 * data[(i+1)*arry + j]);
-    }
-  }
-  
-  /* calculate model of readout noise */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      noise[i*arry + j] = data[i*arry + j] - sig[i*arry + j];
-      noise_abs = fabs(noise[i*arry + j]);
-      
-      if (noise_abs > noiseHi) {
-        noise[i*arry + j] = 0;
-      } else if (noise_abs > noiseLo) {
-        noise[i*arry + j] = (noiseHi - noise_abs) * (noise_abs / noise[i*arry + j]);
+      jind = j;
+      if (jind <= 1) {
+        jind = 2;
+      } else if (jind >= arry-2) {
+        jind = arry - 3;
       }
       
-      /* calculate final signal value */
-      sig[i*arry + j] = data[i*arry + j] - noise[i*arry + j];
+      means[i*arry + j] = (data[(iind+0)*arry + jind+1] + 
+                           data[(iind+0)*arry + jind-1] + 
+                           data[(iind+1)*arry + jind+0] + 
+                           data[(iind-1)*arry + jind-0] + 
+                           data[(iind-1)*arry + jind+1] + 
+                           data[(iind-1)*arry + jind+1] + 
+                           data[(iind-1)*arry + jind-1] + 
+                           data[(iind-1)*arry + jind-1] + 
+                           data[(iind+0)*arry + jind+2] + 
+                           data[(iind-0)*arry + jind-2] + 
+                           data[(iind+2)*arry + jind+0] + 
+                           data[(iind-2)*arry + jind-0] + 
+                           data[(iind+1)*arry + jind+2] + 
+                           data[(iind-1)*arry + jind+2] + 
+                           data[(iind+1)*arry + jind-2] + 
+                           data[(iind-1)*arry + jind-2] + 
+                           data[(iind+2)*arry + jind+1] + 
+                           data[(iind+2)*arry + jind+1] + 
+                           data[(iind-2)*arry + jind-1] + 
+                           data[(iind-2)*arry + jind-1])/20.0;
     }
   }
+  
+  /* calculate clipped differences array */
+  for (i = 0; i < arrx; i++) {
+    for (j = 0; j < arry; j++) {
+      diff = data[i*arry + j] - means[i*arry + j];
+      
+      if (diff < -pclip) {
+        diffs[i*arry + j] = -pclip;
+      } else if (diff > pclip) {
+        diffs[i*arry + j] = pclip;
+      } else {
+        diffs[i*arry + j] = diff;
+      }
+    }
+  }
+  
+  /* to avoid systematic reduction of sources we insist that the average
+   * clipping within any 5-pixel vertical window is zero. */
+  for (i = 0; i < arrx; i++) {
+    for (j = 0; j < arry; j++) {
+      iind = i;
+      if (iind <= 2) {
+        iind = 2;
+      } else if (iind >= arrx-2) {
+        iind = arrx - 3;
+      }
+      
+      sm_diffs[i*arry + j] = (diffs[(iind-2)*arry + j] + 
+                              diffs[(iind-1)*arry + j] + 
+                              diffs[(iind-0)*arry + j] + 
+                              diffs[(iind+1)*arry + j] + 
+                              diffs[(iind+2)*arry + j])/5.0;
+      
+      diff = diffs[i*arry + j] - sm_diffs[i*arry + j];
+      
+      if (diff < -pclip) {
+        noise_arr[i*arry + j] = -pclip;
+      } else if (diff > pclip) {
+        noise_arr[i*arry + j] = pclip;
+      } else {
+        noise_arr[i*arry + j] = diff;
+      }
+      
+      sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
+    }
+  }
+  
+  free(means);
+  free(diffs);
+  free(sm_diffs);
   
   return status;
 }
