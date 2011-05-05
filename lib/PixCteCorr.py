@@ -113,7 +113,7 @@ def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
         will enhance the noise in output image.  
          
             - 0: None.
-            - 1: Vertical linear, +/- 1 pixel.
+            - 1: Smoothing
 
     intermediateFiles: bool 
         Generate intermediate files in the same directory as input? 
@@ -196,7 +196,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
         will enhance the noise in output image.  
          
             - 0: None.
-            - 1: Vertical linear, +/- 1 pixel.
+            - 1: Smoothing
 
     intermediateFiles: bool 
         Generate intermediate
@@ -244,7 +244,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
 
     # Read CTE params from file
     pctefile = pf_out['PRIMARY'].header['PCTEFILE']
-    sim_nit, shft_nit, rn2_nit, q_dtde, dtde_l, psi_node, chg_leak, levels = \
+    sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels = \
       _PixCteParams(pctefile)
 
     # N in charge tail
@@ -311,7 +311,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
         
         # Separate noise and signal.
         # Must be in unit of electrons.
-        sciAmpSig, sciAmpNse = pcfy.DecomposeRN(sciAmpOrig, noise, rn2_nit, rdns[amp])
+        sciAmpSig, sciAmpNse = pcfy.DecomposeRN(sciAmpOrig, rn_clip)
         
         if intermediateFiles:
             mosX1, mosX2, mosY1, mosY2, tCode = quadObj.MosaicPars(amp)
@@ -346,7 +346,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     # Update header
     pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
     pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac)
-    pf_out['PRIMARY'].header.update('PCTERNIT', rn2_nit)
+    pf_out['PRIMARY'].header.update('PCTERNCL', rn_clip)
     pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
     pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit)
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
@@ -397,9 +397,8 @@ def _PixCteParams(fitsTable):
     shft_nit: integer
         Number of shifts to break each readout simulation into
         
-    rn2_nit: int
-        Number of iterations for `noise`=1 in
-        `_DecomposeRN`.
+    rn_clip: float
+        Maximum amplitude of read noise removed by DecomposeRN.
         
     dtde_q: array
         Charge levels at which dtde_l is parameterized
@@ -427,7 +426,7 @@ def _PixCteParams(fitsTable):
     pf_ref = pyfits.open(refFile)
 
     # Read RN2_NIT value from header
-    rn2_nit = pf_ref['PRIMARY'].header['RN2_NIT']
+    rn_clip = pf_ref['PRIMARY'].header['RN_CLIP']
     
     # read SIM_NIT value from header
     sim_nit = pf_ref['PRIMARY'].header['SIM_NIT']
@@ -449,7 +448,7 @@ def _PixCteParams(fitsTable):
     # Close FITS table
     pf_ref.close()
 
-    return sim_nit, shft_nit, rn2_nit, q_dtde, dtde_l, psi_node, chg_leak, levels
+    return sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels
 
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
@@ -642,7 +641,7 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     return chg_leak_lt, chg_open_lt, dpde_l, tail_len
     
 #--------------------------
-def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
+def _DecomposeRN(data_e, rn_clip=10.0):
     """
     Separate noise and signal.
     
@@ -657,23 +656,9 @@ def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
     data_e: array_like
         SCI data in electrons.
 
-    model: int, optional
-        Noise mitigation algorithm.
-        Calculations done in Y only.
-
-            - 0: None.
-            - 1: Vertical linear, +/- 1 pixel.
-            - 100: Simpler version of `model`=1.
-              Not used anymore. Kept for testing.
-
-    nitrn: int, optional
-        Only used if `model`=1. Number of iterations
-        for noise mitigation, each one removing one
-        extra electron.
-
-    readNoise: float, optional
-        Only used if `model`=100. Read noise in
-        electrons.
+    rn_clip: float
+        Maximum amplitude of read noise removed.
+        Defaults to 10.0.
 
     Returns
     -------
@@ -685,7 +670,7 @@ def _DecomposeRN(data_e, model=1, nitrn=7, readNoise=5.0):
 
     """
     
-    sigArr, nseArr = pcfy.DecomposeRN(data_e, model, nitrn, readNoise)
+    sigArr, nseArr = pcfy.DecomposeRN(data_e, rn_clip)
 
     return sigArr, nseArr
     
