@@ -61,7 +61,7 @@ class PixCteError(Exception):
     pass
 
 #--------------------------
-def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
+def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
     """
     Run all the CTE corrections on all the input files.
     
@@ -124,16 +124,13 @@ def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False):
                image.
             3. ROOTNAME_cte_log.txt - Log file.
 
-    nits: int 
-        Not used. *Future work.*
-
     """
     # Parse input to get list of filenames to process
     infiles, output = parseinput.parseinput(input)
     
     # Process each file
     for file in infiles:
-        YCte(file, outFits=outFits, noise=noise, nits=nits, intermediateFiles=intermediateFiles)
+        YCte(file, outFits=outFits, noise=noise, intermediateFiles=intermediateFiles)
         
 #--------------------------
 def XCte():
