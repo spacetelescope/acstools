@@ -209,7 +209,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
 
     # Start timer
     timeBeg = time.time()
-
+    
     # For output files naming.
     # Store in same path as input.
     outPath = os.path.dirname( os.path.abspath(inFits) ) + os.sep
@@ -246,21 +246,24 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
+    del chg_leak, psi_node
 
     # dtde_q: Marginal PHI at a given chg level.
     # q_pix_array: Maps Q (cumulative charge) to P (dependent var).
     # pix_q_array: Maps P to Q.
     dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
+    del dtde_l, q_dtde
  
     # finish interpolation along the Q dimension and reduce arrays to contain
     # only info at the levels specified in the levels array
     chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
       pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
+    del chg_leak_kt, chg_open_kt, dtde_q
           
     # Compute open spaces. Overwrite log file.
 #    chg_leak_tq, chg_open_tq = _TrackChargeTrap(pix_q_array, chg_leak_kt, 
 #                                                ycte_qmax, pFile=outLog, psiNode=psi_node)
-
+    
     # Extract data for amp quadrants.
     # For each amp, view of image is created with amp on bottom left.
     quadObj = ImageOpByAmp.ImageOpByAmp(pf_out)
@@ -268,15 +271,6 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     # DQ needs to be read if new flags are to be added.
     sciQuadData = quadObj.DataByAmp()
     errQuadData = quadObj.DataByAmp(extName='ERR')
-
-    # Optional readnoise from header.
-    # Only needed when NOISE=100, which is hidden from user.
-    if noise != 100:
-        rdns = {}
-        for amp in ampList: rdns[amp] = 0.0 # Dummy
-    else:
-        rdns = quadObj.GetHdrValByAmp('noise')
-    # End if
 
     # Intermediate files
     outLog = ''
@@ -297,7 +291,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
             amp2log = amp
             break
     # End for
-
+    
     # Process each amp readout
     for amp in ampList:
         print os.linesep, 'AMP', amp
@@ -308,7 +302,13 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
         
         # Separate noise and signal.
         # Must be in unit of electrons.
-        sciAmpSig, sciAmpNse = pcfy.DecomposeRN(sciAmpOrig, rn_clip)
+        if noise == 1:
+          sciAmpSig, sciAmpNse = pcfy.DecomposeRN(sciAmpOrig, rn_clip)
+        elif noise == 0:
+          sciAmpSig = sciAmpOrig.copy()
+          sciAmpNse = numpy.zeros(sciAmpSig.shape,dtype=sciAmpSig.dtype)
+        else:
+          raise PixCteError('Invalid noise model specified, must be 0 or 1.')
         
         if intermediateFiles:
             mosX1, mosX2, mosY1, mosY2, tCode = quadObj.MosaicPars(amp)
@@ -322,22 +322,28 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
         else:
             outLog2 = ''
         # End if
-
+        
         # CTE correction in DN.
         sciAmpCor = pcfy.FixYCte(sciAmpSig, cte_frac, sim_nit, shft_nit,
                                   levels, dpde_l, tail_len,
                                   chg_leak_lt, chg_open_lt, amp, outLog2)
-
+        
         # Add noise in electrons back to corrected image.
         sciAmpFin = sciAmpCor + sciAmpNse
+        del sciAmpCor, sciAmpNse
         sciQuadData[amp][:,:] = sciAmpFin.astype(sciQuadData[amp].dtype)
-
+        
         # Apply 10% correction to ERR in quadrature.
         # Assume unit of electrons.
         dcte = 0.1 * numpy.abs(sciAmpFin - sciAmpOrig)
+        del sciAmpFin, sciAmpOrig
         errAmpSig = errQuadData[amp].copy().astype('float')
         errAmpFin = numpy.sqrt(errAmpSig**2 + dcte**2)
+        del errAmpSig, dcte
+        
         errQuadData[amp][:,:] = errAmpFin.astype(errQuadData[amp].dtype)
+        del errAmpFin
+        
     # End of amp loop
 
     # Update header
@@ -422,7 +428,7 @@ def _PixCteParams(fitsTable):
     # Open FITS table
     pf_ref = pyfits.open(refFile)
 
-    # Read RN2_NIT value from header
+    # Read RN_CLIP value from header
     rn_clip = pf_ref['PRIMARY'].header['RN_CLIP']
     
     # read SIM_NIT value from header

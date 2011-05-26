@@ -93,7 +93,7 @@ static PyObject * py_InterpolatePsi(PyObject *self, PyObject *args) {
   Py_DECREF(py_psi_node);
   Py_DECREF(py_chg_leak);
   
-  return Py_BuildValue("OO",py_chg_leak_interp, py_chg_open_interp);
+  return Py_BuildValue("NN",py_chg_leak_interp, py_chg_open_interp);
 }
 
 static PyObject * py_InterpolatePhi(PyObject *self, PyObject *args) {
@@ -148,7 +148,8 @@ static PyObject * py_InterpolatePhi(PyObject *self, PyObject *args) {
   Py_DECREF(py_dtde_l);
   Py_DECREF(py_q_dtde);
   
-  return Py_BuildValue("O",py_dtde_q);
+//  return Py_BuildValue("N",py_dtde_q);
+  return py_dtde_q;
 }
 
 static PyObject * py_FillLevelArrays(PyObject *self, PyObject *args) {
@@ -240,7 +241,7 @@ static PyObject * py_FillLevelArrays(PyObject *self, PyObject *args) {
   Py_DECREF(py_dtde_q);
   Py_DECREF(py_levels);
   
-  return Py_BuildValue("OOOO",py_chg_leak_lt, py_chg_open_lt, py_dpde_l, py_tail_len);
+  return Py_BuildValue("NNNN",py_chg_leak_lt, py_chg_open_lt, py_dpde_l, py_tail_len);
 }
 
 static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
@@ -317,7 +318,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   
   Py_DECREF(py_data);
   
-  return Py_BuildValue("OO", py_sig, py_noise);
+  return Py_BuildValue("NN", py_sig, py_noise);
 }
 
 static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
@@ -426,7 +427,8 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   Py_DECREF(py_chg_leak_lt);
   Py_DECREF(py_chg_open_lt);
   
-  return Py_BuildValue("O", py_sig_cor);
+//  return Py_BuildValue("N", py_sig_cor);
+  return py_sig_cor;
 }
 
 static PyObject * py_AddYCte(PyObject *self, PyObject *args) {
@@ -534,7 +536,8 @@ static PyObject * py_AddYCte(PyObject *self, PyObject *args) {
   Py_DECREF(py_chg_leak_lt);
   Py_DECREF(py_chg_open_lt);
   
-  return Py_BuildValue("O", py_sig_cor);
+//  return Py_BuildValue("N", py_sig_cor);
+  return py_sig_cor;
 }
 
 static PyMethodDef PixCte_FixY_methods[] =
