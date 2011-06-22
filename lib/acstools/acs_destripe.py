@@ -34,7 +34,7 @@ import os, pyfits, sys
 import numpy as np
 from numpy import sqrt, empty, unique, ones, zeros, byte, median, average, sum, concatenate
 
-from pytools import parseinput,teal
+from stsci.tools import parseinput,teal
         
 def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
 

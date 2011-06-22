@@ -20,5 +20,5 @@ import PixCteCorr
 # These lines allow TEAL to print out the names of TEAL-enabled tasks 
 # upon importing this package.
 import os
-from pytools import teal
+from stsci.tools import teal
 teal.print_tasknames(__name__, os.path.dirname(__file__))
