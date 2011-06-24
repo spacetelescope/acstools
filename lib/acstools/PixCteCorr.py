@@ -42,11 +42,11 @@ Notes
 import os, shutil, time, numpy, pyfits
 
 try:
-    from pytools import teal
+    from stsci.tools import teal
 except:
     teal = None
 
-from pytools import parseinput
+from stsci.tools import parseinput
 
 # Local modules
 import ImageOpByAmp
@@ -84,7 +84,7 @@ def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
 
         or from a general Python command line:
 
-            >>> from pytools import teal
+            >>> from stsci.tools import teal
             >>> teal.teal('PixCteCorr')
 
     Parameters
