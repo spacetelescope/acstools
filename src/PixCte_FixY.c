@@ -1,560 +1,376 @@
-#include <stdlib.h>
-#include <stdio.h>
+/*
+    Program: PixCte_FixY.c
+    Authors: P. L. Lim (C), J. Anderson (Fortran)
+    Purpose: Perform computationally intensive operations for 
+             pixel-based CTE correction in parallel direction.
+
+    References:
+    http://docs.scipy.org/doc/numpy/reference/c-api.html
+    http://www.scipy.org/Cookbook/C_Extensions/NumPy_arrays
+    http://dsnra.jpl.nasa.gov/software/Python/numpydoc/numpy-13.html
+
+    History:
+    2010-09-16 Created by PLL.
+*/
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
 
-#include "PixCteCorr.h"
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
 
-static PyObject * py_CalcCteFrac(PyObject *self, PyObject *args) {
-  /* input variables */
-  const double mjd;
-  const int instrument;
-  
-  /* local variables */
-  double cte_frac;
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "di", &mjd, &instrument)) {
-    return NULL;
-  }
-  
-  /* get cte_frac */
-  cte_frac = CalcCteFrac(mjd, instrument);
-  
-  /* test whether it's good */
-  if (cte_frac < 0) {
-    PyErr_SetString(PyExc_ValueError,"Instrument is invalid for CalcCteFrac.");
-    return NULL;
-  }
-  
-  return Py_BuildValue("d",cte_frac);
+/* Global constants - ACS/WFC only */
+#define MAX_YSIZE 2048 // Full-frame FLT - do not change
+#define J_PRINT_MIN 1996 // 1997-1
+#define J_PRINT_MAX 2015 // 2015-0
+#define TRPQ_INIT 99 // 100-1
+
+/* Global constants */
+#define ENDLINE "\n"
+#define N_ITER 4     // N interations for sim_readout()
+
+/* Global constants - NOT USED. Kept just in case. */
+//#define PMAX 49998   // 49999-1
+//#define QUMAX 9999   // 10000-1
+
+/* Global variables */
+int QMAX = 99999;    // Will be updated in FixYCte()
+
+/* #######################################################
+   Matrix Utility functions
+   http://www.scipy.org/Cookbook/C_Extensions/NumPy_arrays */
+
+/* Allocate a double *vector (vec of pointers). */
+double ** ptrvector(long n)
+{
+    double **v;
+    v = (double **) malloc((size_t) (n*sizeof(double)));
+    if (!v)
+    {
+        printf("In **ptrvector. Allocation of memory for double array failed.");
+        exit(0);
+    }
+    return v;
 }
 
-static PyObject * py_InterpolatePsi(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_chg_leak, *opy_psi_node;
-  PyArrayObject *py_chg_leak, *py_psi_node;
-  
-  /* local variables */
-  int status, i, j;
-  int psi_node[NUM_PSI];
-  double chg_leak[NUM_PSI*NUM_LOGQ];
-  double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ];
-  double chg_open_interp[MAX_TAIL_LEN*NUM_LOGQ];
-  
-  /* return variable */
-  npy_intp chg_leak_dim[] = {MAX_TAIL_LEN, NUM_LOGQ};
-  PyArrayObject *py_chg_leak_interp = 
-              (PyArrayObject *) PyArray_SimpleNew(2, chg_leak_dim, NPY_DOUBLE);
-  PyArrayObject *py_chg_open_interp = 
-              (PyArrayObject *) PyArray_SimpleNew(2, chg_leak_dim, NPY_DOUBLE);
-  if (!py_chg_leak_interp || !py_chg_open_interp) {
-    return NULL;
-  }
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OO", &opy_chg_leak, &opy_psi_node)) {
-    return NULL;
-  }
-  
-  py_psi_node = (PyArrayObject *) PyArray_FROMANY(opy_psi_node, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_chg_leak = (PyArrayObject *) PyArray_FROMANY(opy_chg_leak, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  if (!py_psi_node || !py_chg_leak) {
-    return NULL;
-  }
-  
-  /* put array object inputs into local C arrays */
-  for (i = 0; i < NUM_PSI; i++) {
-    psi_node[i] = *(int *) PyArray_GETPTR1(py_psi_node, i);
-    
-    for (j = 0; j < NUM_LOGQ; j++) {
-      chg_leak[i*NUM_LOGQ + j] = *(double *) PyArray_GETPTR2(py_chg_leak, i, j);
-    }
-  }
-  
-  /* call InterpolatePsi */
-  status = InterpolatePsi(chg_leak, psi_node, chg_leak_interp, chg_open_interp);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in InterpolatePsi.");
-    return NULL;
-  }
-  
-  /* copy chg_leak_interp and chg_open_interp to returned PyArrayObjects */
-  for (i = 0; i < MAX_TAIL_LEN; i++) {
-    for (j = 0; j < NUM_LOGQ; j++) {
-      *(npy_double *) PyArray_GETPTR2(py_chg_leak_interp, i, j) = 
-                                                chg_leak_interp[i*NUM_LOGQ + j];
-      *(npy_double *) PyArray_GETPTR2(py_chg_open_interp, i, j) = 
-                                                chg_open_interp[i*NUM_LOGQ + j];
-    }
-  }
-  
-  Py_DECREF(py_psi_node);
-  Py_DECREF(py_chg_leak);
-  
-  return Py_BuildValue("NN",py_chg_leak_interp, py_chg_open_interp);
+/* Free a double *vector (vec of pointers). */ 
+void free_Carrayptrs(double **v)
+{
+    free((char*) v);
 }
 
-static PyObject * py_InterpolatePhi(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_dtde_l, *opy_q_dtde;
-  PyArrayObject *py_dtde_l, *py_q_dtde;
-  int shft_nit;
-  
-  /* local variables */
-  int status, p;
-  double dtde_l[NUM_PHI];
-  int q_dtde[NUM_PHI];
-  double dtde_q[MAX_PHI];
-  
-  /* return variables */
-  npy_intp phi_max_dim[] = {MAX_PHI};
-  PyArrayObject *py_dtde_q = 
-    (PyArrayObject *) PyArray_SimpleNew(1, phi_max_dim, NPY_DOUBLE);
-  if (!py_dtde_q) {
-    return NULL;
-  }
- 
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OOi", &opy_dtde_l, &opy_q_dtde, &shft_nit)) {
-    return NULL;
-  }
-   
-  py_dtde_l = (PyArrayObject *) PyArray_FROMANY(opy_dtde_l, NPY_DOUBLE, 1, 1, NPY_IN_ARRAY);
-  py_q_dtde = (PyArrayObject *) PyArray_FROMANY(opy_q_dtde, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  if (!py_dtde_l || !py_q_dtde) {
-    return NULL;
-  }
-  
-  /* copy input python array to local C array */
-  for (p = 0; p < NUM_PHI; p++) {
-    dtde_l[p] = *(double *) PyArray_GETPTR1(py_dtde_l, p);
-    q_dtde[p] = *(int *) PyArray_GETPTR1(py_q_dtde, p);
-  }
-  
-  /* call InterpolatePhi */
-  status = InterpolatePhi(dtde_l, q_dtde, shft_nit, dtde_q);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in InterpolatePhi.");
-    return NULL;
-  }
-  
-  /* copy local C arrays to return variables */
-  for (p = 0; p < MAX_PHI; p++) {
-    *(npy_double *) PyArray_GETPTR1(py_dtde_q, p) = dtde_q[p];
-  }
-  
-  Py_DECREF(py_dtde_l);
-  Py_DECREF(py_q_dtde);
-  
-//  return Py_BuildValue("N",py_dtde_q);
-  return py_dtde_q;
+/* Create Carray from PyArray. Assumes PyArray is contiguous in memory. */
+double ** pymatrix_to_Carrayptrs(PyArrayObject *arrayin)
+{
+    double **c, *a;
+    int i, n, m;
+    n = arrayin->dimensions[0];
+    m = arrayin->dimensions[1];
+    c = ptrvector(n);
+    a = (double *) arrayin->data; /* pointer to arrayin data as double */
+    for (i=0; i<n; i++) c[i] = a + i*m;
+    return c;
 }
 
-static PyObject * py_FillLevelArrays(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_chg_leak_kt, *opy_chg_open_kt, *opy_dtde_q, *opy_levels;
-  PyArrayObject *py_chg_leak_kt, *py_chg_open_kt, *py_dtde_q, *py_levels;
-  
-  /* local variables */
-  int status, i, j;
-  double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ];
-  double chg_open_kt[MAX_TAIL_LEN*NUM_LOGQ];
-  double dtde_q[MAX_PHI];
-  int levels[NUM_LEV];
-  double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV];
-  double chg_open_lt[MAX_TAIL_LEN*NUM_LEV];
-  double dpde_l[NUM_LEV];
-  int tail_len[NUM_LEV];
-  
-  /* return variables */
-  npy_intp lt_dim[] = {MAX_TAIL_LEN, NUM_LEV};
-  npy_intp l_dim[] = {NUM_LEV};
-  PyArrayObject *py_chg_leak_lt = 
-    (PyArrayObject *) PyArray_SimpleNew(2, lt_dim, NPY_DOUBLE);
-  PyArrayObject *py_chg_open_lt = 
-    (PyArrayObject *) PyArray_SimpleNew(2, lt_dim, NPY_DOUBLE);
-  PyArrayObject *py_dpde_l = 
-    (PyArrayObject *) PyArray_SimpleNew(1, l_dim, NPY_DOUBLE);
-  PyArrayObject *py_tail_len = 
-    (PyArrayObject *) PyArray_SimpleNew(1, l_dim, NPY_INT);
-  if (!py_chg_leak_lt || !py_chg_open_lt || !py_dpde_l || !py_tail_len) {
-    return NULL;
-  }
-  
-  /* put input arguments into variables */
-  if (!PyArg_ParseTuple(args, "OOOO", &opy_chg_leak_kt, &opy_chg_open_kt,
-                                      &opy_dtde_q, &opy_levels)) {
-    return NULL;
-  }
-  
-  py_chg_leak_kt = 
-    (PyArrayObject *) PyArray_FROMANY(opy_chg_leak_kt, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  py_chg_open_kt = 
-    (PyArrayObject *) PyArray_FROMANY(opy_chg_open_kt, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  py_dtde_q = (PyArrayObject *) PyArray_FROMANY(opy_dtde_q, NPY_DOUBLE, 1, 1, NPY_IN_ARRAY);
-  py_levels = (PyArrayObject *) PyArray_FROMANY(opy_levels, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  if (!py_chg_leak_kt || !py_chg_open_kt || !py_dtde_q || !py_levels) {
-    return NULL;
-  }
-  
-  /* copy input python arrays to local C arrays */
-  for (i = 0; i < MAX_PHI; i++) {
-    dtde_q[i] = (double) *(npy_double *) PyArray_GETPTR1(py_dtde_q, i);
-  }
-  
-  for (i = 0; i < NUM_LEV; i++) {
-    levels[i] = (int) *(npy_int *) PyArray_GETPTR1(py_levels, i);
-  }
-  
-  for (i = 0; i < MAX_TAIL_LEN; i++) {
-    for (j = 0; j < NUM_LOGQ; j++) {
-      chg_leak_kt[i*NUM_LOGQ + j] = (double) *(npy_double *) PyArray_GETPTR2(py_chg_leak_kt, i, j);
-      chg_open_kt[i*NUM_LOGQ + j] = (double) *(npy_double *) PyArray_GETPTR2(py_chg_open_kt, i, j);
-    }
-  }
-  
-  /* call FillLevelArrays */
-  status = FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels,
-                           chg_leak_lt, chg_open_lt, dpde_l, tail_len);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in FillLevelArrays.");
-    return NULL;
-  }
-  
-  /* copy local C arrays to return variables */
-  for (j = 0; j < NUM_LEV; j++) {
-    *(npy_double *) PyArray_GETPTR1(py_dpde_l, j) = (npy_double) dpde_l[j];
-    *(npy_int *) PyArray_GETPTR1(py_tail_len, j) = (npy_int) tail_len[j];
-    
-    for (i = 0; i < MAX_TAIL_LEN; i++) {
-      *(npy_double *) PyArray_GETPTR2(py_chg_leak_lt, i, j) = 
-        (npy_double) chg_leak_lt[i*NUM_LEV + j];
-      *(npy_double *) PyArray_GETPTR2(py_chg_open_lt, i, j) = 
-        (npy_double) chg_open_lt[i*NUM_LEV + j];
-    }
-  }
-  
-  Py_DECREF(py_chg_leak_kt);
-  Py_DECREF(py_chg_open_kt);
-  Py_DECREF(py_dtde_q);
-  Py_DECREF(py_levels);
-  
-  return Py_BuildValue("NNNN",py_chg_leak_lt, py_chg_open_lt, py_dpde_l, py_tail_len);
+/* ####################################################### */
+
+/* Evaluate chg_leak_tq or chg_open_tq */
+double eval_prof(PyArrayObject *chg_tq, int t, int q, double val4tmax)
+{
+    double rval=0.0;
+    int qu=q, qu_max=chg_tq->dimensions[1]-1, t_max=chg_tq->dimensions[0]-1;
+
+    if (t < 0) return rval; // In Fortran, rval=0 if t=0
+    if (t > t_max) return val4tmax;
+    if (q < 0) return rval;
+
+    if (q > qu_max) qu = qu_max;
+    rval = *(double *)(chg_tq->data + t*chg_tq->strides[0] + qu*chg_tq->strides[1]);
+    return rval;
 }
 
-static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_data;
-  PyArrayObject *py_data;
-  double pclip;
-  
-  /* local variables */
-  int status, i, j;
-  int arrx, arry;
-  double * data;
-  double * sig;
-  double * noise;
-  
-  /* return variables */
-  npy_intp * out_dim;
-  PyArrayObject * py_sig;
-  PyArrayObject * py_noise;
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "Od", &opy_data, &pclip)) {
-    return NULL;
-  }
-  
-  py_data = (PyArrayObject *) PyArray_FROMANY(opy_data, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  if (!py_data) {
-    return NULL;
-  }
-  
-  /* assign/allocate local variables */
-  arrx = py_data->dimensions[0];
-  arry = py_data->dimensions[1];
-  data = (double *) malloc(arrx * arry * sizeof(double));
-  sig = (double *) malloc(arrx * arry * sizeof(double));
-  noise = (double *) malloc(arrx * arry * sizeof(double));
-  
-  /* return variables */
-  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
-  out_dim[0] = (npy_intp) arrx;
-  out_dim[1] = (npy_intp) arry;  
-  py_sig = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  py_noise = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  if (!py_sig || !py_noise) {
-    return NULL;
-  }
-  
-  /* copy input Python arrays to local C arrays */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      data[i*arry + j] = (double) *(npy_double *) PyArray_GETPTR2(py_data, i, j);
-    }
-  }
-  
-  /* call DecomposeRN */
-  status = DecomposeRN(arrx, arry, data, pclip, sig, noise);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in DecomposeRN.");
-    return NULL;
-  }
-  
-  /* copy local C arrays to return Python arrays */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      *(npy_double *) PyArray_GETPTR2(py_sig, i, j) = (npy_double) sig[i*arry + j];
-      *(npy_double *) PyArray_GETPTR2(py_noise, i, j) = (npy_double) noise[i*arry + j];
-    }
-  }
-  
-  free(out_dim);
-  free(data);
-  free(sig);
-  free(noise);
-  
-  Py_DECREF(py_data);
-  
-  return Py_BuildValue("NN", py_sig, py_noise);
+/* Evaluate q_pix_array */
+int eval_qpix(PyArrayObject *q_pix_array, double p)
+{
+    double rval=0.0;
+    int ip, ip_max=q_pix_array->dimensions[0]-1;
+
+    if (p < 1) return (int) rval;
+
+    ip = ((int) p) - 1;
+    if (ip > ip_max) ip = ip_max;
+    rval = *(double *)(q_pix_array->data + ip*q_pix_array->strides[0]);
+    return (int) rval;
 }
 
-static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_sig_cte, *opy_levels, *opy_dpde_l, *opy_tail_len;
-  PyObject *opy_chg_leak_lt, *opy_chg_open_lt;
-  PyArrayObject *py_sig_cte, *py_levels, *py_dpde_l, *py_tail_len;
-  PyArrayObject *py_chg_leak_lt, *py_chg_open_lt;
-  double cte_frac;
-  int sim_nit, shft_nit;
-  const char *amp_name, *log_file;
-  
-  /* local variables */
-  int status, i, j;
-  int arrx, arry;
-  double * sig_cte;
-  double * sig_cor;
-  int levels[NUM_LEV];
-  double dpde_l[NUM_LEV];
-  int tail_len[NUM_LEV];
-  double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV];
-  double chg_open_lt[MAX_TAIL_LEN*NUM_LEV];
-  
-  /* return variables */
-  npy_intp * out_dim;
-  PyArrayObject * py_sig_cor;
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OdiiOOOOOss", &opy_sig_cte, &cte_frac, &sim_nit, 
-                        &shft_nit, &opy_levels, &opy_dpde_l, & opy_tail_len, 
-                        &opy_chg_leak_lt, &opy_chg_open_lt, &amp_name, &log_file)) {
-    return NULL;
-  }
-  
-  py_sig_cte = (PyArrayObject *) PyArray_FROMANY(opy_sig_cte, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  py_levels = (PyArrayObject *) PyArray_FROMANY(opy_levels, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_dpde_l = (PyArrayObject *) PyArray_FROMANY(opy_dpde_l, NPY_DOUBLE, 1, 1, NPY_IN_ARRAY);
-  py_tail_len = (PyArrayObject *) PyArray_FROMANY(opy_tail_len, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_chg_leak_lt = (PyArrayObject *) PyArray_FROMANY(opy_chg_leak_lt, NPY_DOUBLE, 
-                                                     2, 2, NPY_IN_ARRAY);
-  py_chg_open_lt = (PyArrayObject *) PyArray_FROMANY(opy_chg_open_lt, NPY_DOUBLE, 
-                                                     2, 2, NPY_IN_ARRAY);
-  if (!py_sig_cte || !py_levels || !py_dpde_l || !py_tail_len || 
-      !py_chg_leak_lt || !py_chg_open_lt) {
-    return NULL;
-  }
-  
-  /* local variables */
-  arrx = py_sig_cte->dimensions[0];
-  arry = py_sig_cte->dimensions[1];
-  sig_cte = (double *) malloc(arrx * arry * sizeof(double));
-  sig_cor = (double *) malloc(arrx * arry * sizeof(double));
-  
-  /* return variables */
-  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
-  out_dim[0] = (npy_intp) arrx;
-  out_dim[1] = (npy_intp) arry;
-  py_sig_cor = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  if (!py_sig_cor) {
-    return NULL;
-  }
-  
-  /* copy input Python arrays to local C arrays */  
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      sig_cte[i*arry + j] = (double) *(npy_double *) PyArray_GETPTR2(py_sig_cte, i, j);
-    }
-  }
-  
-  for (i = 0; i < NUM_LEV; i++) {
-    levels[i] = (int) *(npy_int *) PyArray_GETPTR1(py_levels, i);
-    tail_len[i] = (int) *(npy_int *) PyArray_GETPTR1(py_tail_len, i);
-    dpde_l[i] = (double) *(npy_double *) PyArray_GETPTR1(py_dpde_l, i);
-    
-    for (j = 0; j < MAX_TAIL_LEN; j++) {
-      chg_leak_lt[j*NUM_LEV + i] = 
-        (double) *(npy_double *) PyArray_GETPTR2(py_chg_leak_lt, j, i);
-      chg_open_lt[j*NUM_LEV + i] = 
-        (double) *(npy_double *) PyArray_GETPTR2(py_chg_open_lt, j, i);
-    }
-  }
-  
-  /* call FixYCte */
-  status = FixYCte(arrx, arry, sig_cte, sig_cor, cte_frac, sim_nit, shft_nit,
-                   levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt, amp_name, log_file);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in FixYCte.");
-    return NULL;
-  }
-  
-  /* copy fixed data in C array to output Python array */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      *(double *) PyArray_GETPTR2(py_sig_cor, i, j) = sig_cor[i*arry + j];
-    }
-  }
-  
-  free(out_dim);
-  free(sig_cte);
-  free(sig_cor);
-  
-  Py_DECREF(py_sig_cte);
-  Py_DECREF(py_levels);
-  Py_DECREF(py_tail_len);
-  Py_DECREF(py_dpde_l);
-  Py_DECREF(py_chg_leak_lt);
-  Py_DECREF(py_chg_open_lt);
-  
-//  return Py_BuildValue("N", py_sig_cor);
-  return py_sig_cor;
+/*
+This version will use the arrays that go from 0 to QMAX-1
+to describe the CTE loss.
+
+INPUTS:
+pix_curr: The "true" array of pixel values.
+y_size  : Number of rows for readout in each column.
+q_pix_array: Calculated in Python code.
+chg_leak_tq: Calculated in Python code.
+chg_open_tq: Calculated in Python code.
+
+OUTPUT:
+pix_read: The "observed" array, resulting from CTE + "true"
+*/
+void sim_readout(double pix_curr[], double pix_read[], int y_size, PyArrayObject *q_pix_array, PyArrayObject *chg_leak_tq, PyArrayObject *chg_open_tq)
+{
+    int i, q, t, trpq[QMAX], trpq_init2=TRPQ_INIT+1;
+    double iy, qpix, free1, fill;
+
+    // This never needs to be larger than QMAX
+    for (q=0;q<QMAX;q++) trpq[q] = trpq_init2;
+
+    /*
+    Go through the readout cycle. Read the end pixel first
+    and put it next onto the buffer. Then shift the others
+    over. Do this y_size times.
+    */
+    for (i=0;i<y_size;i++)
+    {
+        iy = (i + 1.0) / MAX_YSIZE;
+
+        /*
+        This first half of the loop deals with the emptying
+        of traps. trpq[q] tells you how long it has been
+        since trap #q has released its charge.
+        */
+        free1 = 0.0;
+        q = 0;
+        while (q<QMAX && trpq[q]<trpq_init2)
+	{
+            t = trpq[q] + 1;
+	    if (t <= trpq_init2)
+	    {
+	      /*
+	      Once a trap has given off its electrons for
+              this shift, then increment how long it's been
+	      since it was filled.
+	      */
+	      free1 += eval_prof(chg_leak_tq, t-1, q, 0.0) * iy;
+              trpq[q]++;
+	    }
+  	    q++;
+        } // End of q loop of emptying traps
+
+	pix_read[i] = pix_curr[i] + free1;
+
+	/*
+	Second half of the loop deals with the filling of
+	traps. It is easier to confine fewer electrons.
+	A larger electron cloud sees more traps as a cloud
+	but less traps per electron. Trap density is
+	probably uniform but electron cloud is not.
+	*/
+	fill = 0.0;
+	qpix = eval_qpix(q_pix_array, pix_read[i]);
+	for (q=0;q<qpix;q++)
+	{
+	    t = trpq[q];
+	    fill += eval_prof(chg_open_tq, t-1, q, 1.0) * iy;
+	    trpq[q] = 0;
+	} // End of q loop of filling traps
+
+	pix_read[i] -= fill;
+    } // End of i loop through a column
 }
 
-static PyObject * py_AddYCte(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_sig_cte, *opy_levels, *opy_dpde_l, *opy_tail_len;
-  PyObject *opy_chg_leak_lt, *opy_chg_open_lt;
-  PyArrayObject *py_sig_cte, *py_levels, *py_dpde_l, *py_tail_len;
-  PyArrayObject *py_chg_leak_lt, *py_chg_open_lt;
-  double cte_frac;
-  int shft_nit;
-  
-  /* local variables */
-  int status, i, j;
-  int arrx, arry;
-  double * sig_cte;
-  double * sig_cor;
-  int levels[NUM_LEV];
-  double dpde_l[NUM_LEV];
-  int tail_len[NUM_LEV];
-  double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV];
-  double chg_open_lt[MAX_TAIL_LEN*NUM_LEV];
-  
-  /* return variables */
-  npy_intp * out_dim;
-  PyArrayObject * py_sig_cor;
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OdiOOOOO", &opy_sig_cte, &cte_frac, 
-                        &shft_nit, &opy_levels, &opy_dpde_l, & opy_tail_len, 
-                        &opy_chg_leak_lt, &opy_chg_open_lt)) {
-    return NULL;
-  }
-  
-  py_sig_cte = (PyArrayObject *) PyArray_FROMANY(opy_sig_cte, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  py_levels = (PyArrayObject *) PyArray_FROMANY(opy_levels, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_dpde_l = (PyArrayObject *) PyArray_FROMANY(opy_dpde_l, NPY_DOUBLE, 1, 1, NPY_IN_ARRAY);
-  py_tail_len = (PyArrayObject *) PyArray_FROMANY(opy_tail_len, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_chg_leak_lt = (PyArrayObject *) PyArray_FROMANY(opy_chg_leak_lt, NPY_DOUBLE, 
-                                                     2, 2, NPY_IN_ARRAY);
-  py_chg_open_lt = (PyArrayObject *) PyArray_FROMANY(opy_chg_open_lt, NPY_DOUBLE, 
-                                                     2, 2, NPY_IN_ARRAY);
-  if (!py_sig_cte || !py_levels || !py_dpde_l || !py_tail_len || 
-      !py_chg_leak_lt || !py_chg_open_lt) {
-    return NULL;
-  }
-  
-  /* local variables */
-  arrx = py_sig_cte->dimensions[0];
-  arry = py_sig_cte->dimensions[1];
-  sig_cte = (double *) malloc(arrx * arry * sizeof(double));
-  sig_cor = (double *) malloc(arrx * arry * sizeof(double));
-  
-  /* return variables */
-  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
-  out_dim[0] = (npy_intp) arrx;
-  out_dim[1] = (npy_intp) arry;
-  py_sig_cor = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  if (!py_sig_cor) {
-    return NULL;
-  }
-  
-  /* copy input Python arrays to local C arrays */  
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      sig_cte[i*arry + j] = (double) *(npy_double *) PyArray_GETPTR2(py_sig_cte, i, j);
+/*
+Like sim_readout() but slightly different implementation.
+Kept for testing only. 
+*/
+void sim_readout_NOT_USED(double pix_curr[], double pix_read[], int y_size, PyArrayObject *q_pix_array, PyArrayObject *chg_leak_tq, PyArrayObject *chg_open_tq)
+{
+    int i, q, t, trpq[QMAX], trpq_init2=TRPQ_INIT+1;
+    double iy, qpix, free1, fill;
+
+    // This never needs to be larger than QMAX
+    for (q=0;q<QMAX;q++) trpq[q] = trpq_init2;
+
+    /*
+    Go through the readout cycle. Read the end pixel first
+    and put it next onto the buffer. Then shift the others
+    over. Do this y_size times.
+    */
+    for (i=0;i<y_size;i++)
+    {
+        iy = (i + 1.0) / MAX_YSIZE;
+        free1 = 0.0;
+
+	/* ORIGINAL LOOP STYLE
+	for (q=0;q<QMAX;q++)
+	{
+	    if (trpq[q] >= trpq_init2) break;
+	    t = trpq[q] + 1;
+	    if (t <= trpq_init2)
+	    {
+	        free1 += eval_prof(chg_leak_tq, t-1, q, 0.0) * iy;
+		trpq[q]++;
+	    }
+	}
+	*/
+
+	/* IMPROVED LOOP STYLE */
+	q = 0;
+        while (q<QMAX && trpq[q]<trpq_init2)
+	{
+            t = trpq[q] + 1;
+	    if (t <= trpq_init2)
+	    {
+	      free1 += eval_prof(chg_leak_tq, t-1, q, 0.0) * iy;
+              trpq[q]++;
+	    }
+  	    q++;
+        }
+
+	pix_read[i] = pix_curr[i] + free1;
+
+	fill = 0.0;
+	qpix = eval_qpix(q_pix_array, pix_read[i]);
+	for (q=1;q<=qpix;q++)
+	{
+	    t = trpq[q-1];
+	    fill += eval_prof(chg_open_tq, t-1, q-1, 1.0) * iy;
+            trpq[q-1] = 0;
+	}
+
+	pix_read[i] -= fill;
+    } // End of i loop through a column
+}
+
+static PyObject * FixYCte(PyObject *self, PyObject *args)
+{
+    // Declaration and initialization
+    PyObject *oimage, *ooutimage, *oqpixarr, *ochgleak, *ochgopen;
+    PyArrayObject *image, *outimage, *qpixarr, *chgleak, *chgopen;
+    int i, j, n, xSize, ySize, doLog=0;
+    double in_qmax, pix_obsd[MAX_YSIZE], pix_curr[MAX_YSIZE], pix_read[MAX_YSIZE], **cout;
+    const char *amp_name, *log_file;
+    FILE *flog;
+
+    /*
+    1. Quadrant image
+    2. Output image
+    3. QMAX = _YCTE_QMAX
+    4. q_pix_array
+    5. chg_leak_tq
+    6. chg_open_tq
+    7. AMP
+    8. Log file name
+
+    FUTURE WORK: Might also need to read in NITS from Python.
+    */
+    if (!PyArg_ParseTuple(args, "OOdOOOss:FixYCte", &oimage, &ooutimage, &in_qmax, &oqpixarr, &ochgleak, &ochgopen, &amp_name, &log_file)) return NULL;
+
+    // Build arrays
+    image = (PyArrayObject *)PyArray_FROM_OTF(oimage, NPY_DOUBLE, NPY_IN_ARRAY);
+    outimage = (PyArrayObject *)PyArray_FROM_OTF(ooutimage, NPY_DOUBLE, NPY_OUT_ARRAY);
+    qpixarr = (PyArrayObject *)PyArray_FROM_OTF(oqpixarr, NPY_DOUBLE, NPY_IN_ARRAY);
+    chgleak = (PyArrayObject *)PyArray_FROM_OTF(ochgleak, NPY_DOUBLE, NPY_IN_ARRAY);
+    chgopen = (PyArrayObject *)PyArray_FROM_OTF(ochgopen, NPY_DOUBLE, NPY_IN_ARRAY);
+    if (!image || !outimage || !qpixarr || !chgleak || !chgopen) return NULL;
+
+    // Image dimensions
+    xSize = image->dimensions[1];
+    ySize = image->dimensions[0];
+
+    // Change output to C - memory is allocated
+    cout = pymatrix_to_Carrayptrs(outimage);
+
+    // Set global QMAX (comment out to use preset value)
+    QMAX = (int) in_qmax;
+
+    // Open optional log file
+    if (strlen(log_file) > 0)
+    {
+        doLog = 1;
+        flog = fopen(log_file, "a"); // Always append
+
+	// Header
+        fprintf(flog, "#%s# AMP: %s%s", ENDLINE, amp_name, ENDLINE);
+	fprintf(flog, "#%-4s ", "#PIX");
+	for (j=J_PRINT_MIN; j<J_PRINT_MAX; j++) fprintf(flog, "Y=%-4i ", j+1);
+	fprintf(flog, "%s", ENDLINE);
     }
-  }
-  
-  for (i = 0; i < NUM_LEV; i++) {
-    levels[i] = (int) *(npy_int *) PyArray_GETPTR1(py_levels, i);
-    tail_len[i] = (int) *(npy_int *) PyArray_GETPTR1(py_tail_len, i);
-    dpde_l[i] = (double) *(npy_double *) PyArray_GETPTR1(py_dpde_l, i);
-    
-    for (j = 0; j < MAX_TAIL_LEN; j++) {
-      chg_leak_lt[j*NUM_LEV + i] = 
-      (double) *(npy_double *) PyArray_GETPTR2(py_chg_leak_lt, j, i);
-      chg_open_lt[j*NUM_LEV + i] = 
-      (double) *(npy_double *) PyArray_GETPTR2(py_chg_open_lt, j, i);
+
+    // Loop through columns. Columns are independent of each other.
+    for (i=0; i<xSize; i++)
+    {
+        // Copy input column
+        for (j=0; j<ySize; j++)
+	{
+ 	    pix_obsd[j] = *(double *)(image->data + i*image->strides[1] + j*image->strides[0]);
+	    pix_curr[j] = pix_obsd[j];
+	    pix_read[j] = 0.0;
+	}
+
+	/*
+	Pixel-based CTE correction.
+
+	FUTURE WORK: NITS will be the number of iteration of
+	an extra loop somwhere here to call sim_readout
+	multiple times to refine qpixarr(?).
+	*/
+	for (n=0; n<N_ITER; n++)
+	{
+	  sim_readout(pix_curr, pix_read, ySize, qpixarr, chgleak, chgopen);
+	  for (j=0; j<ySize; j++) pix_curr[j] += pix_obsd[j] - pix_read[j];
+	}
+
+	// Copy output column
+	for (j=0; j<ySize; j++) cout[j][i] = pix_curr[j];
+
+	// Write to log file
+	if (doLog)
+        {
+	    fprintf(flog, "# X=%-i%s", i+1, ENDLINE);
+
+  	    // PIX_CURR
+	    fprintf(flog, "%-4s ", "CURR");
+            for (j=J_PRINT_MIN; j<J_PRINT_MAX; j++) fprintf(flog, "%6i ", (int)(pix_curr[j]+0.5));
+	    fprintf(flog, "%s", ENDLINE);
+
+	    // PIX_OBSD
+	    fprintf(flog, "%-4s ", "OBSD");
+            for (j=J_PRINT_MIN; j<J_PRINT_MAX; j++) fprintf(flog, "%6i ", (int)(pix_obsd[j]+0.5));
+	    fprintf(flog, "%s", ENDLINE);
+
+	    // PIX_READ
+	    fprintf(flog, "%-4s ", "READ");
+            for (j=J_PRINT_MIN; j<J_PRINT_MAX; j++) fprintf(flog, "%6i ", (int)(pix_read[j]+0.5));
+	    fprintf(flog, "%s", ENDLINE);
+	}
     }
-  }
-  
-  /* call FixYCte */
-  status = AddYCte(arrx, arry, sig_cte, sig_cor, cte_frac, shft_nit,
-                   levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in AddYCte.");
-    return NULL;
-  }
-  
-  /* copy fixed data in C array to output Python array */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      *(double *) PyArray_GETPTR2(py_sig_cor, i, j) = sig_cor[i*arry + j];
-    }
-  }
-  
-  free(out_dim);
-  free(sig_cte);
-  free(sig_cor);
-  
-  Py_DECREF(py_sig_cte);
-  Py_DECREF(py_levels);
-  Py_DECREF(py_tail_len);
-  Py_DECREF(py_dpde_l);
-  Py_DECREF(py_chg_leak_lt);
-  Py_DECREF(py_chg_open_lt);
-  
-//  return Py_BuildValue("N", py_sig_cor);
-  return py_sig_cor;
+
+    // Close optional log file
+    if (doLog) fclose(flog);
+
+    // Destroy array references
+    Py_XDECREF(image);
+    Py_XDECREF(qpixarr);
+    Py_XDECREF(chgleak);
+    Py_XDECREF(chgopen);
+
+    /*Py_XINCREF(outimage); */
+    free_Carrayptrs(cout);
+
+    return Py_BuildValue("i",0);
 }
 
 static PyMethodDef PixCte_FixY_methods[] =
 {
-  {"CalcCteFrac",  py_CalcCteFrac, METH_VARARGS, "Calculate CTE multiplier."},
-  {"InterpolatePsi", py_InterpolatePsi, METH_VARARGS, "Interpolate to full tail profile."},
-  {"InterpolatePhi", py_InterpolatePhi, METH_VARARGS, "Interpolate charge traps."},
-  {"FillLevelArrays", py_FillLevelArrays, METH_VARARGS, "FillLevelArrays."},
-  {"DecomposeRN", py_DecomposeRN, METH_VARARGS, "Separate signal and readnoise."},
-  {"FixYCte", py_FixYCte, METH_VARARGS, "Perform parallel CTE correction."},
-  {"AddYCte", py_AddYCte, METH_VARARGS, "Add parallel CTE distortion."},
-  {NULL, NULL, 0, NULL} /* sentinel */
-  
+    {"FixYCte",  FixYCte, METH_VARARGS, "Fix parallel CTE"},
+    {NULL, NULL, 0, NULL} /* sentinel */
+
 };
 
-PyMODINIT_FUNC initPixCte_FixY(void)
+void initPixCte_FixY(void)
 {
-  (void) Py_InitModule("PixCte_FixY", PixCte_FixY_methods);
-  import_array(); // Must be present for NumPy
+    Py_InitModule("PixCte_FixY", PixCte_FixY_methods);
+    import_array(); // Must be present for NumPy
 }
