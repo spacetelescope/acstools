@@ -8,14 +8,23 @@ module.
 
 """
 
-try:
-    import svn_version
-    __svn_version__ = svn_version.__svn_version__
-except:
-    __svn_version__ = 'Unable to determine SVN revision'
+__version__ = ''
+__svn_version__ = 'Unable to determine SVN revision'
+__full_svn_info__ = ''
+__setup_datetime__ = None
 
-import acs_destripe
-import PixCteCorr
+try:
+    __version__ = __import__('pkg_resources').\
+                        get_distribution('acstools').version
+except:
+    pass
+
+try:
+    from acstools.svninfo import (__svn_version__, __full_svn_info__,
+                                  __setup_datetime__)
+except ImportError:
+    pass
+
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks 
 # upon importing this package.
