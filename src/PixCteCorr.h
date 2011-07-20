@@ -1,8 +1,9 @@
 /* constants describing the CTE parameters reference file */
 #define NUM_PHI 9  /* number of phi values in cte params file */
-#define NUM_PSI 13  /* number of psi nodes in cte params file (also # of rows in table) */
+#define NUM_PSI 16  /* number of psi nodes in cte params file (also # of rows in table) */
 #define NUM_LOGQ 4  /* number of log q columns in psi array */
 #define NUM_LEV 107 /* number of specified Q levels */
+#define NUM_SCALE 3 /* number of time dependant CTE scale points */
 
 /* constants describing the CTE characterization */
 #define MAX_TAIL_LEN 60  /* CTE trails are characterized out to 60 pixels */
@@ -16,7 +17,8 @@
 #define NOISE_MODEL 1
 
 /* function prototypes */
-double CalcCteFrac(const double mjd, const int instrument);
+double CalcCteFrac(const double expstart, const double scalemjd[NUM_SCALE],
+                   const double scaleval[NUM_SCALE]);
 int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[],
                    double chg_leak_interp[MAX_TAIL_LEN*NUM_LOGQ],
                    double chg_open_interp[MAX_TAIL_LEN*NUM_LOGQ]);

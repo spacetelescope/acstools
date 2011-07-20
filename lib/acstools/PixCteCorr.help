@@ -72,11 +72,11 @@ How to use the tasks stand alone interface in your own scripts:
 ===============================================================
 For general use in a script, the function CteCorr() should be used with the following syntax:
 
-    def CteCorr(input, outFits='', noise=1, nits=0, intermediateFiles=False) 
+    def CteCorr(input, outFits='', noise=1, intermediateFiles=False) 
 
 For a single image, the function YCte() can be used directly and has the following input:
 
-    def YCte(inFits, outFits='', noise=1, nits=0, intermediateFiles=False)
+    def YCte(inFits, outFits='', noise=1, intermediateFiles=False)
 
 Basic example of how to call CteCorr() yourself from a python command line, 
 this example will use the default parameter settings:

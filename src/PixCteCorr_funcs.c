@@ -9,35 +9,45 @@
 
 /*
  * CalcCteFrac calculates the multiplicative factor that accounts for the
- * worsening of CTE over time. This is currently a linear function valid over
- * the whole life of ACS/WFC, but this will change soon. Jay Anderson has
- * discovered that the slope of the CTE scaling is not constant so the function
- * for CTE frac will be different depending on the obs. start time. The plan
- * is to add the CTE frac parameterization to the CTE params reference file
- * once Jay has them nailed down.
- * - MRD 18 Feb. 2011
- *
- * Constants for instrument names are defined in PixCteCorr.h.
+ * worsening of CTE over time.
  */
-double CalcCteFrac(const double mjd, const int instrument) {
+double CalcCteFrac(const double expstart, const double scalemjd[NUM_SCALE],
+                   const double scaleval[NUM_SCALE]) {
+  
+  /* iteration variables */
+  int i;
   
   /* variables used to calculate the CTE scaling slope */
-  double mjd_pt1, mjd_pt2; /* the MJD points at which the scaling is defined */
+  double mjd_pt1 = 0;
+  double mjd_pt2 = 0;      /* the MJD points at which the scaling is defined */
   double cte_pt1, cte_pt2; /* the CTE frac points at which the scaling is defined */
   
-  double cte_frac;         /* return value */
+  /* return value */
+  double cte_frac;
   
-  if (instrument == ACSWFC) {
-    cte_pt1 = 0.0;
-    cte_pt2 = 1.0;
-    mjd_pt1 = 52335.0;  /* March 2, 2002 */
-    mjd_pt2 = 55263.0;  /* March 8, 2010 */
-  } else {
-    printf("Instrument not found: %i\n",instrument);
-    return -9999.0;
+  /* find the values that bound this exposure */
+  for (i = 0; i < NUM_SCALE-1; i++) {
+    if (expstart >= scalemjd[i] && expstart < scalemjd[i+1]) {
+      mjd_pt1 = scalemjd[i];
+      mjd_pt2 = scalemjd[i+1];
+      cte_pt1 = scaleval[i];
+      cte_pt2 = scaleval[i+1];
+      break;
+    }
   }
   
-  cte_frac = ((cte_pt2 - cte_pt1) / (mjd_pt2 - mjd_pt1)) * (mjd - mjd_pt1);
+  /* it's possible this exposure is not bounded by any of defining points,
+   * in that case we're extrapolating based on the last two points. */
+  if (expstart >= scalemjd[NUM_SCALE-1] && mjd_pt1 == 0 && mjd_pt2 == 0) {
+    mjd_pt1 = scalemjd[NUM_SCALE-2];
+    mjd_pt2 = scalemjd[NUM_SCALE-1];
+    cte_pt1 = scaleval[NUM_SCALE-2];
+    cte_pt2 = scaleval[NUM_SCALE-1];
+  } else if (mjd_pt1 == 0 && mjd_pt2 == 0) {
+    return (cte_frac = -9999.0);
+  }
+  
+  cte_frac = ((cte_pt2 - cte_pt1) / (mjd_pt2 - mjd_pt1)) * (expstart - mjd_pt1) + cte_pt1;
   
   return cte_frac;
 }

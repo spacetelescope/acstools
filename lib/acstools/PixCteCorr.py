@@ -53,7 +53,7 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __vdate__ = "03-May-2011"
 
 # general error for things related to his module
@@ -233,16 +233,14 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     # For epoch-specific operations
     expstart = pf_out['PRIMARY'].header['EXPSTART']
 
-    # Calculate CTE_FRAC
-    if detector == 'WFC':
-      cte_frac = pcfy.CalcCteFrac(expstart, 1)
-    else:
+    # This is just for WFC for now.
+    if detector != 'WFC':
       raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
 
     # Read CTE params from file
-    pctefile = pf_out['PRIMARY'].header['PCTEFILE']
-    sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels = \
-      _PixCteParams(pctefile)
+    pctefile = pf_out['PRIMARY'].header['PCTETAB']
+    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels = \
+      _PixCteParams(pctefile, expstart)
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
@@ -380,7 +378,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     print os.linesep, 'Run time:', timeEnd - timeBeg, 'secs'
 
 #--------------------------
-def _PixCteParams(fitsTable):
+def _PixCteParams(fitsTable, expstart):
     """
     Read params from PCTEFILE.
 
@@ -391,6 +389,9 @@ def _PixCteParams(fitsTable):
     ----------
     fitsTable: string 
         PCTEFILE from header.
+        
+    expstart: float
+        MJD of exposure start time, EXPSTART in image header
 
     Returns
     -------
@@ -436,22 +437,41 @@ def _PixCteParams(fitsTable):
     
     # read SHFT_NIT value from header
     shft_nit = pf_ref['PRIMARY'].header['SHFT_NIT']
+    
+    # read number of CHG_LEAK# extensions from the header
+    nchg_leak = pf_ref['PRIMARY'].header['NCHGLEAK']
 
     # read dtde data from DTDE extension
     dtde_l = pf_ref['DTDE'].data['DTDE']
     q_dtde = pf_ref['DTDE'].data['Q']
     
-    # read chg_leak data from CHG_LEAK extension
-    psi_node = pf_ref['CHG_LEAK'].data['NODE']
-    chg_leak = numpy.array(pf_ref['CHG_LEAK'].data.tolist(), dtype=numpy.float32)[:,1:]
-    
     # read levels data from LEVELS extension
     levels = pf_ref['LEVELS'].data['LEVEL']
+    
+    # read scale data from CTE_SCALE extension
+    scalemjd = pf_ref['CTE_SCALE'].data['MJD']
+    scaleval = pf_ref['CTE_SCALE'].data['SCALE']
+    
+    cte_frac = _CalcCteFrac(expstart, scalemjd, scaleval)
+    
+    # there are nchg_leak CHG_LEAK# extensions. we need to find out which one
+    # is the right one for our data.
+    chg_leak_names = ['CHG_LEAK{}'.format(i) for i in range(1,nchg_leak+1)]
+    
+    for n in chg_leak_names:
+        mjd1 = pf_ref[n].header['MJD1']
+        mjd2 = pf_ref[n].header['MJD2']
+        
+        if (expstart >= mjd1) and (expstart < mjd2):
+            # read chg_leak data from CHG_LEAK extension
+            psi_node = pf_ref[n].data['NODE']
+            chg_leak = numpy.array(pf_ref[n].data.tolist(), dtype=numpy.float32)[:,1:]
+            break
 
     # Close FITS table
     pf_ref.close()
 
-    return sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels
+    return cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels
 
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
@@ -492,31 +512,20 @@ def _ResolveRefFile(refText, sep='$'):
     return f
 
 #--------------------------
-def _CalcCteFrac(expstart,detector):
+def _CalcCteFrac(expstart, scalemjd, scaleval):
     """
-    Calculate CTE_FRAC used for linear time dependency.
-    
-    .. math::
-        CTE_FRAC = (mjd - C1) / (C2 - C1)
-
-    Formula is defined such that `CTE_FRAC` is 0 for
-    `mjd=C1` and 1 for `mjd=C2`.
-
-    WFC: `C1` and `C2` are MJD equivalents for ``2002-03-02``
-    (ACS installation) and ``2009-10-01`` (Anderson's test
-    data), respectively.
-
-    .. note: Only works on ACS/WFC but can be modified
-             to work on other detectors.
+    Calculate CTE_FRAC used to scale CTE according to time dependence.
 
     Parameters
     ----------
     expstart: float
-      EXPSTART from header.
+        EXPSTART from header.
 
-    detector: string
-        DETECTOR from header.
-        Currently only 'WFC' is supported.
+    scalemjd: array
+        MJD points for corresponding CTE scale values in scaleval
+        
+    scaleval: array
+        CTE scale values corresponding to MJDs in scalemjd
 
     Returns
     -------
@@ -525,11 +534,8 @@ def _CalcCteFrac(expstart,detector):
     """
     
     # Calculate CTE_FRAC
-    if detector == 'WFC':
-      cte_frac = pcfy.CalcCteFrac(expstart, 1)
-    else:
-      raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
-      
+    cte_frac = pcfy.CalcCteFrac(expstart, scalemjd, scaleval)
+          
     return cte_frac
     
 #--------------------------
