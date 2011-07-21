@@ -18,6 +18,8 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * 2010/10/26 WH added support for multiple file processing
     * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
     * 2011/04/26 MRD Began updates for new CTE algorithm.
+    * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
+      CTE characterization.
 
 References
 ----------
@@ -54,7 +56,7 @@ import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
 __version__ = "0.5.0"
-__vdate__ = "03-May-2011"
+__vdate__ = "20-Jul-2011"
 
 # general error for things related to his module
 class PixCteError(Exception):
