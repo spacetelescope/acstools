@@ -22,7 +22,7 @@ ext = [ distutils.core.Extension(pkg + '.PixCte_FixY',
         include_dirs = [pythoninc,numpyinc]) ]
 
 setupargs = {
-    'version' : 		"1.3.0",
+    'version' : 		"1.4.0",
     'description' :	    "Python Tools for ACS Data",
     'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson, Matt Davis",
     'author_email' : 	"help@stsci.edu",

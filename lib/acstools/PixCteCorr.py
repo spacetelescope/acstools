@@ -7,7 +7,7 @@ online at:
 
 http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran)
+:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran), Matt Davis
 
 :Organization: Space Telescope Science Institute
 
