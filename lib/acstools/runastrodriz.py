@@ -38,8 +38,7 @@ __taskname__ = "runastrodriz"
 
 # Local variables 
 __version__ = "1.0.0"
-__vdate__ = "(12-Aug-2011)"
-__bitvalue__ = 8192 #+ 2 + 128 +256        # default value for astrodrizzle usage
+__vdate__ = "(31-Aug-2011)"
 
 # Define parameters which need to be set specifically for 
 #    pipeline use of astrodrizzle
@@ -202,7 +201,8 @@ def process(inFile,force=False):
         _pyd_err = _trlroot+'_pydriz.stderr'
 
         try:
-            b = astrodrizzle.MultiDrizzle(input=_infile,runfile=_drizfile,**pipeline_pars)
+            b = astrodrizzle.MultiDrizzle(input=_infile,runfile=_drizfile,
+                                        configObj='defaults',**pipeline_pars)
         except Exception, errorobj:
             _appendTrlFile(_trlfile,_drizlog)
             _appendTrlFile(_trlfile,_pyd_err)
