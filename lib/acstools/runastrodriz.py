@@ -327,7 +327,7 @@ def _getTime():
     return time_str
 
 #### Functions to support execution from the shell.
-def _main():
+def main():
 
     import getopt
 
@@ -367,4 +367,4 @@ def _main():
     sys.exit()
 
 if __name__ == "__main__":
-    _main() 
+    main() 
