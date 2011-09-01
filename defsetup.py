@@ -28,7 +28,7 @@ setupargs = {
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
     'data_files' :      [( pkg+"/pars", ['lib/acstools/pars/*']),( pkg, ['lib/acstools/*.help']),(pkg,['LICENSE.txt'])],
-    'scripts' :         [ 'lib/acstools/acs_destripe'] ,
+    'scripts' :         [ 'lib/acstools/acs_destripe','lib/acstools/runastrodriz'] ,
     'platforms' : 	    ["Linux","Solaris","Mac OS X","Win"],
     'ext_modules' :     ext,
     'package_dir' :     { 'acstools':'lib/acstools', },
