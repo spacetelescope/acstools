@@ -70,7 +70,44 @@ def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
     This function simply calls `YCte()` on each input image
     parsed from the `input` parameter, and passes all remaining
     parameter values through unchanged.
-    
+
+    Parameters
+    ----------
+    input : str or list of str
+        name of FLT image(s) to be corrected. The name(s) can be specified
+        either as:
+         
+          * a single filename ('j1234567q_flt.fits')
+          * a Python list of filenames
+          * a partial filename with wildcards ('\*flt.fits')
+          * filename of an ASN table ('j12345670_asn.fits')
+          * an at-file ('@input')
+        
+    outFits : str
+        *USE DEFAULT IF `input` HAS MULTIPLE FILES.*
+        CTE corrected image in the same
+        directory as input. If not given, will use
+        ROOTNAME_cte.fits instead. Existing file will
+        be overwritten.
+
+    noise : int
+        Noise mitigation algorithm. As CTE
+        loss occurs before noise is added at readout,
+        not removing noise prior to CTE correction
+        will enhance the noise in output image.  
+         
+            - 0: None.
+            - 1: Smoothing
+
+    intermediateFiles : bool 
+        Generate intermediate files in the same directory as input? 
+        Useful for debugging. These are:
+            
+            1. ROOTNAME_cte_rn_tmp.fits - Noise image.
+            2. ROOTNAME_cte_wo_tmp.fits - Noiseless
+               image.
+            3. ROOTNAME_cte_log.txt - Log file.
+            
     Examples
     --------
     1.  This task can be used to correct a set of ACS images simply with:
@@ -88,43 +125,6 @@ def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
 
             >>> from stsci.tools import teal
             >>> teal.teal('PixCteCorr')
-
-    Parameters
-    ----------
-    input: string or list of strings
-        name of FLT image(s) to be corrected. The name(s) can be specified
-        either as:
-         
-          * a single filename ('j1234567q_flt.fits')
-          * a Python list of filenames
-          * a partial filename with wildcards ('\*flt.fits')
-          * filename of an ASN table ('j12345670_asn.fits')
-          * an at-file ('@input')
-        
-    outFits: string
-        *USE DEFAULT IF `input` HAS MULTIPLE FILES.*
-        CTE corrected image in the same
-        directory as input. If not given, will use
-        ROOTNAME_cte.fits instead. Existing file will
-        be overwritten.
-
-    noise: int
-        Noise mitigation algorithm. As CTE
-        loss occurs before noise is added at readout,
-        not removing noise prior to CTE correction
-        will enhance the noise in output image.  
-         
-            - 0: None.
-            - 1: Smoothing
-
-    intermediateFiles: bool 
-        Generate intermediate files in the same directory as input? 
-        Useful for debugging. These are:
-            
-            1. ROOTNAME_cte_rn_tmp.fits - Noise image.
-            2. ROOTNAME_cte_wo_tmp.fits - Noiseless
-               image.
-            3. ROOTNAME_cte_log.txt - Log file.
 
     """
     # Parse input to get list of filenames to process
@@ -146,7 +146,7 @@ def XCte():
     Probably easier to call as routine from `YCte()`.
     """
 
-    print 'Not yet available'
+    raise NotImplementedError('XCte not yet implemented.')
 
 #--------------------------
 def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
@@ -168,27 +168,18 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     * Does not work on RAW but can be modified
       to do so.
 
-    Examples
-    --------
-    1.  This task can be used to correct a single FLT image with:
-
-            >>> import PixCteCorr
-            >>> PixCteCorr.YCte('j12345678_flt.fits')
-
-        This task will generate a new CTE-corrected image.
-
     Parameters
     ----------
-    inFits: string 
+    inFits : str
         FLT image to be corrected.
 
-    outFits: string 
+    outFits : str
         CTE corrected image in the same
         directory as input. If not given, will use
         ROOTNAME_cte.fits instead. Existing file will
         be overwritten.
 
-    noise: int
+    noise  int
         Noise mitigation algorithm. As CTE
         loss occurs before noise is added at readout,
         not removing noise prior to CTE correction
@@ -197,7 +188,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
             - 0: None.
             - 1: Smoothing
 
-    intermediateFiles: bool 
+    intermediateFiles : bool 
         Generate intermediate
         files in the same directory as input? Useful
         for debugging. These are:
@@ -206,6 +197,15 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
             2. ROOTNAME_cte_wo_tmp.fits - Noiseless
                image.
             3. ROOTNAME_cte_log.txt - Log file.
+            
+    Examples
+    --------
+    1.  This task can be used to correct a single FLT image with:
+
+            >>> import PixCteCorr
+            >>> PixCteCorr.YCte('j12345678_flt.fits')
+
+        This task will generate a new CTE-corrected image.
 
     """
 
@@ -237,7 +237,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
 
     # This is just for WFC for now.
     if detector != 'WFC':
-      raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
+        raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
 
     # Read CTE params from file
     pctefile = pf_out['PRIMARY'].header['PCTETAB']
@@ -323,7 +323,7 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
             outLog2 = ''
         # End if
         
-        # CTE correction in DN.
+        # CTE correction
         sciAmpCor = pcfy.FixYCte(sciAmpSig, cte_frac, sim_nit, shft_nit,
                                   levels, dpde_l, tail_len,
                                   chg_leak_lt, chg_open_lt, amp, outLog2)
@@ -389,36 +389,36 @@ def _PixCteParams(fitsTable, expstart):
 
     Parameters
     ----------
-    fitsTable: string 
+    fitsTable : str
         PCTEFILE from header.
         
-    expstart: float
+    expstart : float
         MJD of exposure start time, EXPSTART in image header
 
     Returns
     -------
-    sim_nit: integer
+    sim_nit : int
         Number of readout simulations to do for each column of data
         
-    shft_nit: integer
+    shft_nit : int
         Number of shifts to break each readout simulation into
         
-    rn_clip: float
+    rn_clip : float
         Maximum amplitude of read noise removed by DecomposeRN.
         
-    dtde_q: array
+    dtde_q : ndarray
         Charge levels at which dtde_l is parameterized
     
-    dtde_l: array
+    dtde_l : ndarray
         PHI(Q).
 
-    psi_node: array
+    psi_node : ndarray
         N values for PSI(Q,N).
 
-    chg_leak: array
+    chg_leak : ndarray
         PSI(Q,N).
         
-    levels: array
+    levels : ndarray
         Charge levels at which to do CTE evaluation
 
     """
@@ -486,15 +486,15 @@ def _ResolveRefFile(refText, sep='$'):
 
     Parameters
     ----------
-    refText: string
+    refText : str
         The text to process.
 
-    sep: char 
+    sep : char 
         Separator between directory and file name.
 
     Returns
     -------
-    f: string
+    f : str
         Full path to reference file.
     """
 
@@ -520,18 +520,18 @@ def _CalcCteFrac(expstart, scalemjd, scaleval):
 
     Parameters
     ----------
-    expstart: float
+    expstart : float
         EXPSTART from header.
 
-    scalemjd: array
+    scalemjd : ndarray
         MJD points for corresponding CTE scale values in scaleval
         
-    scaleval: array
+    scaleval : ndarray
         CTE scale values corresponding to MJDs in scalemjd
 
     Returns
     -------
-    CTE_FRAC: float
+    cte_frac : float
         Time scaling factor.
     """
     
@@ -558,19 +558,19 @@ def _InterpolatePsi(chg_leak, psi_node):
 
     Parameters
     ----------
-    chg_leak: array_like
+    chg_leak : ndarray
         PSI table data from PCTEFILE.
 
-    psi_node: array_like
+    psi_node : ndarray
         PSI node data from PCTEFILE.
 
     Returns
     -------
-    chg_leak: array_like
+    chg_leak : ndarray
         Interpolated PSI.
         
-    chg_open: array_like
-        
+    chg_open : ndarray
+        Interpolated tail profile data.
 
     """
     
@@ -590,18 +590,18 @@ def _InterpolatePhi(dtde_l, q_dtde, shft_nit):
     
     Parameters
     ----------
-    dtde_l: array_like
+    dtde_l : ndarray
         PHI data from PCTEFILE.
 
-    q_dtde: array_like
+    q_dtde : ndarray
         Q levels at which dtde_l is defined, read from PCTEFILE
         
-    shft_int: integer
+    shft_int : int
         Number of shifts performed reading out CCD
 
     Returns
     -------
-    dtde_q: array_like
+    dtde_q : ndarray
         dtde_l interpolated at all PHI levels
     
     """
@@ -616,32 +616,32 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     
     Parameters
     ----------
-    chg_leak: array
+    chg_leak : ndarray
         Interpolated chg_leak tail profile data returned by _InterpolatePsi.
         
-    chg_open: array
+    chg_open : ndarray
         Interpolated chg_open tail profile data returned by _InterpolatePsi.
         
-    dtde_q: array
+    dtde_q : ndarray
         PHI data interpolated at all PHI levels as returned by
         _InterpolatePhi.
         
-    levels: array
+    levels : ndarray
         Charge levels at which output arrays will be interpolated.
         Read from PCTEFILE.
         
     Returns
     -------
-    chg_leak_lt: array
+    chg_leak_lt : ndarray
         chg_leak tail profile data interpolated at the specified charge levels.
         
-    chg_open_lt: array
+    chg_open_lt : ndarray
         chg_open tail profile data interpolated at the specified charge levels.
         
-    dpde_l: array
+    dpde_l : ndarray
         dtde_q interpolated and summed for the specified charge levels.
         
-    tail_len: array
+    tail_len : ndarray
         Array of maximum tail lengths for the specified charge levels.
     
     """
@@ -664,19 +664,19 @@ def _DecomposeRN(data_e, rn_clip=10.0):
 
     Parameters
     ----------
-    data_e: array_like
+    data_e : ndarray
         SCI data in electrons.
 
-    rn_clip: float
+    rn_clip : float
         Maximum amplitude of read noise removed.
         Defaults to 10.0.
 
     Returns
     -------
-    sigArr: array_like
+    sigArr : ndarray
         Noiseless signal component in electrons.
 
-    nseArr: array_like
+    nseArr : ndarray
         Noise component in electrons.
 
     """
@@ -695,54 +695,54 @@ def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l,
     
     Parameters
     ----------
-    detector: string
+    detector : str
         DETECTOR from header.
         Currently only 'WFC' is supported.
         
-    cte_data: array
+    cte_data : ndarray
         Data in need of CTE correction. For proper results cte_data[0,x] should
         be next to the readout register and cte_data[-1,x] should be furthest.
         Data are processed a column at a time, e.g. cte_data[:,x] is corrected,
         then cte_data[:,x+1] and so on.
         
-    cte_frac: float
+    cte_frac : float
         Time dependent CTE scaling parameter.
         
-    sim_nit: integer
+    sim_nit : int
         Number of readout simulation iterations to perform.
         
-    shft_nit: integer
+    shft_nit : int
         Number of readout shifts to do.
         
-    levels: array
+    levels : ndarray
         Levels at which CTE is evaluated as read from PCTEFILE.
         
-    dpde_l: array
+    dpde_l : ndarray
         Parameterized amount of charge in CTE trails as a function of
         specific charge levels, as returned by _FillLevelArrays.
         
-    tail_len: array
+    tail_len : ndarray
         Maximum tail lengths for CTE tails at the specific charge levels
         specified by levels, as returned by _FillLevelArrays.
         
-    chg_leak_lt: array
+    chg_leak_lt : ndarray
         Tail profile data at charge levels specified by levels, as returned
         by _FillLevelArrays.
         
-    chg_open_lt: array
+    chg_open_lt : ndarray
         Tail profile data at charge levels specified by levels, as returned
         by _FillLevelArrays.
         
-    amp: character
+    amp : char
         Amp name for this data, used in log file.
         Optional, but must be specified if outLog2 is specified.
         
-    outLog2: string
+    outLog2 : str
         Name of optional log file.
         
     Returns
     -------
-    corrected: array
+    corrected : ndarray
         Data CTE correction algorithm applied. Same size and shape as input
         cte_data.
     
@@ -759,6 +759,163 @@ def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l,
         raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
                               
     return corrected
+
+
+def AddYCte(infile, outfile, electrons=False):
+    """
+    Add CTE blurring to input image using an inversion of the CTE correction
+    code.
+    
+    .. note: No changes are made to the error or data quality arrays. 
+    
+             Data should not have bias or prescan regions.
+             
+             Image must have PCTETAB, DETECTOR, and EXPSTART
+             header keywords, as well as gain information if the image
+             is in DN.
+    
+    Paramters
+    ---------
+    infile : str
+        Filename of image to be blurred. Should have the PCTETAB header
+        keyword pointing to the PCTETAB reference file.
+        
+    outfile : str
+        Filename of blurred output image.
+        
+    electrons : bool, optional
+        If True, the input image is assumed to have units of electrons and
+        no gain operations are performed. If False, the data are assumed to
+        be in DN and they are converted to electrons before CTE blurring is
+        performed. Defaults to False.
+        
+    Raises
+    ------
+    acstools.PixCteCorr.PixCteError
+        If the input image comes from an imcompatible detector.
+    
+    """
+    # copy infile to outfile
+    shutil.copyfile(infile, outfile)
+    
+    # open file for blurring
+    fits = pyfits.open(outfile, mode='update')
+    
+    # For detector-specific operations
+    detector = fits['PRIMARY'].header['DETECTOR']
+
+    # For epoch-specific operations
+    expstart = fits['PRIMARY'].header['EXPSTART']
+
+    # This is just for WFC for now.
+    if detector != 'WFC':
+        os.remove(outfile)
+        raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
+        
+    # Read CTE params from file
+    pctefile = fits['PRIMARY'].header['PCTETAB']
+    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels = \
+      _PixCteParams(pctefile, expstart)
+
+    # N in charge tail
+    chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
+    del chg_leak, psi_node
+
+    # dtde_q: Marginal PHI at a given chg level.
+    # q_pix_array: Maps Q (cumulative charge) to P (dependent var).
+    # pix_q_array: Maps P to Q.
+    dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
+    del dtde_l, q_dtde
+ 
+    # finish interpolation along the Q dimension and reduce arrays to contain
+    # only info at the levels specified in the levels array
+    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+      pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
+    del chg_leak_kt, chg_open_kt, dtde_q
+    
+    ########################################
+    # perform correction for chip 2 (ext. 1)
+    ########################################
+
+    # get data for chip 2 (ext. 1)
+    scidata = fits[1].data.copy().astype(numpy.float)
+    
+    # convert to electrons if needed
+    if not electrons:
+        gainc = fits[0].header['atodgnc']
+        gaind = fits[0].header['atodgnd']
+        
+        scidata[:,:2048] *= gainc
+        scidata[:,2048:] *= gaind
+        
+    # call CTE blurring routine. data must be in units of electrons.
+    print 'Performing CTE correction for science extension 1.'
+    
+    t1 = time.time()
+    cordata = _AddYCte(detector, scidata, cte_frac, shft_nit,
+                        levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt)
+    t2 = time.time()
+
+    print 'AddYCte took {} seconds for extension 1.'.format(t2-t1)
+    
+    # convert blurred data back to DN
+    if not electrons:
+        cordata[:,:2048] /= gainc
+        cordata[:,2048:] /= gaind
+
+    # copy blurred data back to image.
+    fits[1].data[:,:] = cordata.astype(numpy.float32)[:,:]
+    
+    ########################################
+    # perform correction for chip 1 (ext. 4)
+    ########################################
+
+    # get data for chip 1 (ext. 4)
+    scidata = fits[4].data.copy().astype(numpy.float)
+    
+    # convert to electrons
+    if not electrons:
+        gaina = fits[0].header['atodgna']
+        gainb = fits[0].header['atodgnb']
+        
+        scidata[:,:2048] *= gaina
+        scidata[:,2048:] *= gainb
+    
+    # data needs to be flipped so that row 0 is closest to the readout, since
+    # that's what the algorithm expects
+    scidata = scidata[::-1,:]
+
+    # call CTE blurring routine. data must be in units of electrons.
+    print 'Performing CTE blurring for science extension 2.'
+    
+    t1 = time.time()
+    cordata = _AddYCte(detector, scidata, cte_frac, shft_nit,
+                        levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt)
+    t2 = time.time()
+
+    print 'AddYCte took {} seconds for extension 2.'.format(t2-t1)
+    
+    # convert blurred data back to DN
+    if not electrons:
+        cordata[:,:2048] /= gaina
+        cordata[:,2048:] /= gainb
+    
+    # flip data back arround to its original orientation
+    cordata = cordata[::-1,:]
+
+    # copy blurred data back to image.
+    fits[4].data[:,:] = cordata.astype(numpy.float32)[:,:]
+    
+    # Update header
+    fits['PRIMARY'].header.update('PCTEFRAC', cte_frac)
+    fits['PRIMARY'].header.update('PCTERNCL', rn_clip)
+    fits['PRIMARY'].header.update('PCTESMIT', sim_nit)
+    fits['PRIMARY'].header.update('PCTESHFT', shft_nit)
+    fits['PRIMARY'].header.add_history('CTE blurring performed by PixCteCorr.AddYCTE')
+    
+    # close image
+    fits.close()
+
     
 def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l, 
               tail_len, chg_leak_lt, chg_open_lt):
@@ -767,44 +924,44 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
     
     Parameters
     ----------
-    detector: string
+    detector : str
         DETECTOR from header.
         Currently only 'WFC' is supported.
         
-    input_data: array
+    input_data : ndarray
         Data in need of CTE correction. For proper results cte_data[0,x] should
         be next to the readout register and cte_data[-1,x] should be furthest.
         Data are processed a column at a time, e.g. cte_data[:,x] is corrected,
         then cte_data[:,x+1] and so on.
         
-    cte_frac: float
+    cte_frac : float
         Time dependent CTE scaling parameter.
         
-    shft_nit: integer
+    shft_nit : int
         Number of readout shifts to do.
         
-    levels: array
+    levels : ndarray
         Levels at which CTE is evaluated as read from PCTEFILE.
         
-    dpde_l: array
+    dpde_l : ndarray
         Parameterized amount of charge in CTE trails as a function of
         specific charge levels, as returned by _FillLevelArrays.
         
-    tail_len: array
+    tail_len : ndarray
         Maximum tail lengths for CTE tails at the specific charge levels
         specified by levels, as returned by _FillLevelArrays.
         
-    chg_leak_lt: array
+    chg_leak_lt : ndarray
         Tail profile data at charge levels specified by levels, as returned
         by _FillLevelArrays.
         
-    chg_open_lt: array
+    chg_open_lt : ndarray
         Tail profile data at charge levels specified by levels, as returned
         by _FillLevelArrays.
         
     Returns
     -------
-    blurred: array
+    blurred : ndarray
         Data CTE correction algorithm applied. 
         Same size and shape as input_data.
     
