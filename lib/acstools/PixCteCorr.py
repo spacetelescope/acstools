@@ -849,14 +849,14 @@ def AddYCte(infile, outfile, electrons=False):
         scidata[:,2048:] *= gaind
         
     # call CTE blurring routine. data must be in units of electrons.
-    print 'Performing CTE correction for science extension 1.'
+    print 'Performing CTE blurring for science extension 1.'
     
     t1 = time.time()
     cordata = _AddYCte(detector, scidata, cte_frac, shft_nit,
                         levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
-    print 'AddYCte took {} seconds for extension 1.'.format(t2-t1)
+    print 'AddYCte took {} seconds for science extension 1.'.format(t2-t1)
     
     # convert blurred data back to DN
     if not electrons:
@@ -893,7 +893,7 @@ def AddYCte(infile, outfile, electrons=False):
                         levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
-    print 'AddYCte took {} seconds for extension 2.'.format(t2-t1)
+    print 'AddYCte took {} seconds for science extension 2.'.format(t2-t1)
     
     # convert blurred data back to DN
     if not electrons:
