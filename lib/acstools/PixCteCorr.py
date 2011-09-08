@@ -761,7 +761,7 @@ def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l,
     return corrected
 
 
-def AddYCte(infile, outfile, electrons=False):
+def AddYCte(infile, outfile, units=None):
     """
     Add CTE blurring to input image using an inversion of the CTE correction
     code.
@@ -772,7 +772,7 @@ def AddYCte(infile, outfile, electrons=False):
              
              Image must have PCTETAB, DETECTOR, and EXPSTART
              header keywords, as well as gain information if the image
-             is in DN.
+             is in counts.
     
     Paramters
     ---------
@@ -783,18 +783,29 @@ def AddYCte(infile, outfile, electrons=False):
     outfile : str
         Filename of blurred output image.
         
-    electrons : bool, optional
-        If True, the input image is assumed to have units of electrons and
-        no gain operations are performed. If False, the data are assumed to
-        be in DN and they are converted to electrons before CTE blurring is
-        performed. Defaults to False.
+    units : {None,'electrons','counts'}, optional
+        If 'electrons', the input image is assumed to have units of electrons
+        and no gain operations are performed.
+        If 'counts', the data are assumed to be in DN and they are converted
+        to electrons before CTE blurring is performed. The ATODGN* keywords
+        from the primary header are used for the conversions.
+        If None, the BUNIT keyword from the science extension headers is used
+        to set the unit behavior.
+        Defaults to None.
         
     Raises
     ------
+    ValueError
+        If the units keyword is not a valid value.
+    
     acstools.PixCteCorr.PixCteError
         If the input image comes from an imcompatible detector.
     
     """
+    # check the units keyword
+    if units not in {None,'electrons','counts'}:
+        raise ValueError("units keyword must be one of {None,'electrons','counts'}")
+    
     # copy infile to outfile
     shutil.copyfile(infile, outfile)
     
@@ -811,6 +822,10 @@ def AddYCte(infile, outfile, electrons=False):
     if detector != 'WFC':
         os.remove(outfile)
         raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
+        
+    # get units, if necessary
+    if units is None:
+        units = fits[1].header['BUNIT'].strip().lower()
         
     # Read CTE params from file
     pctefile = fits['PRIMARY'].header['PCTETAB']
@@ -841,7 +856,7 @@ def AddYCte(infile, outfile, electrons=False):
     scidata = fits[1].data.copy().astype(numpy.float)
     
     # convert to electrons if needed
-    if not electrons:
+    if units == 'counts':
         gainc = fits[0].header['atodgnc']
         gaind = fits[0].header['atodgnd']
         
@@ -859,7 +874,7 @@ def AddYCte(infile, outfile, electrons=False):
     print 'AddYCte took {} seconds for science extension 1.'.format(t2-t1)
     
     # convert blurred data back to DN
-    if not electrons:
+    if units == 'counts':
         cordata[:,:2048] /= gainc
         cordata[:,2048:] /= gaind
 
@@ -874,7 +889,7 @@ def AddYCte(infile, outfile, electrons=False):
     scidata = fits[4].data.copy().astype(numpy.float)
     
     # convert to electrons
-    if not electrons:
+    if units == 'counts':
         gaina = fits[0].header['atodgna']
         gainb = fits[0].header['atodgnb']
         
@@ -896,7 +911,7 @@ def AddYCte(infile, outfile, electrons=False):
     print 'AddYCte took {} seconds for science extension 2.'.format(t2-t1)
     
     # convert blurred data back to DN
-    if not electrons:
+    if units == 'counts':
         cordata[:,:2048] /= gaina
         cordata[:,2048:] /= gainb
     
@@ -911,7 +926,7 @@ def AddYCte(infile, outfile, electrons=False):
     fits['PRIMARY'].header.update('PCTERNCL', rn_clip)
     fits['PRIMARY'].header.update('PCTESMIT', sim_nit)
     fits['PRIMARY'].header.update('PCTESHFT', shft_nit)
-    fits['PRIMARY'].header.add_history('CTE blurring performed by PixCteCorr.AddYCTE')
+    fits['PRIMARY'].header.add_history('CTE blurring performed by PixCteCorr.AddYCte')
     
     # close image
     fits.close()
