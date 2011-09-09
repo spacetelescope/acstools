@@ -803,8 +803,8 @@ def AddYCte(infile, outfile, units=None):
     
     """
     # check the units keyword
-    if units not in {None,'electrons','counts'}:
-        raise ValueError("units keyword must be one of {None,'electrons','counts'}")
+    if units not in (None,'electrons','counts'):
+        raise ValueError("units keyword must be one of (None,'electrons','counts')")
     
     # copy infile to outfile
     shutil.copyfile(infile, outfile)
