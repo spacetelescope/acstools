@@ -75,6 +75,7 @@ def process(inFile,force=False):
     """
     # We only need to import this package if a user run the task
     import astrodrizzle
+    from astrodrizzle import processInput # used for creating new ASNs for _flc inputs
 
     # Open the input file
     try:
@@ -175,49 +176,59 @@ def process(inFile,force=False):
             # a calibrated product as input, if available.
             _infile = fileutil.buildRootname(_cal_prodname)
             _cal_prodname = _infile
+            _inlist = [_infile]
         else:
             # Working with an ASN table...
-            # Need to insure that product name is lower case
             _infile = inFilename
+            flist,duplist = processInput.checkForDuplicateInputs(_asndict)
+            if len(duplist) > 0:
+                origasn = processInput.changeSuffixinASN(inFilename,'flt')
+                dupasn = processInput.changeSuffixinASN(inFilename,'flc')
+                _inlist = [origasn,dupasn]
+            else:
+                _inlist = [_infile]
             # We want to keep the original specification of the calibration 
             # product name, though, not a lower-case version...
             _cal_prodname = inFilename
-            _new_asn = _infile
+            _new_asn = _inlist # kept so we can delete it when finished
+            
         
         # Run astrodrizzle and send its processing statements to _trlfile
-        _pyver = astrodrizzle.__version__ 
-        # Create trailer marker message for start of astrodrizzle processing
-        _trlmsg = _timestamp('astrodrizzle started ')
-        _trlmsg = _trlmsg+ __trlmarker__
-        _trlmsg = _trlmsg + '%s: Processing %s with astrodrizzle Version %s\n' % (time_str,_infile,_pyver)   
-        print _trlmsg
-
-        # Write out trailer comments to trailer file...
-        ftmp = open(_tmptrl,'w')
-        ftmp.writelines(_trlmsg)
-        ftmp.close()
-        _appendTrlFile(_trlfile,_tmptrl)
+        _pyver = astrodrizzle.__version__
         
-        _pyd_err = _trlroot+'_pydriz.stderr'
+        for _infile in _inlist: # Run astrodrizzle for all inputs
+            # Create trailer marker message for start of astrodrizzle processing
+            _trlmsg = _timestamp('astrodrizzle started ')
+            _trlmsg = _trlmsg+ __trlmarker__
+            _trlmsg = _trlmsg + '%s: Processing %s with astrodrizzle Version %s\n' % (time_str,_infile,_pyver)   
+            print _trlmsg
 
-        try:
-            b = astrodrizzle.MultiDrizzle(input=_infile,runfile=_drizfile,
-                                        configObj='defaults',**pipeline_pars)
-        except Exception, errorobj:
+            # Write out trailer comments to trailer file...
+            ftmp = open(_tmptrl,'w')
+            ftmp.writelines(_trlmsg)
+            ftmp.close()
+            _appendTrlFile(_trlfile,_tmptrl)
+            
+            _pyd_err = _trlroot+'_pydriz.stderr'
+
+            try:
+                b = astrodrizzle.MultiDrizzle(input=_infile,runfile=_drizfile,
+                                            configObj='defaults',**pipeline_pars)
+            except Exception, errorobj:
+                _appendTrlFile(_trlfile,_drizlog)
+                _appendTrlFile(_trlfile,_pyd_err)
+                _ftrl = open(_trlfile,'a')
+                _ftrl.write('ERROR: Could not complete astrodrizzle processing of %s.\n' % _infile) 
+                _ftrl.write(str(sys.exc_type)+': ')
+                _ftrl.writelines(str(errorobj))
+                _ftrl.write('\n')
+                _ftrl.close()
+                print 'ERROR: Could not complete astrodrizzle processing of %s.' % _infile
+                raise Exception, str(errorobj)
+            
+            # Now, append comments created by PyDrizzle to CALXXX trailer file
+            print 'Updating trailer file %s with astrodrizzle comments.' % _trlfile
             _appendTrlFile(_trlfile,_drizlog)
-            _appendTrlFile(_trlfile,_pyd_err)
-            _ftrl = open(_trlfile,'a')
-            _ftrl.write('ERROR: Could not complete astrodrizzle processing of %s.\n' % _infile) 
-            _ftrl.write(str(sys.exc_type)+': ')
-            _ftrl.writelines(str(errorobj))
-            _ftrl.write('\n')
-            _ftrl.close()
-            print 'ERROR: Could not complete astrodrizzle processing of %s.' % _infile
-            raise Exception, str(errorobj)
-        
-        # Now, append comments created by PyDrizzle to CALXXX trailer file
-        print 'Updating trailer file %s with astrodrizzle comments.' % _trlfile
-        _appendTrlFile(_trlfile,_drizlog)
         
         # Save this for when PyFITS can modify a file 'in-place'
         # Update calibration switch
@@ -262,7 +273,7 @@ def process(inFile,force=False):
     
     # If we created a new ASN table, we need to remove it
     if _new_asn != None:
-        os.remove(_new_asn)
+        for _name in _new_asn: os.remove(_name)
         
     # Clean up any generated OrIg_files directory
     if os.path.exists("OrIg_files"):
@@ -294,6 +305,8 @@ def _lowerAsn(asnfile):
 def _appendTrlFile(trlfile,drizfile):
     """ Append drizfile to already existing trlfile from CALXXX.
     """
+    if not os.path.exists(drizfile):
+        return
     # Open already existing CALWF3 trailer file for appending
     ftrl = open(trlfile,'a')
     # Open astrodrizzle trailer file
