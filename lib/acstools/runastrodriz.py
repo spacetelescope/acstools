@@ -37,8 +37,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables 
-__version__ = "1.1.0"
-__vdate__ = "(09-Sep-2011)"
+__version__ = "1.1.1"
+__vdate__ = "(14-Sep-2011)"
 
 # Define parameters which need to be set specifically for 
 #    pipeline use of astrodrizzle
@@ -118,8 +118,8 @@ def process(inFile,force=False):
         _cal_prodname = inFilename[:_indx]
         # Reset inFilename to correspond to appropriate input for
         # drizzle: calibrated product name.
-        inFilename = _mname
-        
+        inFilename = _mname        
+
         if _mname == None:
             errorMsg = 'Could not find calibrated product!' 
             raise Exception,errorMsg
@@ -175,8 +175,14 @@ def process(inFile,force=False):
             # However, we always want to make sure we always use
             # a calibrated product as input, if available.
             _infile = fileutil.buildRootname(_cal_prodname)
+            _infile_flc = fileutil.buildRootname(_cal_prodname,ext=['_flc.fits'])
+
             _cal_prodname = _infile
             _inlist = [_infile]
+            # Add CTE corrected filename as additional input if present
+            if _infile_flc != _infile:
+                _inlist.append(_infile_flc)
+
         else:
             # Working with an ASN table...
             _infile = inFilename
