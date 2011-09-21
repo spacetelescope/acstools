@@ -1,4 +1,0 @@
-#! python
-
-import acstools.runastrodriz
-acstools.runastrodriz.main()

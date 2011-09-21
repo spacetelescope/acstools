@@ -1,7 +1,0 @@
-_task_name_ = string_kw(default="PixCteCorr")
-inFits = string_kw(default="", comment="Input FLT FITS image name")
-outFits = string_kw(default="", comment="Output CTE-corrected image name")
-noise = integer_kw(default=1, comment="Noise mitigation algorithm")
-debug = boolean_kw(default=False, comment="Generate intermediate files for debugging?")
-mode = string_kw(default="all")
-[ _RULES_ ]
