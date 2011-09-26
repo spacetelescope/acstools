@@ -338,7 +338,6 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   PyArrayObject *py_chg_leak_lt, *py_chg_open_lt;
   double cte_frac;
   int sim_nit, shft_nit;
-  const char *amp_name, *log_file;
   
   /* local variables */
   int status, i, j;
@@ -356,9 +355,9 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   PyArrayObject * py_sig_cor;
   
   /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OdiiOOOOOss", &opy_sig_cte, &cte_frac, &sim_nit, 
+  if (!PyArg_ParseTuple(args, "OdiiOOOOO", &opy_sig_cte, &cte_frac, &sim_nit, 
                         &shft_nit, &opy_levels, &opy_dpde_l, & opy_tail_len, 
-                        &opy_chg_leak_lt, &opy_chg_open_lt, &amp_name, &log_file)) {
+                        &opy_chg_leak_lt, &opy_chg_open_lt)) {
     return NULL;
   }
   
@@ -412,7 +411,7 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   
   /* call FixYCte */
   status = FixYCte(arrx, arry, sig_cte, sig_cor, cte_frac, sim_nit, shft_nit,
-                   levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt, amp_name, log_file);
+                   levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt);
   if (status != 0) {
     PyErr_SetString(PyExc_StandardError, "An error occurred in FixYCte.");
     return NULL;
@@ -421,115 +420,7 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   /* copy fixed data in C array to output Python array */
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      *(double *) PyArray_GETPTR2(py_sig_cor, i, j) = sig_cor[i*arry + j];
-    }
-  }
-  
-  free(out_dim);
-  free(sig_cte);
-  free(sig_cor);
-  
-  Py_DECREF(py_sig_cte);
-  Py_DECREF(py_levels);
-  Py_DECREF(py_tail_len);
-  Py_DECREF(py_dpde_l);
-  Py_DECREF(py_chg_leak_lt);
-  Py_DECREF(py_chg_open_lt);
-  
-  return Py_BuildValue("N", py_sig_cor);
-}
-
-static PyObject * py_AddYCte(PyObject *self, PyObject *args) {
-  /* input variables */
-  PyObject *opy_sig_cte, *opy_levels, *opy_dpde_l, *opy_tail_len;
-  PyObject *opy_chg_leak_lt, *opy_chg_open_lt;
-  PyArrayObject *py_sig_cte, *py_levels, *py_dpde_l, *py_tail_len;
-  PyArrayObject *py_chg_leak_lt, *py_chg_open_lt;
-  double cte_frac;
-  int shft_nit;
-  
-  /* local variables */
-  int status, i, j;
-  int arrx, arry;
-  double * sig_cte;
-  double * sig_cor;
-  int levels[NUM_LEV];
-  double dpde_l[NUM_LEV];
-  int tail_len[NUM_LEV];
-  double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV];
-  double chg_open_lt[MAX_TAIL_LEN*NUM_LEV];
-  
-  /* return variables */
-  npy_intp * out_dim;
-  PyArrayObject * py_sig_cor;
-  
-  /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OdiOOOOO", &opy_sig_cte, &cte_frac, 
-                        &shft_nit, &opy_levels, &opy_dpde_l, & opy_tail_len, 
-                        &opy_chg_leak_lt, &opy_chg_open_lt)) {
-    return NULL;
-  }
-  
-  py_sig_cte = (PyArrayObject *) PyArray_FROMANY(opy_sig_cte, NPY_DOUBLE, 2, 2, NPY_IN_ARRAY);
-  py_levels = (PyArrayObject *) PyArray_FROMANY(opy_levels, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_dpde_l = (PyArrayObject *) PyArray_FROMANY(opy_dpde_l, NPY_DOUBLE, 1, 1, NPY_IN_ARRAY);
-  py_tail_len = (PyArrayObject *) PyArray_FROMANY(opy_tail_len, NPY_INT, 1, 1, NPY_IN_ARRAY);
-  py_chg_leak_lt = (PyArrayObject *) PyArray_FROMANY(opy_chg_leak_lt, NPY_DOUBLE, 
-                                                     2, 2, NPY_IN_ARRAY);
-  py_chg_open_lt = (PyArrayObject *) PyArray_FROMANY(opy_chg_open_lt, NPY_DOUBLE, 
-                                                     2, 2, NPY_IN_ARRAY);
-  if (!py_sig_cte || !py_levels || !py_dpde_l || !py_tail_len || 
-      !py_chg_leak_lt || !py_chg_open_lt) {
-    return NULL;
-  }
-  
-  /* local variables */
-  arrx = py_sig_cte->dimensions[0];
-  arry = py_sig_cte->dimensions[1];
-  sig_cte = (double *) malloc(arrx * arry * sizeof(double));
-  sig_cor = (double *) malloc(arrx * arry * sizeof(double));
-  
-  /* return variables */
-  out_dim = (npy_intp *) malloc(2 * sizeof(npy_intp));
-  out_dim[0] = (npy_intp) arrx;
-  out_dim[1] = (npy_intp) arry;
-  py_sig_cor = (PyArrayObject *) PyArray_SimpleNew(2, out_dim, NPY_DOUBLE);
-  if (!py_sig_cor) {
-    return NULL;
-  }
-  
-  /* copy input Python arrays to local C arrays */  
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      sig_cte[i*arry + j] = (double) *(npy_double *) PyArray_GETPTR2(py_sig_cte, i, j);
-    }
-  }
-  
-  for (i = 0; i < NUM_LEV; i++) {
-    levels[i] = (int) *(npy_int *) PyArray_GETPTR1(py_levels, i);
-    tail_len[i] = (int) *(npy_int *) PyArray_GETPTR1(py_tail_len, i);
-    dpde_l[i] = (double) *(npy_double *) PyArray_GETPTR1(py_dpde_l, i);
-    
-    for (j = 0; j < MAX_TAIL_LEN; j++) {
-      chg_leak_lt[j*NUM_LEV + i] = 
-      (double) *(npy_double *) PyArray_GETPTR2(py_chg_leak_lt, j, i);
-      chg_open_lt[j*NUM_LEV + i] = 
-      (double) *(npy_double *) PyArray_GETPTR2(py_chg_open_lt, j, i);
-    }
-  }
-  
-  /* call FixYCte */
-  status = AddYCte(arrx, arry, sig_cte, sig_cor, cte_frac, shft_nit,
-                   levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt);
-  if (status != 0) {
-    PyErr_SetString(PyExc_StandardError, "An error occurred in AddYCte.");
-    return NULL;
-  }
-  
-  /* copy fixed data in C array to output Python array */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      *(double *) PyArray_GETPTR2(py_sig_cor, i, j) = sig_cor[i*arry + j];
+      *(npy_double *) PyArray_GETPTR2(py_sig_cor, i, j) = (npy_double) sig_cor[i*arry + j];
     }
   }
   
@@ -555,7 +446,6 @@ static PyMethodDef PixCte_FixY_methods[] =
   {"FillLevelArrays", py_FillLevelArrays, METH_VARARGS, "FillLevelArrays."},
   {"DecomposeRN", py_DecomposeRN, METH_VARARGS, "Separate signal and readnoise."},
   {"FixYCte", py_FixYCte, METH_VARARGS, "Perform parallel CTE correction."},
-  {"AddYCte", py_AddYCte, METH_VARARGS, "Add parallel CTE distortion."},
   {NULL, NULL, 0, NULL} /* sentinel */
   
 };

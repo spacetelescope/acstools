@@ -22,7 +22,7 @@ if False :
         pass
 
 else :
-    __version__ = '1.5.2'
+    __version__ = '2.0.0dev'
 
 try:
     from acstools.svninfo import (__svn_version__, __full_svn_info__,
@@ -30,12 +30,4 @@ try:
 except ImportError:
     pass
 
-import acs_destripe
 import PixCteCorr
-import runastrodriz
-
-# These lines allow TEAL to print out the names of TEAL-enabled tasks 
-# upon importing this package.
-import os
-from stsci.tools import teal
-teal.print_tasknames(__name__, os.path.dirname(__file__))

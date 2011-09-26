@@ -320,7 +320,7 @@ int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
    * central pixel. */
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      /* if this pixel is within 2 rows/columns of the edge get the median
+      /* if this pixel is within 2 rows/columns of the edge get the mean
        * from the pixel in the third row/column from the edge. */
       iind = i;
       if (iind <= 1) {
