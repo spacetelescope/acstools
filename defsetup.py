@@ -22,13 +22,13 @@ ext = [ distutils.core.Extension(pkg + '.PixCte_FixY',
         include_dirs = [pythoninc,numpyinc]) ]
 
 setupargs = {
-    'version' : 		"1.5.2",
+    'version' : 		"2.0.0dev",
     'description' :	    "Python Tools for ACS Data",
     'author' : 		    "Warren Hack, Norman Grogin, Pey Lian Lim, Jay Anderson, Matt Davis",
     'author_email' : 	"help@stsci.edu",
     'license' : 		"http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE",
-    'data_files' :      [( pkg+"/pars", ['lib/acstools/pars/*']),( pkg, ['lib/acstools/*.help']),(pkg,['LICENSE.txt'])],
-    'scripts' :         [ 'lib/acstools/acs_destripe','lib/acstools/runastrodriz'] ,
+    'data_files' :      [(pkg,['LICENSE.txt'])],
+    'scripts' :         ['lib/acstools/fitsdiff'] ,
     'platforms' : 	    ["Linux","Solaris","Mac OS X","Win"],
     'ext_modules' :     ext,
     'package_dir' :     { 'acstools':'lib/acstools', },
