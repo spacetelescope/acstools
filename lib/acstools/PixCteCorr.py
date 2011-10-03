@@ -58,6 +58,10 @@ __taskname__ = "PixCteCorr"
 __version__ = "0.5.0"
 __vdate__ = "20-Jul-2011"
 
+# constants related to the CTE algorithm in use
+ACS_CTE_NAME = 'PixelCTE 2011'
+ACS_CTE_VER = '2.0'
+
 # general error for things related to his module
 class PixCteError(Exception):
     pass
@@ -352,6 +356,8 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     pf_out['PRIMARY'].header.update('PCTERNCL', rn_clip)
     pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
     pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit)
+    pf_out['PRIMARY'].header.update('CTE_NAME', ACS_CTE_NAME, 'name of CTE algorithm')
+    pf_out['PRIMARY'].header.update('CTE_VER', ACS_CTE_VER, 'version of CTE algorithm')
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
     pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
 
