@@ -8,33 +8,21 @@ module.
 
 """
 
-if False :
-    __version__ = ''
-
-    __svn_version__ = 'Unable to determine SVN revision'
-    __full_svn_info__ = ''
-    __setup_datetime__ = None
-
-    try:
-        __version__ = __import__('pkg_resources').\
-                            get_distribution('acstools').version
-    except:
-        pass
-
-else :
-    __version__ = '1.5.2'
 
 try:
-    from acstools.svninfo import (__svn_version__, __full_svn_info__,
-                                  __setup_datetime__)
+    from acstools.version import (__version__, __svn_revision__,
+                                  __svn_full_info__, __setup_datetime__)
 except ImportError:
-    pass
+    __version__ = ''
+    __svn_revision__ = ''
+    __svn_full_info__ = ''
+    __setup_datetime__ = None
 
 import acs_destripe
 import PixCteCorr
 import runastrodriz
 
-# These lines allow TEAL to print out the names of TEAL-enabled tasks 
+# These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.
 import os
 from stsci.tools import teal
