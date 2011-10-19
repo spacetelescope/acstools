@@ -352,10 +352,10 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
 
     # Update header
     pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
-    pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac)
-    pf_out['PRIMARY'].header.update('PCTERNCL', rn_clip)
-    pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit)
-    pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit)
+    pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac, 'CTE time scaling value')
+    pf_out['PRIMARY'].header.update('PCTERNCL', rn_clip, 'PCTE readnoise amplitude')
+    pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit, 'PCTE readout simulation iterations')
+    pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit, 'PCTE readout number of shifts')
     pf_out['PRIMARY'].header.update('CTE_NAME', ACS_CTE_NAME, 'name of CTE algorithm')
     pf_out['PRIMARY'].header.update('CTE_VER', ACS_CTE_VER, 'version of CTE algorithm')
     pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
