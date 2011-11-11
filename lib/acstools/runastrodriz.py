@@ -74,8 +74,8 @@ def process(inFile,force=False):
         using default values for astrodrizzle parameters.
     """
     # We only need to import this package if a user run the task
-    import astrodrizzle
-    from astrodrizzle import processInput # used for creating new ASNs for _flc inputs
+    import astrodither
+    from astrodither import processInput # used for creating new ASNs for _flc inputs
 
     # Open the input file
     try:
@@ -200,7 +200,7 @@ def process(inFile,force=False):
             
         
         # Run astrodrizzle and send its processing statements to _trlfile
-        _pyver = astrodrizzle.__version__
+        _pyver = astrodither.__version__
         
         for _infile in _inlist: # Run astrodrizzle for all inputs
             # Create trailer marker message for start of astrodrizzle processing
@@ -218,7 +218,7 @@ def process(inFile,force=False):
             _pyd_err = _trlroot+'_pydriz.stderr'
 
             try:
-                b = astrodrizzle.MultiDrizzle(input=_infile,runfile=_drizfile,
+                b = astrodither.AstroDrizzle(input=_infile,runfile=_drizfile,
                                             configObj='defaults',**pipeline_pars)
             except Exception, errorobj:
                 _appendTrlFile(_trlfile,_drizlog)
