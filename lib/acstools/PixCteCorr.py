@@ -20,6 +20,7 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * 2011/04/26 MRD Began updates for new CTE algorithm.
     * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
       CTE characterization.
+    * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
 
 References
 ----------
@@ -55,12 +56,12 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "0.5.0"
-__vdate__ = "20-Jul-2011"
+__version__ = "1.0.0"
+__vdate__ = "29-Nov-2011"
 
 # constants related to the CTE algorithm in use
-ACS_CTE_NAME = 'PixelCTE 2011'
-ACS_CTE_VER = '2.0'
+ACS_CTE_NAME = 'PixelCTE 2012'
+ACS_CTE_VER = '3.0'
 
 # general error for things related to his module
 class PixCteError(Exception):
@@ -110,7 +111,6 @@ def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
             1. ROOTNAME_cte_rn_tmp.fits - Noise image.
             2. ROOTNAME_cte_wo_tmp.fits - Noiseless
                image.
-            3. ROOTNAME_cte_log.txt - Log file.
             
     Examples
     --------
@@ -200,7 +200,6 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
             1. ROOTNAME_cte_rn_tmp.fits - Noise image.
             2. ROOTNAME_cte_wo_tmp.fits - Noiseless
                image.
-            3. ROOTNAME_cte_log.txt - Log file.
             
     Examples
     --------
@@ -245,22 +244,20 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
 
     # Read CTE params from file
     pctefile = pf_out['PRIMARY'].header['PCTETAB']
-    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels = \
-      _PixCteParams(pctefile, expstart)
+    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node,\
+    chg_leak, levels, col_scale = _PixCteParams(pctefile, expstart)
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
     del chg_leak, psi_node
 
     # dtde_q: Marginal PHI at a given chg level.
-    # q_pix_array: Maps Q (cumulative charge) to P (dependent var).
-    # pix_q_array: Maps P to Q.
     dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
     del dtde_l, q_dtde
  
     # finish interpolation along the Q dimension and reduce arrays to contain
     # only info at the levels specified in the levels array
-    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+    chg_leak_lt, chg_open_lt, dpde_l = \
       pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
     del chg_leak_kt, chg_open_kt, dtde_q
           
@@ -277,24 +274,10 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     errQuadData = quadObj.DataByAmp(extName='ERR')
 
     # Intermediate files
-    outLog = ''
     if intermediateFiles:
         # Images
         mosWo = quadObj.MosaicTemplate()
         mosRn = mosWo.copy()
-
-        # Log file name
-        outLog = rootname + '_cte_log.txt'
-    # End if
-
-    # Choose one amp to log detailed results
-    ampPriorityOrder = ['C','D','A','B'] # Might be instrument dependent
-    amp2log = ''
-    for amp in ampPriorityOrder:
-        if amp in ampList:
-            amp2log = amp
-            break
-    # End for
     
     # Process each amp readout
     for amp in ampList:
@@ -319,18 +302,17 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
             mosWo[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpSig, tCode, trueCopy=True)
             mosRn[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpNse, tCode, trueCopy=True)
         # End if
-
-        # Only log pre-selected amp.
-        if amp == amp2log:
-            outLog2 = outLog
-        else:
-            outLog2 = ''
-        # End if
+        
+        # make CTE scaling array for this amp
+        cte_frac_arr = cte_frac * numpy.ones_like(sciAmpSig) * \
+            col_scale[amp][-sciAmpSig.shape[1]:];
+        cte_frac_arr = cte_frac_arr * \
+            numpy.arange(1,sciAmpSig.shape[0]+1).reshape((sciAmpSig.shape[0],1))
+        cte_frac_arr /= 2048.
         
         # CTE correction
-        sciAmpCor = pcfy.FixYCte(sciAmpSig, cte_frac, sim_nit, shft_nit,
-                                  levels, dpde_l, tail_len,
-                                  chg_leak_lt, chg_open_lt, amp, outLog2)
+        sciAmpCor = pcfy.FixYCte(sciAmpSig, sim_nit, shft_nit, cte_frac_arr,
+                                  levels, dpde_l, chg_leak_lt, chg_open_lt)
         
         # Add noise in electrons back to corrected image.
         sciAmpFin = sciAmpCor + sciAmpNse
@@ -381,7 +363,6 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
         print os.linesep, 'Intermediate files:'
         print outWo
         print outRn
-        print outLog
     # End if
 
     # Stop timer
@@ -406,6 +387,9 @@ def _PixCteParams(fitsTable, expstart):
 
     Returns
     -------
+    cte_frac : float
+        Time dependent CTE scaling.
+    
     sim_nit : int
         Number of readout simulations to do for each column of data
         
@@ -429,6 +413,9 @@ def _PixCteParams(fitsTable, expstart):
         
     levels : ndarray
         Charge levels at which to do CTE evaluation
+        
+    col_scale : dict of ndarray
+        Dictionary containing the column-by-column CTE scaling for each amp.
 
     """
 
@@ -478,11 +465,20 @@ def _PixCteParams(fitsTable, expstart):
             psi_node = pf_ref[n].data['NODE']
             chg_leak = numpy.array(pf_ref[n].data.tolist(), dtype=numpy.float32)[:,1:]
             break
+            
+    # column-by-column CTE scaling
+    col_scale = {}
+    
+    col_scale['A'] = pf_ref['COL_SCALE'].data['AMPA']
+    col_scale['B'] = pf_ref['COL_SCALE'].data['AMPB']
+    col_scale['C'] = pf_ref['COL_SCALE'].data['AMPC']
+    col_scale['D'] = pf_ref['COL_SCALE'].data['AMPD']
 
     # Close FITS table
     pf_ref.close()
 
-    return cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels
+    return cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node,\
+           chg_leak, levels, col_scale
 
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
@@ -655,13 +651,13 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     
     """
     
-    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+    chg_leak_lt, chg_open_lt, dpde_l = \
       pcfy.FillLevelArrays(chg_leak, chg_open, dtde_q, levels)
       
-    return chg_leak_lt, chg_open_lt, dpde_l, tail_len
+    return chg_leak_lt, chg_open_lt, dpde_l
     
 #--------------------------
-def _DecomposeRN(data_e, rn_clip=10.0):
+def _DecomposeRN(data_e, rn_clip=4.25):
     """
     Separate noise and signal.
     
@@ -677,8 +673,7 @@ def _DecomposeRN(data_e, rn_clip=10.0):
         SCI data in electrons.
 
     rn_clip : float
-        Maximum amplitude of read noise removed.
-        Defaults to 10.0.
+        Read noise level of image.
 
     Returns
     -------
@@ -694,8 +689,8 @@ def _DecomposeRN(data_e, rn_clip=10.0):
 
     return sigArr, nseArr
     
-def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l, 
-              tail_len, chg_leak_lt, chg_open_lt, amp='', outLog2=''):
+def _FixYCte(detector, cte_data, sim_nit, shft_nit, cte_frac, levels, dpde_l, 
+             chg_leak_lt, chg_open_lt):
     """
     Perform CTE correction on input data. It is best to perform some kind
     of readnoise smoothing on the data, otherwise the CTE algorithm will
@@ -714,14 +709,15 @@ def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l,
         Data are processed a column at a time, e.g. cte_data[:,x] is corrected,
         then cte_data[:,x+1] and so on.
         
-    cte_frac : float
-        Time dependent CTE scaling parameter.
-        
     sim_nit : int
         Number of readout simulation iterations to perform.
         
     shft_nit : int
         Number of readout shifts to do.
+        
+    cte_frac : ndarray
+        CTE scaling image combining the time dependent and column-by-column
+        CTE factors. Should be same shape as `cte_data`.
         
     levels : ndarray
         Levels at which CTE is evaluated as read from PCTEFILE.
@@ -729,10 +725,6 @@ def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l,
     dpde_l : ndarray
         Parameterized amount of charge in CTE trails as a function of
         specific charge levels, as returned by _FillLevelArrays.
-        
-    tail_len : ndarray
-        Maximum tail lengths for CTE tails at the specific charge levels
-        specified by levels, as returned by _FillLevelArrays.
         
     chg_leak_lt : ndarray
         Tail profile data at charge levels specified by levels, as returned
@@ -742,28 +734,17 @@ def _FixYCte(detector, cte_data, cte_frac, sim_nit, shft_nit, levels, dpde_l,
         Tail profile data at charge levels specified by levels, as returned
         by _FillLevelArrays.
         
-    amp : char
-        Amp name for this data, used in log file.
-        Optional, but must be specified if outLog2 is specified.
-        
-    outLog2 : str
-        Name of optional log file.
-        
     Returns
     -------
     corrected : ndarray
-        Data CTE correction algorithm applied. Same size and shape as input
-        cte_data.
+        Data after CTE correction algorithm applied. Same size and shape as
+        input cte_data.
     
     """
-    
-    if outLog2 != '' and amp == '':
-        raise PixCteError('amp argument must be specified if log file is specified.')
 
     if detector == 'WFC':
-        corrected = pcfy.FixYCte(cte_data, cte_frac, sim_nit, shft_nit,
-                                levels, dpde_l, tail_len,
-                                chg_leak_lt, chg_open_lt, amp, outLog2)
+        corrected = pcfy.FixYCte(cte_data, sim_nit, shft_nit, cte_frac,
+                                 levels, dpde_l, chg_leak_lt, chg_open_lt)
     else:
         raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
                               
@@ -838,8 +819,8 @@ def AddYCte(infile, outfile, units=None):
         
     # Read CTE params from file
     pctefile = fits['PRIMARY'].header['PCTETAB']
-    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node, chg_leak, levels = \
-      _PixCteParams(pctefile, expstart)
+    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node,\
+    chg_leak, levels, col_scale = _PixCteParams(pctefile, expstart)
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
@@ -853,7 +834,7 @@ def AddYCte(infile, outfile, units=None):
  
     # finish interpolation along the Q dimension and reduce arrays to contain
     # only info at the levels specified in the levels array
-    chg_leak_lt, chg_open_lt, dpde_l, tail_len = \
+    chg_leak_lt, chg_open_lt, dpde_l = \
       pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
     del chg_leak_kt, chg_open_kt, dtde_q
     
@@ -869,23 +850,32 @@ def AddYCte(infile, outfile, units=None):
         gainc = fits[0].header['atodgnc']
         gaind = fits[0].header['atodgnd']
         
-        scidata[:,:2048] *= gainc
-        scidata[:,2048:] *= gaind
+        scidata[:,:scidata.shape[1]/2] *= gainc
+        scidata[:,scidata.shape[1]/2:] *= gaind
+        
+    # setup cte frac array for chip 2
+    ampc_scale = col_scale['C'][-scidata.shape[1]/2:]
+    ampd_scale = col_scale['D'][-scidata.shape[1]/2:][::-1]
+    col_scale_temp = numpy.concatenate((ampc_scale,ampd_scale))
+    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    cte_frac_arr = cte_frac_arr * \
+        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+    cte_frac_arr /= 2048.
         
     # call CTE blurring routine. data must be in units of electrons.
     print 'Performing CTE blurring for science extension 1.'
     
     t1 = time.time()
-    cordata = _AddYCte(detector, scidata, cte_frac, shft_nit,
-                        levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt)
+    cordata = _AddYCte(detector, scidata, cte_frac_arr, shft_nit,
+                        levels, dpde_l, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
     print 'AddYCte took {} seconds for science extension 1.'.format(t2-t1)
     
     # convert blurred data back to DN
     if units == 'counts':
-        cordata[:,:2048] /= gainc
-        cordata[:,2048:] /= gaind
+        cordata[:,:scidata.shape[1]/2] /= gainc
+        cordata[:,scidata.shape[1]/2:] /= gaind
 
     # copy blurred data back to image.
     fits[1].data[:,:] = cordata.astype(numpy.float32)[:,:]
@@ -902,27 +892,36 @@ def AddYCte(infile, outfile, units=None):
         gaina = fits[0].header['atodgna']
         gainb = fits[0].header['atodgnb']
         
-        scidata[:,:2048] *= gaina
-        scidata[:,2048:] *= gainb
+        scidata[:,:scidata.shape[1]/2] *= gaina
+        scidata[:,scidata.shape[1]/2:] *= gainb
     
     # data needs to be flipped so that row 0 is closest to the readout, since
     # that's what the algorithm expects
     scidata = scidata[::-1,:]
+    
+    # setup cte frac array for chip 2
+    ampa_scale = col_scale['A'][-scidata.shape[1]/2:]
+    ampb_scale = col_scale['B'][-scidata.shape[1]/2:][::-1]
+    col_scale_temp = numpy.concatenate((ampa_scale,ampb_scale))
+    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    cte_frac_arr = cte_frac_arr * \
+        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+    cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
     print 'Performing CTE blurring for science extension 2.'
     
     t1 = time.time()
-    cordata = _AddYCte(detector, scidata, cte_frac, shft_nit,
-                        levels, dpde_l, tail_len, chg_leak_lt, chg_open_lt)
+    cordata = _AddYCte(detector, scidata, cte_frac_arr, shft_nit,
+                        levels, dpde_l, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
     print 'AddYCte took {} seconds for science extension 2.'.format(t2-t1)
     
     # convert blurred data back to DN
     if units == 'counts':
-        cordata[:,:2048] /= gaina
-        cordata[:,2048:] /= gainb
+        cordata[:,:scidata.shape[1]/2] /= gaina
+        cordata[:,scidata.shape[1]/2:] /= gainb
     
     # flip data back arround to its original orientation
     cordata = cordata[::-1,:]
@@ -942,7 +941,7 @@ def AddYCte(infile, outfile, units=None):
 
     
 def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l, 
-              tail_len, chg_leak_lt, chg_open_lt):
+             chg_leak_lt, chg_open_lt):
     """
     Apply ACS CTE blurring to input data.
     
@@ -958,8 +957,9 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
         Data are processed a column at a time, e.g. cte_data[:,x] is corrected,
         then cte_data[:,x+1] and so on.
         
-    cte_frac : float
-        Time dependent CTE scaling parameter.
+    cte_frac : ndarray
+        CTE scaling image combining the time dependent and column-by-column
+        CTE factors. Should be same shape as `cte_data`.
         
     shft_nit : int
         Number of readout shifts to do.
@@ -970,10 +970,6 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
     dpde_l : ndarray
         Parameterized amount of charge in CTE trails as a function of
         specific charge levels, as returned by _FillLevelArrays.
-        
-    tail_len : ndarray
-        Maximum tail lengths for CTE tails at the specific charge levels
-        specified by levels, as returned by _FillLevelArrays.
         
     chg_leak_lt : ndarray
         Tail profile data at charge levels specified by levels, as returned
@@ -992,9 +988,8 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
     """
     
     if detector == 'WFC':
-        blurred = pcfy.AddYCte(input_data, cte_frac,shft_nit,
-                                levels, dpde_l, tail_len,
-                                chg_leak_lt, chg_open_lt)
+        blurred = pcfy.AddYCte(input_data, shft_nit, cte_frac,
+                                levels, dpde_l, chg_leak_lt, chg_open_lt)
     else:
         raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
                               
