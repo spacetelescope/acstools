@@ -56,8 +56,8 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.0.0"
-__vdate__ = "29-Nov-2011"
+__version__ = "1.0.1"
+__vdate__ = "05-Jan-2012"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
@@ -68,7 +68,7 @@ class PixCteError(Exception):
     pass
 
 #--------------------------
-def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
+def CteCorr(input, outFits='', noise=1):
     """
     Run all the CTE corrections on all the input files.
     
@@ -103,14 +103,6 @@ def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
          
             - 0: None.
             - 1: Smoothing
-
-    intermediateFiles : bool 
-        Generate intermediate files in the same directory as input? 
-        Useful for debugging. These are:
-            
-            1. ROOTNAME_cte_rn_tmp.fits - Noise image.
-            2. ROOTNAME_cte_wo_tmp.fits - Noiseless
-               image.
             
     Examples
     --------
@@ -136,7 +128,7 @@ def CteCorr(input, outFits='', noise=1, intermediateFiles=False):
     
     # Process each file
     for file in infiles:
-        YCte(file, outFits=outFits, noise=noise, intermediateFiles=intermediateFiles)
+        YCte(file, outFits=outFits, noise=noise)
         
 #--------------------------
 def XCte():
@@ -153,7 +145,7 @@ def XCte():
     raise NotImplementedError('XCte not yet implemented.')
 
 #--------------------------
-def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
+def YCte(inFits, outFits='', noise=1):
     """
     Apply correction for parallel CTE loss.
 
@@ -191,15 +183,6 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
          
             - 0: None.
             - 1: Smoothing
-
-    intermediateFiles : bool 
-        Generate intermediate
-        files in the same directory as input? Useful
-        for debugging. These are:
-            
-            1. ROOTNAME_cte_rn_tmp.fits - Noise image.
-            2. ROOTNAME_cte_wo_tmp.fits - Noiseless
-               image.
             
     Examples
     --------
@@ -260,77 +243,91 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     chg_leak_lt, chg_open_lt, dpde_l = \
       pcfy.FillLevelArrays(chg_leak_kt, chg_open_kt, dtde_q, levels)
     del chg_leak_kt, chg_open_kt, dtde_q
-          
-    # Compute open spaces. Overwrite log file.
-#    chg_leak_tq, chg_open_tq = _TrackChargeTrap(pix_q_array, chg_leak_kt, 
-#                                                ycte_qmax, pFile=outLog, psiNode=psi_node)
     
-    # Extract data for amp quadrants.
-    # For each amp, view of image is created with amp on bottom left.
-    quadObj = ImageOpByAmp.ImageOpByAmp(pf_out)
-    ampList = quadObj.GetAmps()
-    # DQ needs to be read if new flags are to be added.
-    sciQuadData = quadObj.DataByAmp()
-    errQuadData = quadObj.DataByAmp(extName='ERR')
+    ########################################
+    # perform correction for chip 2 (ext. 1)
+    ########################################
 
-    # Intermediate files
-    if intermediateFiles:
-        # Images
-        mosWo = quadObj.MosaicTemplate()
-        mosRn = mosWo.copy()
+    # get data for chip 2 (ext. 1)
+    scidata = pf_out[1].data.copy().astype(numpy.float)
+    errdata = pf_out[2].data.copy().astype(numpy.float)
     
-    # Process each amp readout
-    for amp in ampList:
-        print os.linesep, 'AMP', amp
+    # separate signal and noise
+    sigdata, nsedata = pcfy.DecomposeRN(scidata, rn_clip)
         
-        # Keep a copy of original SCI for error calculations.
-        # Assume unit of electrons.
-        sciAmpOrig = sciQuadData[amp].copy().astype('float')
+    # setup cte frac array for chip 2
+    ampc_scale = col_scale['C'][-scidata.shape[1]/2:]
+    ampd_scale = col_scale['D'][-scidata.shape[1]/2:][::-1]
+    col_scale_temp = numpy.concatenate((ampc_scale,ampd_scale))
+    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    cte_frac_arr = cte_frac_arr * \
+        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+    cte_frac_arr /= 2048.
         
-        # Separate noise and signal.
-        # Must be in unit of electrons.
-        if noise == 1:
-          sciAmpSig, sciAmpNse = pcfy.DecomposeRN(sciAmpOrig, rn_clip)
-        elif noise == 0:
-          sciAmpSig = sciAmpOrig.copy()
-          sciAmpNse = numpy.zeros(sciAmpSig.shape,dtype=sciAmpSig.dtype)
-        else:
-          raise PixCteError('Invalid noise model specified, must be 0 or 1.')
+    # call CTE blurring routine. data must be in units of electrons.
+    print 'Performing CTE correction for science extension 1.'
+    
+    t1 = time.time()
+    cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, cte_frac_arr,
+                            levels, dpde_l, chg_leak_lt, chg_open_lt)
+    t2 = time.time()
+
+    print 'FixYCte took %f seconds for science extension 1.' % (t2-t1)
+    
+    # add noise back in
+    findata = cordata + nsedata
+
+    # copy corrected data back to image.
+    pf_out[1].data[:,:] = findata.astype(numpy.float32)[:,:]
+    
+    # add error as 10% of change
+    delta = 0.1 * numpy.abs(scidata - findata)
+    errdata = numpy.sqrt(errdata**2 + delta**2)
+    
+    pf_out[2].data[:,:] = errdata.astype(numpy.float32)[:,:]
+    
+    ########################################
+    # perform correction for chip 1 (ext. 4)
+    ########################################
+    
+    # get data for chip 1 (ext. 4)
+    # array must be flipped so readout is in row 0
+    scidata = pf_out[4].data.copy().astype(numpy.float)[::-1,:]
+    errdata = pf_out[5].data.copy().astype(numpy.float)[::-1,:]
+    
+    # separate signal and noise
+    sigdata, nsedata = pcfy.DecomposeRN(scidata, rn_clip)
         
-        if intermediateFiles:
-            mosX1, mosX2, mosY1, mosY2, tCode = quadObj.MosaicPars(amp)
-            mosWo[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpSig, tCode, trueCopy=True)
-            mosRn[mosY1:mosY2,mosX1:mosX2] = quadObj.FlipAmp(sciAmpNse, tCode, trueCopy=True)
-        # End if
+    # setup cte frac array for chip 2
+    ampc_scale = col_scale['A'][-scidata.shape[1]/2:]
+    ampd_scale = col_scale['B'][-scidata.shape[1]/2:][::-1]
+    col_scale_temp = numpy.concatenate((ampc_scale,ampd_scale))
+    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    cte_frac_arr = cte_frac_arr * \
+        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+    cte_frac_arr /= 2048.
         
-        # make CTE scaling array for this amp
-        cte_frac_arr = cte_frac * numpy.ones_like(sciAmpSig) * \
-            col_scale[amp][-sciAmpSig.shape[1]:];
-        cte_frac_arr = cte_frac_arr * \
-            numpy.arange(1,sciAmpSig.shape[0]+1).reshape((sciAmpSig.shape[0],1))
-        cte_frac_arr /= 2048.
-        
-        # CTE correction
-        sciAmpCor = pcfy.FixYCte(sciAmpSig, sim_nit, shft_nit, cte_frac_arr,
-                                  levels, dpde_l, chg_leak_lt, chg_open_lt)
-        
-        # Add noise in electrons back to corrected image.
-        sciAmpFin = sciAmpCor + sciAmpNse
-        del sciAmpCor, sciAmpNse
-        sciQuadData[amp][:,:] = sciAmpFin.astype(sciQuadData[amp].dtype)
-        
-        # Apply 10% correction to ERR in quadrature.
-        # Assume unit of electrons.
-        dcte = 0.1 * numpy.abs(sciAmpFin - sciAmpOrig)
-        del sciAmpFin, sciAmpOrig
-        errAmpSig = errQuadData[amp].copy().astype('float')
-        errAmpFin = numpy.sqrt(errAmpSig**2 + dcte**2)
-        del errAmpSig, dcte
-        
-        errQuadData[amp][:,:] = errAmpFin.astype(errQuadData[amp].dtype)
-        del errAmpFin
-        
-    # End of amp loop
+    # call CTE blurring routine. data must be in units of electrons.
+    print 'Performing CTE correction for science extension 4.'
+    
+    t1 = time.time()
+    cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, cte_frac_arr,
+                            levels, dpde_l, chg_leak_lt, chg_open_lt)
+    t2 = time.time()
+
+    print 'FixYCte took %f seconds for science extension 4.' % (t2-t1)
+    
+    # add noise back in
+    findata = cordata + nsedata
+
+    # copy corrected data back to image.
+    pf_out[4].data[:,:] = findata.astype(numpy.float32)[::-1,:]
+    
+    # add error as 10% of change
+    delta = 0.1 * numpy.abs(scidata - findata)
+    errdata = numpy.sqrt(errdata**2 + delta**2)
+    
+    pf_out[5].data[:,:] = errdata.astype(numpy.float32)[::-1,:]
 
     # Update header
     pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
@@ -349,21 +346,6 @@ def YCte(inFits, outFits='', noise=1, intermediateFiles=False):
     # Close output file
     pf_out.close()
     print os.linesep, outFits, 'written'
-
-    # Write intermediate files
-    if intermediateFiles:
-        outWo = rootname + '_cte_wo_tmp.fits'
-        hdu = pyfits.PrimaryHDU(mosWo)
-        hdu.writeto(outWo, clobber=True) # Overwrite
-        
-        outRn = rootname + '_cte_rn_tmp.fits'
-        hdu = pyfits.PrimaryHDU(mosRn)
-        hdu.writeto(outRn, clobber=True) # Overwrite
-
-        print os.linesep, 'Intermediate files:'
-        print outWo
-        print outRn
-    # End if
 
     # Stop timer
     timeEnd = time.time()
@@ -870,7 +852,7 @@ def AddYCte(infile, outfile, units=None):
                         levels, dpde_l, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
-    print 'AddYCte took {} seconds for science extension 1.'.format(t2-t1)
+    print 'AddYCte took %f seconds for science extension 1.' % (t2-t1)
     
     # convert blurred data back to DN
     if units == 'counts':
@@ -916,7 +898,7 @@ def AddYCte(infile, outfile, units=None):
                         levels, dpde_l, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
-    print 'AddYCte took {} seconds for science extension 2.'.format(t2-t1)
+    print 'AddYCte took %f seconds for science extension 2.' % (t2-t1)
     
     # convert blurred data back to DN
     if units == 'counts':
