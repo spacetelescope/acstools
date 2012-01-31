@@ -22,7 +22,7 @@ if False :
         pass
 
 else :
-    __version__ = '1.6.1'
+    __version__ = '1.7.0'
 
 try:
     from acstools.svninfo import (__svn_version__, __full_svn_info__,

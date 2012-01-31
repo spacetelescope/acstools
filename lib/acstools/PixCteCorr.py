@@ -56,19 +56,20 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.0.1"
-__vdate__ = "05-Jan-2012"
+__version__ = "1.1.0"
+__vdate__ = "30-Jan-2012"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
-ACS_CTE_VER = '3.0'
+ACS_CTE_VER = '3.1'
 
 # general error for things related to his module
 class PixCteError(Exception):
     pass
 
 #--------------------------
-def CteCorr(input, outFits='', noise=1):
+def CteCorr(input, outFits='', read_noise=None, noise_model=None,
+            oversub_thresh=None, sim_nit=None, shift_nit=None):
     """
     Run all the CTE corrections on all the input files.
     
@@ -94,15 +95,30 @@ def CteCorr(input, outFits='', noise=1):
         directory as input. If not given, will use
         ROOTNAME_cte.fits instead. Existing file will
         be overwritten.
+    
+    read_noise : float, optional
+        Read noise level.
+        If None, takes value from PCTETAB header RN_CLIP keyword.
 
-    noise : int
-        Noise mitigation algorithm. As CTE
-        loss occurs before noise is added at readout,
-        not removing noise prior to CTE correction
-        will enhance the noise in output image.  
+    noise_model : {0, 1, 2, None}, optional
+        Noise mitigation algorithm.
+        If None, takes value from PCTETAB header NSEMODEL keyword.
          
-            - 0: None.
-            - 1: Smoothing
+        0: No smoothing
+        1: Normal smoothing
+        2: Strong smoothing
+    
+    oversub_thresh : float, optional
+        Pixels corrected below this value will be re-corrected.
+        If None, takes value from PCTETAB header SUBTHRSH keyword.
+    
+    sim_nit : int, optional
+        Number of times readout simulation is performed per column.
+        If None, takes value from PCTETAB header SIM_NIT keyword.
+    
+    shift_nit : int, optional
+        Number of times column is shifted during simulated readout.
+        If None, takes value from PCTETAB header SHFT_NIT keyword.
             
     Examples
     --------
@@ -128,24 +144,14 @@ def CteCorr(input, outFits='', noise=1):
     
     # Process each file
     for file in infiles:
-        YCte(file, outFits=outFits, noise=noise)
-        
-#--------------------------
-def XCte():
-    """
-    *FUTURE WORK.*
-    Not Implemented yet.
-    
-    Apply correction to serial CTE loss. This is to
-    be done before parallel CTE loss correction.
-    
-    Probably easier to call as routine from `YCte()`.
-    """
+        YCte(file, outFits=outFits, read_noise=read_noise,
+             noise_model=noise_model, oversub_thresh=oversub_thresh,
+             sim_nit=sim_nit, shift_nit=shift_nit)
 
-    raise NotImplementedError('XCte not yet implemented.')
 
 #--------------------------
-def YCte(inFits, outFits='', noise=1):
+def YCte(inFits, outFits='', read_noise=None, noise_model=None,
+         oversub_thresh=None, sim_nit=None, shift_nit=None):
     """
     Apply correction for parallel CTE loss.
 
@@ -175,14 +181,29 @@ def YCte(inFits, outFits='', noise=1):
         ROOTNAME_cte.fits instead. Existing file will
         be overwritten.
 
-    noise  int
-        Noise mitigation algorithm. As CTE
-        loss occurs before noise is added at readout,
-        not removing noise prior to CTE correction
-        will enhance the noise in output image.  
+    read_noise : float, optional
+        Read noise level.
+        If None, takes value from PCTETAB header RN_CLIP keyword.
+
+    noise_model : {0, 1, 2, None}, optional
+        Noise mitigation algorithm.
+        If None, takes value from PCTETAB header NSEMODEL keyword.
          
-            - 0: None.
-            - 1: Smoothing
+        0: No smoothing
+        1: Normal smoothing
+        2: Strong smoothing
+    
+    oversub_thresh : float, optional
+        Pixels corrected below this value will be re-corrected.
+        If None, takes value from PCTETAB header SUBTHRSH keyword.
+    
+    sim_nit : int, optional
+        Number of times readout simulation is performed per column.
+        If None, takes value from PCTETAB header SIM_NIT keyword.
+    
+    shift_nit : int, optional
+        Number of times column is shifted during simulated readout.
+        If None, takes value from PCTETAB header SHFT_NIT keyword.
             
     Examples
     --------
@@ -194,6 +215,8 @@ def YCte(inFits, outFits='', noise=1):
         This task will generate a new CTE-corrected image.
 
     """
+    if noise_model not in (0, 1, 2, None):
+        raise ValueError("noise_model must be one of (0, 1, 2, None).")
 
     # Start timer
     timeBeg = time.time()
@@ -227,8 +250,32 @@ def YCte(inFits, outFits='', noise=1):
 
     # Read CTE params from file
     pctefile = pf_out['PRIMARY'].header['PCTETAB']
-    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node,\
-    chg_leak, levels, col_scale = _PixCteParams(pctefile, expstart)
+    pardict = _PixCteParams(pctefile, expstart)
+    
+    cte_frac = pardict['cte_frac']
+    q_dtde = pardict['q_dtde']
+    dtde_l = pardict['dtde_l']
+    psi_node = pardict['psi_node']
+    chg_leak = pardict['chg_leak']
+    levels = pardict['levels']
+    col_scale = pardict['col_scale']
+    
+    if sim_nit is None:
+        sim_nit = pardict['sim_nit']
+    
+    if shift_nit is None:
+        shft_nit = pardict['shft_nit']
+    else:
+        shft_nit = shift_nit
+    
+    if read_noise is None:
+        read_noise = pardict['read_noise']
+    
+    if noise_model is None:
+        noise_model = pardict['noise_model']
+    
+    if oversub_thresh is None:
+        oversub_thresh = pardict['oversub_thresh']
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
@@ -253,7 +300,11 @@ def YCte(inFits, outFits='', noise=1):
     errdata = pf_out[2].data.copy().astype(numpy.float)
     
     # separate signal and noise
-    sigdata, nsedata = pcfy.DecomposeRN(scidata, rn_clip)
+    if noise_model in (1,2):
+        sigdata, nsedata = pcfy.DecomposeRN(scidata, read_noise, noise_model)
+    elif noise_model == 0:
+        sigdata = scidata.copy()
+        nsedata = numpy.zeros_like(sigdata)
         
     # setup cte frac array for chip 2
     ampc_scale = col_scale['C'][-scidata.shape[1]/2:]
@@ -268,8 +319,9 @@ def YCte(inFits, outFits='', noise=1):
     print 'Performing CTE correction for science extension 1.'
     
     t1 = time.time()
-    cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, cte_frac_arr,
-                            levels, dpde_l, chg_leak_lt, chg_open_lt)
+    cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, oversub_thresh, 
+                           cte_frac_arr, levels, dpde_l, chg_leak_lt, 
+                           chg_open_lt)
     t2 = time.time()
 
     print 'FixYCte took %f seconds for science extension 1.' % (t2-t1)
@@ -296,7 +348,11 @@ def YCte(inFits, outFits='', noise=1):
     errdata = pf_out[5].data.copy().astype(numpy.float)[::-1,:]
     
     # separate signal and noise
-    sigdata, nsedata = pcfy.DecomposeRN(scidata, rn_clip)
+    if noise_model in (1,2):
+        sigdata, nsedata = pcfy.DecomposeRN(scidata, read_noise, noise_model)
+    elif noise_model == 0:
+        sigdata = scidata.copy()
+        nsedata = numpy.zeros_like(sigdata)
         
     # setup cte frac array for chip 2
     ampc_scale = col_scale['A'][-scidata.shape[1]/2:]
@@ -311,8 +367,9 @@ def YCte(inFits, outFits='', noise=1):
     print 'Performing CTE correction for science extension 4.'
     
     t1 = time.time()
-    cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, cte_frac_arr,
-                            levels, dpde_l, chg_leak_lt, chg_open_lt)
+    cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, oversub_thresh, 
+                           cte_frac_arr, levels, dpde_l, chg_leak_lt, 
+                           chg_open_lt)
     t2 = time.time()
 
     print 'FixYCte took %f seconds for science extension 4.' % (t2-t1)
@@ -332,15 +389,13 @@ def YCte(inFits, outFits='', noise=1):
     # Update header
     pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
     pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac, 'CTE time scaling value')
-    if noise == 1:
-      pf_out['PRIMARY'].header.update('PCTERNCL', rn_clip, 'PCTE readnoise amplitude')
-    elif noise == 0:
-      pf_out['PRIMARY'].header.update('PCTERNCL', 0, 'PCTE readnoise amplitude')
+    pf_out['PRIMARY'].header.update('PCTERNCL', read_noise, 'PCTE readnoise amplitude')
+    pf_out['PRIMARY'].header.update('PCTENSMD', noise_model, 'PCTE readnoise mitigation algorithm')
+    pf_out['PRIMARY'].header.update('PCTETRSH', oversub_thresh, 'PCTE over-subtraction threshold')
     pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit, 'PCTE readout simulation iterations')
     pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit, 'PCTE readout number of shifts')
     pf_out['PRIMARY'].header.update('CTE_NAME', ACS_CTE_NAME, 'name of CTE algorithm')
     pf_out['PRIMARY'].header.update('CTE_VER', ACS_CTE_VER, 'version of CTE algorithm')
-    pf_out['PRIMARY'].header.add_history('PCTE noise model is %i' % noise)
     pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
 
     # Close output file
@@ -369,6 +424,8 @@ def _PixCteParams(fitsTable, expstart):
 
     Returns
     -------
+    A dictionary containing the following:
+    
     cte_frac : float
         Time dependent CTE scaling.
     
@@ -378,8 +435,14 @@ def _PixCteParams(fitsTable, expstart):
     shft_nit : int
         Number of shifts to break each readout simulation into
         
-    rn_clip : float
+    read_noise : float
         Maximum amplitude of read noise removed by DecomposeRN.
+    
+    noise_model : {0, 1, 2}
+        Read noise smoothing algorithm selection.
+    
+    oversub_thresh : float
+        CTE corrected pixels taken below this value are re-corrected.
         
     dtde_q : ndarray
         Charge levels at which dtde_l is parameterized
@@ -410,13 +473,19 @@ def _PixCteParams(fitsTable, expstart):
     pf_ref = pyfits.open(refFile)
 
     # Read RN_CLIP value from header
-    rn_clip = pf_ref['PRIMARY'].header['RN_CLIP']
+    read_noise = pf_ref['PRIMARY'].header['RN_CLIP']
+    
+    # read NSEMODEL value
+    noise_model = pf_ref['PRIMARY'].header['NSEMODEL']
     
     # read SIM_NIT value from header
     sim_nit = pf_ref['PRIMARY'].header['SIM_NIT']
     
     # read SHFT_NIT value from header
     shft_nit = pf_ref['PRIMARY'].header['SHFT_NIT']
+    
+    # read SUBTHRSH value from header
+    oversub_thresh = pf_ref['PRIMARY'].header['SUBTHRSH']
     
     # read number of CHG_LEAK# extensions from the header
     nchg_leak = pf_ref['PRIMARY'].header['NCHGLEAK']
@@ -458,9 +527,22 @@ def _PixCteParams(fitsTable, expstart):
 
     # Close FITS table
     pf_ref.close()
+    
+    d = {}
+    d['cte_frac'] = cte_frac
+    d['sim_nit'] = sim_nit
+    d['shft_nit'] = shft_nit
+    d['oversub_thresh'] = oversub_thresh
+    d['read_noise'] = read_noise
+    d['noise_model'] = noise_model
+    d['q_dtde'] = q_dtde
+    d['dtde_l'] = dtde_l
+    d['psi_node'] = psi_node
+    d['chg_leak'] = chg_leak
+    d['levels'] = levels
+    d['col_scale'] = col_scale
 
-    return cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node,\
-           chg_leak, levels, col_scale
+    return d
 
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
@@ -639,23 +721,26 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     return chg_leak_lt, chg_open_lt, dpde_l
     
 #--------------------------
-def _DecomposeRN(data_e, rn_clip=4.25):
+def _DecomposeRN(data_e, read_noise=4.25, noise_model=1):
     """
     Separate noise and signal.
     
-        REAL DATA = SIGNAL + NOISE
-
-    .. note: Assume data only has 1 amp readout with
-             amp on lower left when displayed with default
-             plot settings.
+    REAL DATA = SIGNAL + NOISE
 
     Parameters
     ----------
     data_e : ndarray
         SCI data in electrons.
 
-    rn_clip : float
-        Read noise level of image.
+    read_noise : float, optional
+        Read noise level.
+
+    noise_model : {0, 1, 2}, optional
+        Noise mitigation algorithm.
+         
+        0: No smoothing
+        1: Normal smoothing
+        2: Strong smoothing
 
     Returns
     -------
@@ -666,13 +751,15 @@ def _DecomposeRN(data_e, rn_clip=4.25):
         Noise component in electrons.
 
     """
+    if noise_model not in (0, 1, 2):
+        raise ValueError("noise_model must be one of (0, 1, 2).")
     
-    sigArr, nseArr = pcfy.DecomposeRN(data_e, rn_clip)
+    sigArr, nseArr = pcfy.DecomposeRN(data_e, read_noise, noise_model)
 
     return sigArr, nseArr
     
-def _FixYCte(detector, cte_data, sim_nit, shft_nit, cte_frac, levels, dpde_l, 
-             chg_leak_lt, chg_open_lt):
+def _FixYCte(detector, cte_data, sim_nit, shft_nit, oversub_thresh,
+             cte_frac, levels, dpde_l, chg_leak_lt, chg_open_lt):
     """
     Perform CTE correction on input data. It is best to perform some kind
     of readnoise smoothing on the data, otherwise the CTE algorithm will
@@ -696,6 +783,9 @@ def _FixYCte(detector, cte_data, sim_nit, shft_nit, cte_frac, levels, dpde_l,
         
     shft_nit : int
         Number of readout shifts to do.
+    
+    oversub_thresh : float
+        CTE corrected pixels taken below this value are re-corrected.
         
     cte_frac : ndarray
         CTE scaling image combining the time dependent and column-by-column
@@ -725,8 +815,9 @@ def _FixYCte(detector, cte_data, sim_nit, shft_nit, cte_frac, levels, dpde_l,
     """
 
     if detector == 'WFC':
-        corrected = pcfy.FixYCte(cte_data, sim_nit, shft_nit, cte_frac,
-                                 levels, dpde_l, chg_leak_lt, chg_open_lt)
+        corrected = pcfy.FixYCte(cte_data, sim_nit, shft_nit, oversub_thresh,
+                                 cte_frac, levels, dpde_l,
+                                 chg_leak_lt, chg_open_lt)
     else:
         raise PixCteError('Invalid detector: PixCteCorr only supports ACS WFC.')
                               
@@ -982,8 +1073,12 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
 #--------------------------
 def run(configObj):
     
-    CteCorr(configObj['inFits'],outFits=configObj['outFits'],noise=configObj['noise'],
-        intermediateFiles=configObj['debug'])
+    CteCorr(configObj['inFits'],outFits=configObj['outFits'],
+            read_noise=configObj['read_noise'],
+            noise_model=configObj['noise_model'],
+            oversub_thresh=configObj['oversub_thresh'],
+            sim_nit=configObj['sim_nit'],
+            shift_nit=configObj['shift_nit'])
     
 def getHelpAsString():
     helpString = ''
@@ -991,6 +1086,6 @@ def getHelpAsString():
         helpString += teal.getHelpFileAsString(__taskname__,__file__)
 
     if helpString.strip() == '':
-        helpString += __doc__+'\n'+YCte.__doc__
+        helpString += __doc__ + '\n' + CteCorr.__doc__
 
     return helpString

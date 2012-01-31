@@ -196,6 +196,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   PyObject *opy_data;
   PyArrayObject *py_data;
   double pclip;
+  int noise_model;
   
   /* local variables */
   int status;
@@ -207,7 +208,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   PyArrayObject * py_noise;
   
   /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "Od", &opy_data, &pclip)) {
+  if (!PyArg_ParseTuple(args, "Odi", &opy_data, &pclip, &noise_model)) {
     return NULL;
   }
   
@@ -232,7 +233,7 @@ static PyObject * py_DecomposeRN(PyObject *self, PyObject *args) {
   
   /* call DecomposeRN */
   status = DecomposeRN(arrx, arry, (double *) PyArray_DATA(py_data), pclip,
-                       (double *) PyArray_DATA(py_sig), 
+                       noise_model, (double *) PyArray_DATA(py_sig), 
                        (double *) PyArray_DATA(py_noise));
   if (status != 0) {
     PyErr_SetString(PyExc_StandardError, "An error occurred in DecomposeRN.");
@@ -254,6 +255,7 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   PyArrayObject *py_sig_cte, *py_levels, *py_dpde_l;
   PyArrayObject *py_cte_frac, *py_chg_leak_lt, *py_chg_open_lt;
   int sim_nit, shft_nit;
+  double sub_thresh;
   
   /* local variables */
   int status;
@@ -264,8 +266,8 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   PyArrayObject * py_sig_cor;
   
   /* put arguments into variables */
-  if (!PyArg_ParseTuple(args, "OiiOOOOO", &opy_sig_cte, &sim_nit, &shft_nit,
-                        &opy_cte_frac, &opy_levels, &opy_dpde_l, 
+  if (!PyArg_ParseTuple(args, "OiidOOOOO", &opy_sig_cte, &sim_nit, &shft_nit,
+                        &sub_thresh, &opy_cte_frac, &opy_levels, &opy_dpde_l, 
                         &opy_chg_leak_lt, &opy_chg_open_lt)) {
     return NULL;
   }
@@ -303,7 +305,7 @@ static PyObject * py_FixYCte(PyObject *self, PyObject *args) {
   /* call FixYCte */
   status = FixYCte(arrx, arry, (double *) PyArray_DATA(py_sig_cte),
                    (double *) PyArray_DATA(py_sig_cor), sim_nit,
-                   shft_nit, (double *) PyArray_DATA(py_cte_frac),
+                   shft_nit, sub_thresh, (double *) PyArray_DATA(py_cte_frac),
                    (int *) PyArray_DATA(py_levels),
                    (double *) PyArray_DATA(py_dpde_l),
                    (double *) PyArray_DATA(py_chg_leak_lt),

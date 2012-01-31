@@ -31,11 +31,12 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
                     double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
                     double dpde_l[NUM_LEV]);
 int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
-                const double pclip, double sig_arr[arrx*arry], double noise_arr[arrx*arry]);
+                const double read_noise, const int noise_model,
+                double sig_arr[arrx*arry], double noise_arr[arrx*arry]);
 int FixYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
             double sig_cor[arrx*arry], const int sim_nit, const int shft_nit,
-            double cte_frac[arrx*arry], const int levels[NUM_LEV],
-            const double dpde_l[NUM_LEV],
+            const double too_low, double cte_frac[arrx*arry],
+            const int levels[NUM_LEV], const double dpde_l[NUM_LEV],
             const double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
             const double chg_open_lt[MAX_TAIL_LEN*NUM_LEV]);
 int AddYCte(const int arrx, const int arry, const double sig_cte[arrx*arry],
