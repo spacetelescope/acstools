@@ -824,7 +824,7 @@ def _FixYCte(detector, cte_data, sim_nit, shft_nit, oversub_thresh,
     return corrected
 
 
-def AddYCte(infile, outfile, units=None):
+def AddYCte(infile, outfile, shift_nit=None, units=None):
     """
     Add CTE blurring to input image using an inversion of the CTE correction
     code.
@@ -845,6 +845,10 @@ def AddYCte(infile, outfile, units=None):
         
     outfile : str
         Filename of blurred output image.
+    
+    shift_nit : int, optional
+        Number of times column is shifted during simulated readout.
+        If None, takes value from PCTETAB header SHFT_NIT keyword.
         
     units : {None,'electrons','counts'}, optional
         If 'electrons', the input image is assumed to have units of electrons
@@ -892,8 +896,20 @@ def AddYCte(infile, outfile, units=None):
         
     # Read CTE params from file
     pctefile = fits['PRIMARY'].header['PCTETAB']
-    cte_frac, sim_nit, shft_nit, rn_clip, q_dtde, dtde_l, psi_node,\
-    chg_leak, levels, col_scale = _PixCteParams(pctefile, expstart)
+    pardict = _PixCteParams(pctefile, expstart)
+    
+    cte_frac = pardict['cte_frac']
+    q_dtde = pardict['q_dtde']
+    dtde_l = pardict['dtde_l']
+    psi_node = pardict['psi_node']
+    chg_leak = pardict['chg_leak']
+    levels = pardict['levels']
+    col_scale = pardict['col_scale']
+    
+    if shift_nit is None:
+        shft_nit = pardict['shft_nit']
+    else:
+        shft_nit = shift_nit
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
