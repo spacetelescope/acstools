@@ -5,10 +5,6 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef _WIN32
-#define fmax _fmax
-#endif
-
 #include "PixCteCorr.h"
 
 /* constants that come up for optional logfile */
@@ -135,7 +131,10 @@ int FixYCte(const int arrx, const int arry, const double sig_cte[ /* arrx*arry *
           }
 
           /* recalculate a new CTE scaling factor */
-          ncf_top = fmax(pix_obs[i], 0.0);
+	  if ( pix_obs[i] > 0.0 )
+		  ncf_top = pix_obs[i];
+	  else
+		  ncf_top = 0.0;
           ncf_bot = ncf_top - pix_cur[i];
 
           if (ncf_top == 0) {

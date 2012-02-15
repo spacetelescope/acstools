@@ -382,9 +382,11 @@ int DecomposeRN(const int arrx, const int arry, const double data[ /* arrx*arry 
     for (j = 0; j < arry; j++) {
       sum = 0.0;
       
+#define IMAX(a,b) ( ((a) > (b)) ? (a) : (b) )
+#define IMIN(a,b) ( ((a) < (b)) ? (a) : (b) )
       /* add up local pixels to calculate sigma */
-      for (i2 = fmaxl(0, i-1); i2 <= fminl(i+1, arrx-1); i2++) {
-        for (j2 = fmaxl(0, j-1); j2 <= fminl(j+1, arry-1); j2++) {
+      for (i2 = IMAX(0, i-1); i2 <= IMIN(i+1, arrx-1); i2++) {
+        for (j2 = IMAX(0, j-1); j2 <= IMIN(j+1, arry-1); j2++) {
           sum += pow(noise_arr[i2*arry + j2], 2);
         }
       }
