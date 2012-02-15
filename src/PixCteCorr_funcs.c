@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#define _USE_MATH_DEFINES       /* needed for MS Windows to define M_PI */ 
 #include <math.h>
 #include <stdlib.h>
 
@@ -277,9 +278,9 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
  * The clipping parameter read_noise controls the maximum amount by which a pixel
  * will be modified, or the maximum amplitude of the read noise.
  */
-int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
+int DecomposeRN(const int arrx, const int arry, const double data[ /* arrx*arry */ ],
                 const double read_noise, const int noise_model,
-                double sig_arr[arrx*arry], double noise_arr[arrx*arry]) {
+                double sig_arr[ /* arrx*arry */ ], double noise_arr[ /* arrx*arry */ ]) {
   
   /* status variable for return */
   int status = 0;
