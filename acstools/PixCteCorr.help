@@ -54,19 +54,29 @@ outFits (string)
     ERR arrays will be added in quadrature with 10% of the correction. 
     DQ not changed.
 
-noise (int)
-    Noise mitigation algorithm. As CTE loss occurs before noise is added at 
-    readout, not removing noise prior to CTE correction will enhance the noise in output image.   
-        0: None.
-        1: Vertical linear, +/- 1 pixel (DEFAULT).
+read_noise (float)
+    Read noise level in electrons. Default behavior is to take value from
+    PCTETAB header.
 
-debug (Yes/No)
-    Generate intermediate files in the same directory as input? 
-    Default is no. Useful for debugging. 
-    These will be created:
-        1. ROOTNAME_cte_rn_tmp.fits - Noise image.
-        2. ROOTNAME_cte_wo_tmp.fits - Noiseless image.
-        3. ROOTNAME_cte_log.txt - Log file.
+noise_model (int)
+    Noise mitigation algorithm. Default behavior is to take value from
+    PCTETAB header.
+    
+    0: No smoothing
+    1: Normal smoothing
+    2: Strong smoothing
+
+oversub_thresh (float)
+    Pixels corrected below this value will be re-corrected. Default behavior
+    is to take value from PCTETAB header.
+
+sim_nit (int)
+    Number of times raedout simulation is performed per column. Default
+    behavior is to take value from PCTETAB header.
+
+shift_nit (int)
+    Number of times column is shifted during simulated readout. Default
+    behavior is to take value from PCTETAB header.
 
 How to use the tasks stand alone interface in your own scripts:
 ===============================================================

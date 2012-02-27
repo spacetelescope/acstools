@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#define _USE_MATH_DEFINES       /* needed for MS Windows to define M_PI */ 
 #include <math.h>
 #include <stdlib.h>
 
@@ -143,10 +144,9 @@ int InterpolatePsi(const double chg_leak[NUM_PSI*NUM_LOGQ], const int psi_node[N
  * that describes the amount of charge in the CTE tail and where the charge is.
  * -MRD 21 Feb. 2011
  *
- * Input dtde_l is read from the CTE parameters file and cte_frac is calculated
- * from the observation start date by CalcCteFrac.
- * Outputs dtde_q, q_pix_array, and pix_q_array are arrays MAX_PHI long (should
- * be 99999) and ycte_qmax is an integer.
+ * Input dtde_l is read from the CTE parameters file.
+ *
+ * Outputs dtde_q is arrays MAX_PHI long (should be 99999).
  */
 int InterpolatePhi(const double dtde_l[NUM_PHI], const int q_dtde[NUM_PHI],
                    const int shft_nit, double dtde_q[MAX_PHI]) {
@@ -166,9 +166,6 @@ int InterpolatePhi(const double dtde_l[NUM_PHI], const int q_dtde[NUM_PHI],
   double log_qa, log_qb;
   double log_da, log_db;
   
-  /* something for holding intermediate calculation results */
-  double qtmp;
-  
   for (p = 0; p < NUM_PHI-1; p++) {
     log_qa = log10((double) q_dtde[p]);
     log_qb = log10((double) q_dtde[p+1]);
@@ -180,14 +177,19 @@ int InterpolatePhi(const double dtde_l[NUM_PHI], const int q_dtde[NUM_PHI],
       interp_dist = (interp_pt - log_qa) / (log_qb - log_qa);
       interp_val = log_da + (interp_dist * (log_db - log_da));
       
-      qtmp = pow(10, interp_val)/(double) CTE_REF_ROW;
-      qtmp = pow((1.0 - qtmp), (double) CTE_REF_ROW/ (double) shft_nit);
-      dtde_q[q-1] = 1.0 - qtmp;
+      dtde_q[q-1] = pow(10, interp_val);
+      if (p == NUM_PHI - 2) {
+        dtde_q[q-1] = dtde_l[p] * (1.0 - (double) (q - q_dtde[p]) / (double) (q_dtde[p+1] - q_dtde[p]));
+      }
     }
   }
   
-  qtmp = pow((1.0 - (dtde_l[NUM_PHI-1]/CTE_REF_ROW)),CTE_REF_ROW/shft_nit);
-  dtde_q[MAX_PHI-1] = 1.0 - qtmp;
+  dtde_q[MAX_PHI - 1] = 0.0;
+  
+  for (q = 0; q < MAX_PHI; q++) {
+    dtde_q[q] = 1.0 - pow(1.0 - dtde_q[q]/(double) CTE_REF_ROW, 
+                          (double) CTE_REF_ROW/(double) shft_nit);
+  }
   
   return status;
 }
@@ -200,8 +202,7 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
                     const double dtde_q[MAX_PHI], const int levels[NUM_LEV],
                     double chg_leak_lt[MAX_TAIL_LEN*NUM_LEV],
                     double chg_open_lt[MAX_TAIL_LEN*NUM_LEV],
-                    double dpde_l[NUM_LEV],
-                    int tail_len[NUM_LEV]) {
+                    double dpde_l[NUM_LEV]) {
   
   /* status variable for return */
   int status = 0;
@@ -266,147 +267,195 @@ int FillLevelArrays(const double chg_leak_kt[MAX_TAIL_LEN*NUM_LOGQ],
     }
   }
   
-  /* calculate max tail lengths for each level */
-  for (l = 0; l < NUM_LEV; l++) {
-    tail_len[l] = MAX_TAIL_LEN;
-    
-    for (t = MAX_TAIL_LEN-1; t >= 0; t--) {
-      if (chg_leak_lt[t*NUM_LEV + l] == 0) {
-        tail_len[l] = t+1;
-      } else {
-        break;
-      }
-    }
-  }
-  
   return status;
 }
+
 
 /*
  * Attempt to separate readout noise from signal, since CTI happens before
  * readout noise is added to the signal.
  *
- * The clipping parameter pclip controls the maximum amount by which a pixel
+ * The clipping parameter read_noise controls the maximum amount by which a pixel
  * will be modified, or the maximum amplitude of the read noise.
  */
-int DecomposeRN(const int arrx, const int arry, const double data[arrx*arry],
-                const double pclip, double sig_arr[arrx*arry], double noise_arr[arrx*arry]) {
+int DecomposeRN(const int arrx, const int arry, const double data[ /* arrx*arry */ ],
+                const double read_noise, const int noise_model,
+                double sig_arr[ /* arrx*arry */ ], double noise_arr[ /* arrx*arry */ ]) {
   
   /* status variable for return */
   int status = 0;
   
   /* iteration variables */
-  int i, j;
+  int i, j, i2, j2, it_count;
   
-  /* array to hold pixel means from 20 surrounding pixels */
-  double * means;
+  int max_it1 = 25;
+  int max_it2 = 30;
   
-  /* array to hold clipped difference between data and means */
-  double * diffs;
-  double diff;
+  /* accumulation variables */
+  double sum;
+  int num;
   
-  /* array to hold smoothed diffs */
-  double * sm_diffs;
+  double d1, d2, d3;
   
-  /* index variables */
-  int iind, jind;
+  double rms;
   
-  /* get space for arrays */
-  means = (double *) malloc(arrx * arry * sizeof(double));
-  diffs = (double *) malloc(arrx * arry * sizeof(double));
-  sm_diffs = (double *) malloc(arrx * arry * sizeof(double));
+  double * local_sigma;
+  double * local_weight;
+  char * local_mask;
   
-  /* calculate means array as average of 20 surrounding pixel, not including
-   * central pixel. */
+  /* check for valid noise_model */
+  if (noise_model != 0 && noise_model != 1 && noise_model != 2) {
+    return (status = ERROR_RETURN);
+  }
+  
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      /* if this pixel is within 2 rows/columns of the edge get the median
-       * from the pixel in the third row/column from the edge. */
-      iind = i;
-      if (iind <= 1) {
-        iind = 2;
-      } else if (iind >= arrx-2) {
-        iind = arrx - 3;
-      }
-      jind = j;
-      if (jind <= 1) {
-        jind = 2;
-      } else if (jind >= arry-2) {
-        jind = arry - 3;
-      }
-      
-      means[i*arry + j] = (data[(iind+0)*arry + jind+1] + 
-                           data[(iind+0)*arry + jind-1] + 
-                           data[(iind+1)*arry + jind+0] + 
-                           data[(iind-1)*arry + jind-0] + 
-                           data[(iind-1)*arry + jind+1] + 
-                           data[(iind-1)*arry + jind+1] + 
-                           data[(iind-1)*arry + jind-1] + 
-                           data[(iind-1)*arry + jind-1] + 
-                           data[(iind+0)*arry + jind+2] + 
-                           data[(iind-0)*arry + jind-2] + 
-                           data[(iind+2)*arry + jind+0] + 
-                           data[(iind-2)*arry + jind-0] + 
-                           data[(iind+1)*arry + jind+2] + 
-                           data[(iind-1)*arry + jind+2] + 
-                           data[(iind+1)*arry + jind-2] + 
-                           data[(iind-1)*arry + jind-2] + 
-                           data[(iind+2)*arry + jind+1] + 
-                           data[(iind+2)*arry + jind+1] + 
-                           data[(iind-2)*arry + jind-1] + 
-                           data[(iind-2)*arry + jind-1])/20.0;
+      sig_arr[i*arry + j] = data[i*arry + j];
+      noise_arr[i*arry + j] = 0.0;
     }
   }
   
-  /* calculate clipped differences array */
+  /* no smoothing */
+  if (noise_model == 0) {
+    return status;
+  }
+  
+  /* adjust each pixel to be more similar to the three pixels below it */
+  it_count = 0;
+  
+  do {
+    sum = 0.0;
+    num = 0;
+    
+    for (i = 3; i < arrx; i++) {
+      for (j = 0; j < arry; j++) {
+        d1 = sig_arr[i*arry + j] - sig_arr[(i-1)*arry + j];
+        
+        if (d1 > 0.1*read_noise) {
+          d1 = 0.1*read_noise;
+        } else if (d1 < -0.1*read_noise) {
+          d1 = -0.1*read_noise;
+        }
+        
+        d2 = sig_arr[i*arry + j] - sig_arr[(i-2)*arry + j];
+        
+        if (d2 > 0.1*read_noise) {
+          d2 = 0.1*read_noise;
+        } else if (d2 < -0.1*read_noise) {
+          d2 = -0.1*read_noise;
+        }
+        
+        d3 = sig_arr[i*arry + j] - sig_arr[(i-3)*arry + j];
+        
+        if (d3 > 0.1*read_noise) {
+          d3 = 0.1*read_noise;
+        } else if (d3 < -0.1*read_noise) {
+          d3 = -0.1*read_noise;
+        }
+        
+        noise_arr[i*arry + j] += (d1 + d2 + d3) / 3.0;
+        
+        sum += pow(noise_arr[i*arry + j], 2);
+        num++;
+      }
+    }
+    
+    for (i = 0; i < arrx; i++) {
+      for (j = 0; j < arry; j++) {
+        sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
+      }
+    }
+    
+    rms = sqrt(sum / (double) num);
+    
+    it_count++;
+    
+  } while (it_count < 25 || (it_count < 30 && rms < 1.25*read_noise));
+  
+  /* allocate sigma, weight, and mask arrays */
+  local_sigma = (double *) malloc(arrx * arry * sizeof(double));
+  local_weight = (double *) malloc(arrx * arry * sizeof(double));
+  local_mask = (char *) malloc(arrx * arry * sizeof(char));
+  
+  /* calculate local sigma, initialize weights and mask */
   for (i = 0; i < arrx; i++) {
     for (j = 0; j < arry; j++) {
-      diff = data[i*arry + j] - means[i*arry + j];
+      sum = 0.0;
       
-      if (diff < -pclip) {
-        diffs[i*arry + j] = -pclip;
-      } else if (diff > pclip) {
-        diffs[i*arry + j] = pclip;
+#define IMAX(a,b) ( ((a) > (b)) ? (a) : (b) )
+#define IMIN(a,b) ( ((a) < (b)) ? (a) : (b) )
+      /* add up local pixels to calculate sigma */
+      for (i2 = IMAX(0, i-1); i2 <= IMIN(i+1, arrx-1); i2++) {
+        for (j2 = IMAX(0, j-1); j2 <= IMIN(j+1, arry-1); j2++) {
+          sum += pow(noise_arr[i2*arry + j2], 2);
+        }
+      }
+      
+      local_sigma[i*arry + j] = sqrt(sum / 9.0);
+      
+      if (local_sigma[i*arry + j] > 1.72*read_noise) {
+        local_weight[i*arry + j] = 1.72 * read_noise / local_sigma[i*arry + j];
+        
+        local_mask[i*arry + j] = 0;
+        
       } else {
-        diffs[i*arry + j] = diff;
+        local_weight[i*arry + j] = 1.0;
+        
+        local_mask[i*arry + j] = 1;
       }
     }
   }
   
-  /* to avoid systematic reduction of sources we insist that the average
-   * clipping within any 5-pixel vertical window is zero. */
-  for (i = 0; i < arrx; i++) {
-    for (j = 0; j < arry; j++) {
-      iind = i;
-      if (iind <= 2) {
-        iind = 2;
-      } else if (iind >= arrx-2) {
-        iind = arrx - 3;
+  if (noise_model == 1) {
+    /* downweight pixels with locally high noise */
+    for (i = 1; i < arrx-1; i++) {
+      for (j = 1; j < arry-1; j++) {
+        num = 0;
+        
+        for (i2 = i-1; i2 <= i+1; i2++) {
+          for (j2 = j-1; j2 <= j+1; j2++) {
+            num += (int) local_mask[i2*arry + j2];
+          }
+        }
+        
+        noise_arr[i*arry + j] *= (double) num / 9.0;
       }
-      
-      sm_diffs[i*arry + j] = (diffs[(iind-2)*arry + j] + 
-                              diffs[(iind-1)*arry + j] + 
-                              diffs[(iind-0)*arry + j] + 
-                              diffs[(iind+1)*arry + j] + 
-                              diffs[(iind+2)*arry + j])/5.0;
-      
-      diff = diffs[i*arry + j] - sm_diffs[i*arry + j];
-      
-      if (diff < -pclip) {
-        noise_arr[i*arry + j] = -pclip;
-      } else if (diff > pclip) {
-        noise_arr[i*arry + j] = pclip;
-      } else {
-        noise_arr[i*arry + j] = diff;
+    }
+    
+    for (i = 0; i < arrx; i++) {
+      for (j = 0; j < arry; j++) {
+        sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
       }
-      
-      sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
+    }
+    
+  } else if (noise_model == 2) {
+    /* downweight pixels with locally high noise, but less so than under
+     * noise_model == 1.
+     */
+    for (i = 1; i < arrx-1; i++) {
+      for (j = 1; j < arry-1; j++) {
+        sum = 0.0;
+        
+        for (i2 = i-1; i2 <= i+1; i2++) {
+          for (j2 = j-1; j2 <= j+1; j2++) {
+            sum += local_weight[i2*arry + j2];
+          }
+        }
+        
+        noise_arr[i*arry + j] *= sum / 9.0;
+      }
+    }
+    
+    for (i = 0; i < arrx; i++) {
+      for (j = 0; j < arry; j++) {
+        sig_arr[i*arry + j] = data[i*arry + j] - noise_arr[i*arry + j];
+      }
     }
   }
   
-  free(means);
-  free(diffs);
-  free(sm_diffs);
+  free(local_sigma);
+  free(local_weight);
+  free(local_mask);
   
   return status;
 }
