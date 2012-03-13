@@ -1,11 +1,11 @@
 
-This program tries to clean out horizontal stripes and crosstalk signatures
+This program tries to clean out horizontal stripes
 found in ACS/WFC post-SM4 data.  
 
 It is assumed that the data is an ACS/WFC FLT image - with two SCI extensions.
 The program needs access to the flatfield specified in the image header PFLTFILE.
 
-:Author: Norman Grogin, STScI, June 2010.
+:Author: Norman Grogin, STScI, March 2012.
 
 Notes
 -----
