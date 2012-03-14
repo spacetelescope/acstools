@@ -53,10 +53,10 @@ class stripearray(object):
     self.science = self.hdulist['sci',1].data
     self.err = self.hdulist['err',1].data
     if (self.ampstring == 'ABCD'): 
-	    self.science = np.concatenate(self.science,hdulist['sci',2].data[::-1,:],axis=1)
-	    self.err = np.concatenate(self.err,hdulist['err',2].data[::-1,:],axis=1)
+      self.science = np.concatenate(self.science,hdulist['sci',2].data[::-1,:],axis=1)
+      self.err = np.concatenate(self.err,hdulist['err',2].data[::-1,:],axis=1)
     self.ingest_flatfield()
-	
+  
   def ingest_flatfield(self):
     flatfile = self.hdulist[0].header['PFLTFILE']
     
@@ -67,40 +67,40 @@ class stripearray(object):
     else: hduflat = self.resolve_flatname(flatfile)
     
     if (self.ampstring == 'ABCD'): 
-	    self.invflat = np.concatenate(1/hduflat['sci',1].data,1/hduflat['sci',2].data[::-1,:],axis=1)
+      self.invflat = np.concatenate(1/hduflat['sci',1].data,1/hduflat['sci',2].data[::-1,:],axis=1)
     else:
-	    ### complex algorithm to determine proper subarray of flatfield to use
+      ### complex algorithm to determine proper subarray of flatfield to use
       
-	    ### which amp?
-	    if (self.ampstring == 'A' or self.ampstring == 'B' or self.ampstring == 'AB'):
+      ### which amp?
+      if (self.ampstring == 'A' or self.ampstring == 'B' or self.ampstring == 'AB'):
         self.invflat = 1/hduflat['sci',2].data
-	    else:
+      else:
         self.invflat = 1/hduflat['sci',1].data
       
-	    ### now, which section?
-	    sizaxis1 = self.hdulist[1].header['SIZAXIS1']
-	    sizaxis2 = self.hdulist[1].header['SIZAXIS2']
-	    centera1 = self.hdulist[1].header['CENTERA1']
-	    centera2 = self.hdulist[1].header['CENTERA2']
-	    
-	    ### configure the offset appropriate to left- or right-side of CCD
-	    if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
+      ### now, which section?
+      sizaxis1 = self.hdulist[1].header['SIZAXIS1']
+      sizaxis2 = self.hdulist[1].header['SIZAXIS2']
+      centera1 = self.hdulist[1].header['CENTERA1']
+      centera2 = self.hdulist[1].header['CENTERA2']
+      
+      ### configure the offset appropriate to left- or right-side of CCD
+      if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
         xdelta = 13
-	    else:
+      else:
         xdelta = 35
       
-	    xlo = centera1 - xdelta - sizaxis1/2 - 1
-	    xhi = centera1 - xdelta + sizaxis1/2 - 1
-	    ylo = centera2 - sizaxis2/2 - 1
-	    yhi = centera2 + sizaxis2/2 - 1
-	    
-	    self.invflat = self.invflat[ylo:yhi,xlo:xhi]
+      xlo = centera1 - xdelta - sizaxis1/2 - 1
+      xhi = centera1 - xdelta + sizaxis1/2 - 1
+      ylo = centera2 - sizaxis2/2 - 1
+      yhi = centera2 + sizaxis2/2 - 1
+      
+      self.invflat = self.invflat[ylo:yhi,xlo:xhi]
     
     ### apply the flatfield if necessary
     if self.flatcorr != 'COMPLETE':
-	    self.science = self.science / self.invflat
-	    self.err = self.err / self.invflat
-	
+      self.science = self.science / self.invflat
+      self.err = self.err / self.invflat
+  
   def resolve_flatname(self,flatfile):
     ### resolve the filename into an absolute pathname (if necessary)
     flatparts = flatfile.partition('$')
@@ -108,29 +108,29 @@ class stripearray(object):
       flatdir = os.getenv(flatparts[0])
       if flatdir is None:
         errstr = 'Environment variable ',flatparts[0],' not defined!'
-        raise ValueError,errstr 	   
+        raise ValueError,errstr      
       flatfile = flatdir+flatparts[2]
     if not os.path.exists(flatfile):
       errstr = 'Flat-field file ',flatfile,' could not be found!'
       raise IOError, errstr
     ### open the flatfield
     return(pyfits.open(flatfile))
-	
+  
   def write_corrected(self,output):
     
     ### un-apply the flatfield if necessary
     if self.flatcorr != 'COMPLETE':
-	    self.science = self.science * self.invflat
-	    self.err = self.err * self.invflat
+      self.science = self.science * self.invflat
+      self.err = self.err * self.invflat
     
     ### reverse the amp merge
     if (self.ampstring == 'ABCD'): 
-	    [self.hdulist['sci',1].data,self.hdulist['sci',2].data] = \
+      [self.hdulist['sci',1].data,self.hdulist['sci',2].data] = \
         np.split(self.science,2,axis=1)
-	    self.hdulist['sci',2].data = self.hdulist['sci',2].data[::-1,:]
-	    [self.hdulist['err',1],self.hdulist['err',2]] = \
+      self.hdulist['sci',2].data = self.hdulist['sci',2].data[::-1,:]
+      [self.hdulist['err',1],self.hdulist['err',2]] = \
         np.split(self.err,2,axis=1)
-	    self.hdulist['err',2].data = self.hdulist['err',2].data[::-1,:]
+      self.hdulist['err',2].data = self.hdulist['err',2].data[::-1,:]
     
     # Write the output
     self.hdulist.writeto(output)
@@ -142,18 +142,18 @@ def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
   for image in flist:
     ### Skip processing pre-SM4 images   
     if (pyfits.getval(image,'EXPSTART') <= 54967):
-	    sys.stdout.write('Error: Not processing %s ...pre-SM4 images not supported!'%image)
-	    continue
+      sys.stdout.write('Error: Not processing %s ...pre-SM4 images not supported!'%image)
+      continue
     
     ### Skip processing non-DARKCORR'd non-BIAS images
     if (pyfits.getval(image,'IMAGETYP') != 'BIAS' and pyfits.getval(image,'DARKCORR') != 'COMPLETE'):
-	    sys.stdout.write('Error: Not processing %s ...non-BIAS images must have DARKCORR=COMPLETE!'%image)
-	    continue
+      sys.stdout.write('Error: Not processing %s ...non-BIAS images must have DARKCORR=COMPLETE!'%image)
+      continue
     
     ### newly requiring images be in electrons (revised CALACS now does this at beginning rather than end)
     if (pyfits.getval(image,'BUNIT',ext=1) != 'ELECTRONS'):
-	    sys.stdout.write('Error: Not processing %s ...SCI and ERR extensions must be in units of electrons!'%image)
-	    continue	
+      sys.stdout.write('Error: Not processing %s ...SCI and ERR extensions must be in units of electrons!'%image)
+      continue  
     
     # generate output filename for each input based on specification
     # of the output suffix
