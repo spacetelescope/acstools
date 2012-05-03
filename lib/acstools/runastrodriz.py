@@ -283,7 +283,12 @@ def process(inFile,force=False):
 
     # Clean up any generated OrIg_files directory
     if os.path.exists("OrIg_files"):
-        os.rmdir("OrIg_files")
+        # check to see whether this directory is empty
+        flist = glob.glob('OrIg_files/*.fits')
+        if len(flist) == 0:
+            os.rmdir("OrIg_files")
+        else:
+            print 'OrIg_files directory NOT removed as it still contained images...'
 
     # Provide feedback to user
     print _final_msg
