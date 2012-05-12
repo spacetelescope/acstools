@@ -21,6 +21,8 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
       CTE characterization.
     * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
+    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
+    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
 
 References
 ----------
@@ -56,12 +58,12 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.1.0"
-__vdate__ = "30-Jan-2012"
+__version__ = "1.2.0"
+__vdate__ = "11-May-2012"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
-ACS_CTE_VER = '3.1'
+ACS_CTE_VER = '3.2'
 
 # general error for things related to his module
 class PixCteError(Exception):

@@ -62,9 +62,9 @@ noise_model (int)
     Noise mitigation algorithm. Default behavior is to take value from
     PCTETAB header.
     
-    0: No smoothing
-    1: Normal smoothing
-    2: Strong smoothing
+    0: Assume noiseless image
+    1: Noise is smoothed
+    2: No noise smoothing
 
 oversub_thresh (float)
     Pixels corrected below this value will be re-corrected. Default behavior
