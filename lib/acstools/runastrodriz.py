@@ -37,8 +37,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.1.1"
-__vdate__ = "(14-Sep-2011)"
+__version__ = "1.1.2"
+__vdate__ = "(16-May-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -180,13 +180,13 @@ def process(inFile,force=False):
             _cal_prodname = _infile
             _inlist = [_infile]
             # Add CTE corrected filename as additional input if present
-            if _infile_flc != _infile:
+            if os.path.exists(_infile_flc) and _infile_flc != _infile:
                 _inlist.append(_infile_flc)
 
         else:
             # Working with an ASN table...
             _infile = inFilename
-            flist,duplist = processInput.checkForDuplicateInputs(_asndict)
+            flist,duplist = processInput.checkForDuplicateInputs(_asndict['order'])
             if len(duplist) > 0:
                 origasn = processInput.changeSuffixinASN(inFilename,'flt')
                 dupasn = processInput.changeSuffixinASN(inFilename,'flc')
