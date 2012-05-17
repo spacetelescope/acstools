@@ -26,8 +26,8 @@ __usage__ = """
   """
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.2.3'
-__vdate__ = '05-Mar-2012'
+__version__ = '0.2.4'
+__vdate__ = '17-May-2012'
 
 import os, pyfits, sys
 import numpy as np
@@ -37,8 +37,8 @@ from stsci.tools import parseinput,teal
 ### here are defined the fractional crosstalk values : 
 ### flux-independent; intra-chip only; reflexive; 
 ### (values had been 7.0e-5 before tweak to fit Saturn obsvs.)
-CDcrosstalk = 7.1e-5
-ABcrosstalk = 7.1e-5
+CDcrosstalk = 9.1e-5
+ABcrosstalk = 9.1e-5
 
 class stripearray(object):
   
@@ -53,10 +53,10 @@ class stripearray(object):
     self.science = self.hdulist['sci',1].data
     self.err = self.hdulist['err',1].data
     if (self.ampstring == 'ABCD'): 
-      self.science = np.concatenate(self.science,hdulist['sci',2].data[::-1,:],axis=1)
-      self.err = np.concatenate(self.err,hdulist['err',2].data[::-1,:],axis=1)
+      self.science = np.concatenate((self.science,self.hdulist['sci',2].data[::-1,:]),axis=1)
+      self.err = np.concatenate((self.err,self.hdulist['err',2].data[::-1,:]),axis=1)
     self.ingest_flatfield()
-  
+
   def ingest_flatfield(self):
     flatfile = self.hdulist[0].header['PFLTFILE']
     
@@ -67,7 +67,7 @@ class stripearray(object):
     else: hduflat = self.resolve_flatname(flatfile)
     
     if (self.ampstring == 'ABCD'): 
-      self.invflat = np.concatenate(1/hduflat['sci',1].data,1/hduflat['sci',2].data[::-1,:],axis=1)
+      self.invflat = np.concatenate((1/hduflat['sci',1].data,1/hduflat['sci',2].data[::-1,:]),axis=1)
     else:
       ### complex algorithm to determine proper subarray of flatfield to use
       
@@ -124,13 +124,14 @@ class stripearray(object):
       self.err = self.err * self.invflat
     
     ### reverse the amp merge
-    if (self.ampstring == 'ABCD'): 
-      [self.hdulist['sci',1].data,self.hdulist['sci',2].data] = \
-        np.split(self.science,2,axis=1)
-      self.hdulist['sci',2].data = self.hdulist['sci',2].data[::-1,:]
-      [self.hdulist['err',1],self.hdulist['err',2]] = \
-        np.split(self.err,2,axis=1)
-      self.hdulist['err',2].data = self.hdulist['err',2].data[::-1,:]
+    if (self.ampstring == 'ABCD'):
+      tmp_1, tmp_2 = np.split(self.science, 2, axis=1)
+      self.hdulist['sci',1].data = tmp_1.copy()
+      self.hdulist['sci',2].data = tmp_2[::-1,:].copy()
+
+      tmp_1, tmp_2 = np.split(self.err, 2, axis=1)
+      self.hdulist['err',1].data = tmp_1.copy()
+      self.hdulist['err',2].data = tmp_2[::-1,:].copy()
     
     # Write the output
     self.hdulist.writeto(output)
@@ -171,11 +172,11 @@ def clean(input,suffix,clobber=False,maxiter=15,sigrej=2.0):
     sys.stdout.write("Created corrected image: %s\n"%output)
 
 def perform_correction(image,output,maxiter=15,sigrej=2.0):
-  
+
   ### construct the frame to be cleaned, including the
   ### associated data stuctures needed for cleaning
   frame = stripearray(image)
-  
+
   # Do the stripe cleaning
   clean_streak(frame,maxiter=maxiter,sigrej=sigrej)
   
@@ -294,8 +295,8 @@ def getHelpAsString(fulldoc=True):
   helpString += 'Version '+__version__+'\n'
   
   """ 
-    return useful help from a file in the script directory called module.help
-    """
+  return useful help from a file in the script directory called module.help
+  """
   helpString += teal.getHelpFileAsString(__taskname__,__file__)
   
   helpString += __usage__
