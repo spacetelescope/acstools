@@ -23,6 +23,7 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
     * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
     * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
+    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
 
 References
 ----------
@@ -59,7 +60,7 @@ import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
 __version__ = "1.2.0"
-__vdate__ = "11-May-2012"
+__vdate__ = "22-May-2012"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
@@ -507,7 +508,7 @@ def _PixCteParams(fitsTable, expstart):
 
     # there are nchg_leak CHG_LEAK# extensions. we need to find out which one
     # is the right one for our data.
-    chg_leak_names = ['CHG_LEAK{}'.format(i) for i in range(1,nchg_leak+1)]
+    chg_leak_names = ['CHG_LEAK%i'%(i) for i in range(1,nchg_leak+1)]
 
     for n in chg_leak_names:
         mjd1 = pf_ref[n].header['MJD1']
