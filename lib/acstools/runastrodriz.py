@@ -90,11 +90,13 @@ def process(inFile,force=False):
 
     # Initialize for later use...
     _mname = None
+    _new_asn = None
     # Check input file to see if [DRIZ/DITH]CORR is set to PERFORM
     if '_asn' in inFilename:
         # We are working with an ASN table.
         # Use asnutil code to extract filename
         inFilename = _lowerAsn(inFilename)
+        _new_asn = [inFilename]
         _asndict = asnutil.readASNTable(inFilename,None,prodonly=False)
         _fname = fileutil.buildRootname(string.lower(_asndict['output']),ext=['_drz.fits'])
         _cal_prodname = string.lower(_asndict['output'])
@@ -168,7 +170,7 @@ def process(inFile,force=False):
     _drizfile = _trlroot + '_pydriz'
     _drizlog = _drizfile + ".log" # the '.log' gets added automatically by astrodrizzle
 
-    _new_asn = None
+    print 'dcorr = ',dcorr,inFilename
     if dcorr == 'PERFORM':
         if '_asn.fits' not in inFilename:
             # Working with a singleton
@@ -196,7 +198,7 @@ def process(inFile,force=False):
             # We want to keep the original specification of the calibration
             # product name, though, not a lower-case version...
             _cal_prodname = inFilename
-            _new_asn = _inlist # kept so we can delete it when finished
+            _new_asn.extend(_inlist) # kept so we can delete it when finished
 
 
         # Run astrodrizzle and send its processing statements to _trlfile
@@ -279,7 +281,7 @@ def process(inFile,force=False):
 
     # If we created a new ASN table, we need to remove it
     if _new_asn != None:
-        for _name in _new_asn: os.remove(_name)
+        for _name in _new_asn: fileutil.removeFile(_name)
 
     # Clean up any generated OrIg_files directory
     if os.path.exists("OrIg_files"):
