@@ -22,7 +22,7 @@ if False :
         pass
 
 else :
-    __version__ = '1.7.0'
+    __version__ = '1.7.1'
 
 try:
     from acstools.svninfo import (__svn_version__, __full_svn_info__,
@@ -33,8 +33,9 @@ except ImportError:
 import acs_destripe
 import PixCteCorr
 import runastrodriz
+import calacs
 
-# These lines allow TEAL to print out the names of TEAL-enabled tasks 
+# These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.
 import os
 from stsci.tools import teal

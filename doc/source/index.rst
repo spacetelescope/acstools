@@ -10,8 +10,9 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
    acs_destripe
+   calacs
    pixctecorr
 
 Indices and tables
