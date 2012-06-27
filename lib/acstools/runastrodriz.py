@@ -3,7 +3,7 @@
 """ runastrodriz.py - Module to control operation of astrodrizzle to
         remove distortion and combine HST images in the pipeline.
 
-USAGE: runastrodriz.py inputFilename
+USAGE: runastrodriz.py [-fh] inputFilename [newpath]
 
 Alternative USAGE:
     python
@@ -435,6 +435,7 @@ def main():
     # initialize default values
     help = 0
     force = False
+    newdir = None
 
     # read options
     for opt, value in optlist:
@@ -444,15 +445,18 @@ def main():
             force = True
         if opt == "-i":
             interactive = True
+
     if len(args) < 1:
-        print "syntax: runastrodriz.py [-fh] inputFilename"
+        print "syntax: runastrodriz.py [-fh] inputFilename [newpath]"
         sys.exit()
+    if len(args) > 1:
+        newdir = args[-1]
     if (help):
         print __doc__
         print "\t", __version__+'('+__vdate__+')'
     else:
         try:
-            process(args[0],force=force)
+            process(args[0],force=force,newpath=newdir)
         except Exception, errorobj:
             print str(errorobj)
             print "ERROR: Cannot run astrodrizzle on %s." % sys.argv[1]
