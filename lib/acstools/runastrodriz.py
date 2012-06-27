@@ -8,7 +8,7 @@ USAGE: runastrodriz.py inputFilename
 Alternative USAGE:
     python
     from acstools import runastrodriz
-    runastrodriz.process(inputFilename,force=False)
+    runastrodriz.process(inputFilename,force=False,newpath=None)
 
 GUI Usage under Python:
     python
@@ -19,9 +19,19 @@ GUI Usage under Python:
 PyRAF Usage:
     epar runastrodriz
 
+If a value has been provided for the newpath parameter, all processing will be
+performed in that directory/ramdisk.  The steps involved are:
+   - create a temporary directory under that directory named after the input file
+   - copy all files related to the input to that new directory
+   - change to that new directory and run astrodrizzle
+   - change back to original directory
+   - move (not copy) ALL files from temp directory to original directory
+   - delete temp sub-directory
+
 *** INITIAL VERSION
 W.J. Hack  12 Aug 2011: Initial version based on Version 1.2.0 of
                         STSDAS$pkg/hst_calib/wfc3/runwf3driz.py
+W.J. Hack  27 Jun 2012: Implement support to process in different directory
 """
 
 # Import standard Python modules
@@ -37,8 +47,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.1.2"
-__vdate__ = "(16-May-2012)"
+__version__ = "1.2.0"
+__vdate__ = "(27-Jun-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -66,10 +76,11 @@ def help():
     print getHelpAsString()
 
 def run(configobj=None):
-    process(configobj['input'],force=configobj['force'])
+    process(configobj['input'],force=configobj['force'],
+                newpath=configobj['newpath'])
 
 #### Primary user interface
-def process(inFile,force=False):
+def process(inFile,force=False,newpath=None):
     """ Run astrodrizzle on input file/ASN table
         using default values for astrodrizzle parameters.
     """
@@ -87,6 +98,13 @@ def process(inFile,force=False):
     except TypeError:
         print "ERROR: Inappropriate input file."
         return
+
+    #If newpath was specified, move all files to that directory for processing
+    if newpath:
+        orig_processing_dir = os.getcwd()
+        new_processing_dir = _createWorkingDir(newpath,inFilename)
+        _copyToNewWorkingDir(new_processing_dir,inFilename)
+        os.chdir(new_processing_dir)
 
     # Initialize for later use...
     _mname = None
@@ -292,6 +310,13 @@ def process(inFile,force=False):
         else:
             print 'OrIg_files directory NOT removed as it still contained images...'
 
+    # If processing was done in a temp working dir, restore results to original
+    # processing directory, return to original working dir and remove temp dir
+    if newpath:
+        _restoreResults(new_processing_dir,orig_processing_dir)
+        os.chdir(orig_processing_dir)
+        _removeWorkingDir(new_processing_dir)
+
     # Provide feedback to user
     print _final_msg
 
@@ -351,6 +376,49 @@ def _getTime():
     time_str = time.strftime('%H:%M:%S (%d-%b-%Y)',_ltime)
 
     return time_str
+
+#### Functions used to manage processing in a separate directory/ramdisk
+def _createWorkingDir(rootdir,input):
+    """
+    Create a working directory based on input name under the parent directory specified as rootdir
+    """
+    # extract rootname from input
+    rootname = input[:input.find('_')]
+    newdir = os.path.join(rootdir,rootname)
+    if not os.path.exists(newdir):
+        os.mkdir(newdir)
+    return newdir
+
+def _copyToNewWorkingDir(newdir,input):
+    """ Copy input file and all related files necessary for processing to the new working directory.
+
+        This function works in a greedy manner, in that all files associated
+        with all inputs(have the same rootname) will be copied to the new
+        working directory.
+    """
+    flist = []
+    if '_asn.fits' in input:
+        asndict = asnutil.readASNTable(input,None)
+        flist.append(input[:input.find('_')])
+        flist.extend(asndict['order'])
+        flist.append(asndict['output'])
+    else:
+        flist.append(input[:input.find('_')])
+    # copy all files related to these rootnames into new dir
+    for rootname in flist:
+        for fname in glob.glob(rootname+'*'):
+            shutil.copy(fname,os.path.join(newdir,fname))
+
+def _restoreResults(newdir,origdir):
+    """ Move (not copy) all files from newdir back to the original directory
+    """
+    for fname in glob.glob(os.path.join(newdir,'*')):
+        shutil.move(fname,os.path.join(origdir,os.path.basename(fname)))
+
+def _removeWorkingDir(newdir):
+    """ Delete working directory
+    """
+    os.rmdir(newdir)
 
 #### Functions to support execution from the shell.
 def main():
