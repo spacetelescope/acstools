@@ -3,12 +3,12 @@
 """ runastrodriz.py - Module to control operation of astrodrizzle to
         remove distortion and combine HST images in the pipeline.
 
-USAGE: runastrodriz.py [-fh] inputFilename [newpath]
+USAGE: runastrodriz.py [-fhi] inputFilename [newpath]
 
 Alternative USAGE:
     python
     from acstools import runastrodriz
-    runastrodriz.process(inputFilename,force=False,newpath=None)
+    runastrodriz.process(inputFilename,force=False,newpath=None,inmemory=False)
 
 GUI Usage under Python:
     python
@@ -18,6 +18,12 @@ GUI Usage under Python:
 
 PyRAF Usage:
     epar runastrodriz
+
+If the '-i' option gets specified, no intermediate products will be written out
+to disk. These products, instead, will be kept in memory. This includes all
+single drizzle products (*single_sci and *single_wht), median image,
+blot images, and crmask images.  The use of this option will therefore require
+significantly more memory than usual to process the data.
 
 If a value has been provided for the newpath parameter, all processing will be
 performed in that directory/ramdisk.  The steps involved are:
@@ -32,6 +38,8 @@ performed in that directory/ramdisk.  The steps involved are:
 W.J. Hack  12 Aug 2011: Initial version based on Version 1.2.0 of
                         STSDAS$pkg/hst_calib/wfc3/runwf3driz.py
 W.J. Hack  27 Jun 2012: Implement support to process in different directory
+
+W.J. Hack  24 Aug 2012: Provided interface for in-memory option
 """
 
 # Import standard Python modules
@@ -47,8 +55,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.2.0"
-__vdate__ = "(27-Jun-2012)"
+__version__ = "1.3.0"
+__vdate__ = "(24-Aug-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -77,10 +85,10 @@ def help():
 
 def run(configobj=None):
     process(configobj['input'],force=configobj['force'],
-                newpath=configobj['newpath'])
+                newpath=configobj['newpath'],inmemory=configobj['in_memory'])
 
 #### Primary user interface
-def process(inFile,force=False,newpath=None):
+def process(inFile,force=False,newpath=None, inmemory=False):
     """ Run astrodrizzle on input file/ASN table
         using default values for astrodrizzle parameters.
     """
@@ -239,7 +247,8 @@ def process(inFile,force=False,newpath=None):
 
             try:
                 b = drizzlepac.astrodrizzle.AstroDrizzle(input=_infile,runfile=_drizfile,
-                                            configobj='defaults',**pipeline_pars)
+                                            configobj='defaults',in_memory=inmemory,
+                                            **pipeline_pars)
             except Exception, errorobj:
                 _appendTrlFile(_trlfile,_drizlog)
                 _appendTrlFile(_trlfile,_pyd_err)
@@ -426,7 +435,7 @@ def main():
     import getopt
 
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'hf')
+        optlist, args = getopt.getopt(sys.argv[1:], 'hfi')
     except getopt.error, e:
         print str(e)
         print __doc__
@@ -436,6 +445,7 @@ def main():
     help = 0
     force = False
     newdir = None
+    inmemory = False
 
     # read options
     for opt, value in optlist:
@@ -444,10 +454,10 @@ def main():
         if opt == "-f":
             force = True
         if opt == "-i":
-            interactive = True
+            inmemory = True
 
     if len(args) < 1:
-        print "syntax: runastrodriz.py [-fh] inputFilename [newpath]"
+        print "syntax: runastrodriz.py [-fhi] inputFilename [newpath]"
         sys.exit()
     if len(args) > 1:
         newdir = args[-1]
@@ -456,7 +466,7 @@ def main():
         print "\t", __version__+'('+__vdate__+')'
     else:
         try:
-            process(args[0],force=force,newpath=newdir)
+            process(args[0],force=force,newpath=newdir, inmemory=inmemory)
         except Exception, errorobj:
             print str(errorobj)
             print "ERROR: Cannot run astrodrizzle on %s." % sys.argv[1]

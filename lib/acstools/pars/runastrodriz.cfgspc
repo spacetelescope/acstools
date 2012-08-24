@@ -2,3 +2,5 @@ _task_name_ = string_kw(default="runastrodriz")
 input = string_kw(default="", comment="Input filename (single image or ASN file)")
 force = boolean_kw(default=False, comment="Process regardless of DRIZCORR?")
 newpath = string_kw(default="", comment="Name of new directory for processing")
+in_memory = boolean_kw(default=False, comment="Process everything in memory to minimize disk I/O?")
+
