@@ -21,6 +21,7 @@ except ImportError:
 import acs_destripe
 import PixCteCorr
 import runastrodriz
+import calacs
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.
