@@ -6,6 +6,8 @@
 Welcome to acstools's documentation!
 ====================================
 
+Modules for Advanced Camera for Surveys (ACS).
+
 Contents:
 
 .. toctree::

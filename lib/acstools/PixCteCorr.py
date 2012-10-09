@@ -7,42 +7,46 @@ online at:
 
 http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran), Matt Davis
-
-:Organization: Space Telescope Science Institute
-
-:History:
-    * 2010/09/01 PLL created this module.
-    * 2010/10/13 WH added/modified documentations.
-    * 2010/10/15 PLL fixed PCTEFILE lookup logic.
-    * 2010/10/26 WH added support for multiple file processing
-    * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
-    * 2011/04/26 MRD Began updates for new CTE algorithm.
-    * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
-      CTE characterization.
-    * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
-    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
-    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
-    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
+.. note::
+    * This code only works for ACS/WFC but can be modified to work on other
+      detectors.
+    * It was developed for use with full-frame GAIN=2 FLT images as input.
+    * It has not been fully tested with any other formats.
+    * Noise is slightly enhanced in the output (see [Anderson]_).
+    * This code assumes a linear time dependence for a given set of
+      coefficients.
+    * This algorithm does not account for traps with very long release timescale
+      but it is not an issue for ACS/WFC.
+    * This code also does not account for second-exposure effect.
+    * Multi-threading support was not implemented in this version as it would
+      interfere with eventual pipeline operation.
 
 References
 ----------
 .. [Anderson] Anderson J. & Bedin, L.R., 2010, PASP, 122, 1035
 
-Notes
-------
-* This code only works for ACS/WFC but can be modified to work on other detectors.
-* It was developed for use with full-frame GAIN=2 FLT images as input.
-* It has not been fully tested with any other formats.
-* Noise is slightly enhanced in the output (see [Anderson]_).
-* This code assumes a linear time dependence for a given set of coefficients.
-* This algorithm does not account for traps with very long release timescale
-  but it is not an issue for ACS/WFC.
-* This code also does not account for second-exposure effect.
-* Multi-threading support was not implemented in this version as it would
-  interfere with eventual pipeline operation.
-
 """
+
+#### TAKEN OUT FROM FORMAL DOC BUT KEPT FOR HISTORY
+#
+#:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran), Matt Davis
+#
+#:Organization: Space Telescope Science Institute
+#
+#:History:
+#    * 2010/09/01 PLL created this module.
+#    * 2010/10/13 WH added/modified documentations.
+#    * 2010/10/15 PLL fixed PCTEFILE lookup logic.
+#    * 2010/10/26 WH added support for multiple file processing
+#    * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
+#    * 2011/04/26 MRD Began updates for new CTE algorithm.
+#    * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
+#      CTE characterization.
+#    * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
+#    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
+#    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
+#    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
+####################
 
 # External modules
 import os, shutil, time, numpy, pyfits

@@ -6,4 +6,12 @@ This task implements a pixel-based CTE correction for calibrated ACS/WFC images.
 .. currentmodule:: acstools.PixCteCorr
 
 .. automodule:: acstools.PixCteCorr
-   :members: 
+   :members: CteCorr, AddYCte
+
+Version
+-------
+
+.. autodata:: acstools.PixCteCorr.__version__
+.. autodata:: acstools.PixCteCorr.__vdate__
+.. autodata:: acstools.PixCteCorr.ACS_CTE_NAME
+.. autodata:: acstools.PixCteCorr.ACS_CTE_VER
