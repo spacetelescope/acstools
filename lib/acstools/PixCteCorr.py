@@ -919,6 +919,10 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     else:
         shft_nit = shift_nit
 
+    # The following are only used to update the header of the output, blurred image
+    sim_nit = pardict['sim_nit']
+    rn_clip = pardict['read_noise']
+
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
     del chg_leak, psi_node
