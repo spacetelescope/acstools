@@ -82,8 +82,8 @@ import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.2.0"
-__vdate__ = "22-May-2012"
+__version__ = "1.2.1"
+__vdate__ = "11-Oct-2012"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
