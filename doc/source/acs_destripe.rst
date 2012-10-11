@@ -1,7 +1,7 @@
 .. _acsdestripe:
 
 *****************
-ACS_DESTRIPE Task
+ACS Destripe Task
 *****************
 This task has been written to remove the bias stripe pattern imposed on
 post-SM4 full frame ACS/WFC images.  
@@ -11,11 +11,15 @@ The program needs access to the flatfield specified in the image header
 PFLTFILE.
 
 .. note::
-    If PFLTFILE has the value "N/A", as is the case with biases and darks,
-    then the program assumes a unity flatfield.
 
-    This program also expects an `_flt.fits` file as input, **NOT** a
-    `_raw.fits` file.
+    #. Make sure the `acstools` package is on your Python path.
+
+    #. If PFLTFILE has the value "N/A", as is the case with biases and darks,
+       then the program assumes a unity flatfield.
+
+    #. This program also expects an `_flt.fits` file as input, **NOT** a
+       `_raw.fits` file.
+
 
 Parameters
 ----------
@@ -44,18 +48,20 @@ sigrej : float
     This parameters sets the sigma level for the rejection applied
     during each iteration of statistics computations for the
     row-by-row corrections. 
-    
+
+
 Examples
 --------
-To run this task from within Python, make sure the `acstools` package is on
-your Python path:
+Destripe the given input FLT and append 'csck' suffix to output.
+Do not overwrite if output already exists.
+Set maximum iterations and rejection sigma to given non-default values.
 
 >>> from acstools import acs_destripe
 >>> acs_destripe.clean('uncorrected_flt.fits','csck', clobber=False, maxiter=15, sigrej=2.0)
 
-To run this task using the TEAL GUI to set the parameters under PyRAF:
+Using the TEAL GUI.
 
->>> import acstools
+>>> from acstools import acs_destripe
 >>> from stsci.tools import teal
 >>> teal.teal('acs_destripe')
 
@@ -64,11 +70,28 @@ To run this task from the operating system command line, make sure the file
 
     % ./acs_destripe [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
 
+    -h for help
+
+    -c for clobber
+
+    15 is example of non-default `maxiter`
+
+    2.0 is example of non-default `sigrej`
+
+
+Global Variables
+----------------
+
+.. autodata:: acstools.acs_destripe.ABcrosstalk
+.. autodata:: acstools.acs_destripe.CDcrosstalk
+
+
 Version
 -------
 
 .. autodata:: acstools.acs_destripe.__version__
 .. autodata:: acstools.acs_destripe.__vdate__
+
 
 Author
 ------

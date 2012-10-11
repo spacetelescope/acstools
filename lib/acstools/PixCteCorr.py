@@ -21,6 +21,25 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * Multi-threading support was not implemented in this version as it would
       interfere with eventual pipeline operation.
 
+Examples
+--------
+To correct a set of ACS FLT images, with one new CTE-corrected image
+for each input.
+
+>>> from acstools import PixCteCorr
+>>> PixCteCorr.CteCorr('j*q_flt.fits')
+
+Using the TEAL GUI.
+
+>>> from acstools import PixCteCorr
+>>> from stsci.tools import teal
+>>> teal.teal('PixCteCorr')
+
+From within PyRAF::
+
+    --> from acstools import PixCteCorr
+    --> epar PixCteCorr
+
 References
 ----------
 .. [Anderson] Anderson J. & Bedin, L.R., 2010, PASP, 122, 1035
@@ -126,24 +145,6 @@ def CteCorr(input, outFits='', read_noise=None, noise_model=None,
     shift_nit : int, optional
         Number of times column is shifted during simulated readout.
         If None, takes value from PCTETAB header SHFT_NIT keyword.
-
-    Examples
-    --------
-    1.  This task can be used to correct a set of ACS images simply with:
-
-            >>> import PixCteCorr
-            >>> PixCteCorr.CteCorr('j*q_flt.fits')
-
-        This task will generate a new CTE-corrected image for each of the FLT images.
-
-    2.  The TEAL GUI can be used to run this task using:
-
-            >>> epar PixCteCorr  # under PyRAF only
-
-        or from a general Python command line:
-
-            >>> from stsci.tools import teal
-            >>> teal.teal('PixCteCorr')
 
     """
     # Parse input to get list of filenames to process

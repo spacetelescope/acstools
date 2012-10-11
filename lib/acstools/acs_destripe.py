@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-""" acs_destripe - try to clean out horizontal stripes from ACS WFC post-SM4 data.
-  
-  """
+"""
+acs_destripe - try to clean out horizontal stripes from ACS WFC post-SM4 data.
+
+"""
 __author__ = "Norman Grogin, STScI, March 2012."
 __usage__ = """
   
