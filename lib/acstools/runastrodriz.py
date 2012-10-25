@@ -85,10 +85,11 @@ def help():
 
 def run(configobj=None):
     process(configobj['input'],force=configobj['force'],
-                newpath=configobj['newpath'],inmemory=configobj['in_memory'])
+                newpath=configobj['newpath'],inmemory=configobj['in_memory'],
+                num_cores=configobj['num_cores'])
 
 #### Primary user interface
-def process(inFile,force=False,newpath=None, inmemory=False):
+def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
     """ Run astrodrizzle on input file/ASN table
         using default values for astrodrizzle parameters.
     """
@@ -196,7 +197,6 @@ def process(inFile,force=False,newpath=None, inmemory=False):
     _drizfile = _trlroot + '_pydriz'
     _drizlog = _drizfile + ".log" # the '.log' gets added automatically by astrodrizzle
 
-    print 'dcorr = ',dcorr,inFilename
     if dcorr == 'PERFORM':
         if '_asn.fits' not in inFilename:
             # Working with a singleton
@@ -248,7 +248,7 @@ def process(inFile,force=False,newpath=None, inmemory=False):
             try:
                 b = drizzlepac.astrodrizzle.AstroDrizzle(input=_infile,runfile=_drizfile,
                                             configobj='defaults',in_memory=inmemory,
-                                            **pipeline_pars)
+                                            num_cores=num_cores, **pipeline_pars)
             except Exception, errorobj:
                 _appendTrlFile(_trlfile,_drizlog)
                 _appendTrlFile(_trlfile,_pyd_err)
@@ -435,7 +435,7 @@ def main():
     import getopt
 
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'hfi')
+        optlist, args = getopt.getopt(sys.argv[1:], 'hfin:')
     except getopt.error, e:
         print str(e)
         print __doc__
@@ -446,6 +446,7 @@ def main():
     force = False
     newdir = None
     inmemory = False
+    num_cores = None
 
     # read options
     for opt, value in optlist:
@@ -455,6 +456,11 @@ def main():
             force = True
         if opt == "-i":
             inmemory = True
+        if opt == '-n':
+            if not value.isdigit():
+                print 'ERROR: num_cores value must be an integer!'
+                raise ValueError
+            num_cores = int(value)
 
     if len(args) < 1:
         print "syntax: runastrodriz.py [-fhi] inputFilename [newpath]"
@@ -466,7 +472,7 @@ def main():
         print "\t", __version__+'('+__vdate__+')'
     else:
         try:
-            process(args[0],force=force,newpath=newdir, inmemory=inmemory)
+            process(args[0],force=force,newpath=newdir, inmemory=inmemory, num_cores=num_cores)
         except Exception, errorobj:
             print str(errorobj)
             print "ERROR: Cannot run astrodrizzle on %s." % sys.argv[1]
