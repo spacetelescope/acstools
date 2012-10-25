@@ -55,8 +55,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.3.0"
-__vdate__ = "(24-Aug-2012)"
+__version__ = "1.4.0"
+__vdate__ = "(25-Oct-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
