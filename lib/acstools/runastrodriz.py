@@ -3,7 +3,7 @@
 """ runastrodriz.py - Module to control operation of astrodrizzle to
         remove distortion and combine HST images in the pipeline.
 
-USAGE: runastrodriz.py [-fhi] inputFilename [newpath]
+USAGE: runastrodriz.py [-fhibn] inputFilename [newpath]
 
 Alternative USAGE:
     python
@@ -34,6 +34,12 @@ performed in that directory/ramdisk.  The steps involved are:
    - move (not copy) ALL files from temp directory to original directory
    - delete temp sub-directory
 
+The '-b' option will run this task in BASIC mode without creating headerlets
+for each input image.
+
+The '-n' option allows the user to specify the number of cores to be used in
+running AstroDrizzle.
+
 *** INITIAL VERSION
 W.J. Hack  12 Aug 2011: Initial version based on Version 1.2.0 of
                         STSDAS$pkg/hst_calib/wfc3/runwf3driz.py
@@ -55,8 +61,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.4.0"
-__vdate__ = "(25-Oct-2012)"
+__version__ = "1.5.0"
+__vdate__ = "(14-Nov-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -86,16 +92,19 @@ def help():
 def run(configobj=None):
     process(configobj['input'],force=configobj['force'],
                 newpath=configobj['newpath'],inmemory=configobj['in_memory'],
-                num_cores=configobj['num_cores'])
+                num_cores=configobj['num_cores'],headerlets=configobj['headerlets'])
 
 #### Primary user interface
-def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
+def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
+            headerlets=True):
     """ Run astrodrizzle on input file/ASN table
         using default values for astrodrizzle parameters.
     """
     # We only need to import this package if a user run the task
     import drizzlepac
     from drizzlepac import processInput # used for creating new ASNs for _flc inputs
+    import stwcs
+    from stwcs.wcsutil import headerlet
 
     # Open the input file
     try:
@@ -118,6 +127,8 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
     # Initialize for later use...
     _mname = None
     _new_asn = None
+    _calfiles = []
+
     # Check input file to see if [DRIZ/DITH]CORR is set to PERFORM
     if '_asn' in inFilename:
         # We are working with an ASN table.
@@ -196,7 +207,6 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
     _tmptrl = _trlroot + '_tmp.tra'
     _drizfile = _trlroot + '_pydriz'
     _drizlog = _drizfile + ".log" # the '.log' gets added automatically by astrodrizzle
-
     if dcorr == 'PERFORM':
         if '_asn.fits' not in inFilename:
             # Working with a singleton
@@ -206,7 +216,8 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
             _infile_flc = fileutil.buildRootname(_cal_prodname,ext=['_flc.fits'])
 
             _cal_prodname = _infile
-            _inlist = [_infile]
+            _inlist = _calfiles = [_infile]
+
             # Add CTE corrected filename as additional input if present
             if os.path.exists(_infile_flc) and _infile_flc != _infile:
                 _inlist.append(_infile_flc)
@@ -215,6 +226,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
             # Working with an ASN table...
             _infile = inFilename
             flist,duplist = processInput.checkForDuplicateInputs(_asndict['order'])
+            _calfiles = flist
             if len(duplist) > 0:
                 origasn = processInput.changeSuffixinASN(inFilename,'flt')
                 dupasn = processInput.changeSuffixinASN(inFilename,'flc')
@@ -318,6 +330,11 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None):
             os.rmdir("OrIg_files")
         else:
             print 'OrIg_files directory NOT removed as it still contained images...'
+    # Generate headerlets for each updated FLT image
+    for fname in _calfiles:
+        headerlet.write_headerlet(fname,'OPUS',output='flt', wcskey='PRIMARY',
+            author="OPUS",descrip="Default WCS from Pipeline Calibration",
+            attach=False,clobber=True)
 
     # If processing was done in a temp working dir, restore results to original
     # processing directory, return to original working dir and remove temp dir
@@ -435,7 +452,7 @@ def main():
     import getopt
 
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'hfin:')
+        optlist, args = getopt.getopt(sys.argv[1:], 'bhfin:')
     except getopt.error, e:
         print str(e)
         print __doc__
@@ -447,6 +464,7 @@ def main():
     newdir = None
     inmemory = False
     num_cores = None
+    headerlets= True
 
     # read options
     for opt, value in optlist:
@@ -461,9 +479,11 @@ def main():
                 print 'ERROR: num_cores value must be an integer!'
                 raise ValueError
             num_cores = int(value)
-
+        if opt == '-b':
+            # turn off writing headerlets
+            headerlets=False
     if len(args) < 1:
-        print "syntax: runastrodriz.py [-fhi] inputFilename [newpath]"
+        print "syntax: runastrodriz.py [-fhibn] inputFilename [newpath]"
         sys.exit()
     if len(args) > 1:
         newdir = args[-1]
@@ -472,7 +492,8 @@ def main():
         print "\t", __version__+'('+__vdate__+')'
     else:
         try:
-            process(args[0],force=force,newpath=newdir, inmemory=inmemory, num_cores=num_cores)
+            process(args[0],force=force,newpath=newdir, inmemory=inmemory,
+                    num_cores=num_cores, headerlets=headerlets)
         except Exception, errorobj:
             print str(errorobj)
             print "ERROR: Cannot run astrodrizzle on %s." % sys.argv[1]
