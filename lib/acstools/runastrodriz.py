@@ -46,6 +46,8 @@ W.J. Hack  12 Aug 2011: Initial version based on Version 1.2.0 of
 W.J. Hack  27 Jun 2012: Implement support to process in different directory
 
 W.J. Hack  24 Aug 2012: Provided interface for in-memory option
+
+W.J. Hack  26 Nov 2012: Option to write out headerlets added and debugged
 """
 
 # Import standard Python modules
@@ -61,8 +63,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.5.0"
-__vdate__ = "(14-Nov-2012)"
+__version__ = "1.5.1"
+__vdate__ = "(26-Nov-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -104,7 +106,9 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
     import drizzlepac
     from drizzlepac import processInput # used for creating new ASNs for _flc inputs
     import stwcs
-    from stwcs.wcsutil import headerlet
+
+    if headerlets:
+        from stwcs.wcsutil import headerlet
 
     # Open the input file
     try:
@@ -330,11 +334,21 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
             os.rmdir("OrIg_files")
         else:
             print 'OrIg_files directory NOT removed as it still contained images...'
-    # Generate headerlets for each updated FLT image
-    for fname in _calfiles:
-        headerlet.write_headerlet(fname,'OPUS',output='flt', wcskey='PRIMARY',
-            author="OPUS",descrip="Default WCS from Pipeline Calibration",
-            attach=False,clobber=True)
+    if headerlets:
+        # Generate headerlets for each updated FLT image
+        hlet_msg = _timestamp("Writing Headerlets started")
+        for fname in _calfiles:
+            headerlet.write_headerlet(fname,'OPUS',output='flt', wcskey='PRIMARY',
+                author="OPUS",descrip="Default WCS from Pipeline Calibration",
+                attach=False,clobber=True,logging=False)
+            # update trailer file to log creation of headerlet files
+            frootname = fileutil.buildNewRootname(fname)
+            hname = "%s_flt_hlet.fits"%frootname
+            hlet_msg += "Created Headerlet file %s \n"%hname
+        hlet_msg += _timestamp("Writing Headerlets completed")
+        ftrl = open(_trlfile,'a')
+        ftrl.write(hlet_msg)
+        ftrl.close()
 
     # If processing was done in a temp working dir, restore results to original
     # processing directory, return to original working dir and remove temp dir
