@@ -63,8 +63,8 @@ import pyfits
 __taskname__ = "runastrodriz"
 
 # Local variables
-__version__ = "1.5.1"
-__vdate__ = "(26-Nov-2012)"
+__version__ = "1.5.2"
+__vdate__ = "(13-Dec-2012)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -338,13 +338,16 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         # Generate headerlets for each updated FLT image
         hlet_msg = _timestamp("Writing Headerlets started")
         for fname in _calfiles:
-            headerlet.write_headerlet(fname,'OPUS',output='flt', wcskey='PRIMARY',
-                author="OPUS",descrip="Default WCS from Pipeline Calibration",
-                attach=False,clobber=True,logging=False)
-            # update trailer file to log creation of headerlet files
             frootname = fileutil.buildNewRootname(fname)
             hname = "%s_flt_hlet.fits"%frootname
             hlet_msg += "Created Headerlet file %s \n"%hname
+            try:
+                headerlet.write_headerlet(fname,'OPUS',output='flt', wcskey='PRIMARY',
+                    author="OPUS",descrip="Default WCS from Pipeline Calibration",
+                    attach=False,clobber=True,logging=False)
+            except ValueError:
+                hlet_msg += _timestamp("SKIPPED: Headerlet not created for %s \n"%fname)
+                # update trailer file to log creation of headerlet files
         hlet_msg += _timestamp("Writing Headerlets completed")
         ftrl = open(_trlfile,'a')
         ftrl.write(hlet_msg)
