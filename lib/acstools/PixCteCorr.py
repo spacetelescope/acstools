@@ -21,6 +21,40 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * Multi-threading support was not implemented in this version as it would
       interfere with eventual pipeline operation.
 
+
+Optional preprocessing for nonstandard FLT input
+================================================
+If you are not using a fully calibrated FLT image as input,
+you might also need to do one or more of the following before running the task:
+
+    * Convert image to unit of electrons.
+
+    * For combined image (e.g., superdark), set noise=0.
+      --- OR ---
+      hedit pctefile_101109.fits[0] RN2_NIT X
+      where X is an integer
+      (0 to 8, inclusive, electrons upper limit for noise mitigation).
+
+    * Primary FITS header (EXT 0) must have these keywords populated:
+        * ROOTNAME
+        * INSTRUME (must be ACS)
+        * DETECTOR (must be WFC)
+        * CCDAMP (ABCD, AD, BC, A, B, C, or D)
+        * EXPSTART
+        * ATODGNA, ATODGNB, ATODGNC, ATODGND
+
+    * SCI FITS header (EXT 1 or 4) must have these keywords populated:
+        * EXTNAME (must be SCI)
+        * EXTVER (1 or 2)
+
+    * ERR FITS header (EXT 2 or 5) must have these keywords populated:
+        * EXTNAME (must be ERR)
+        * EXTVER (1 or 2)
+
+    * DQ FITS header (EXT 3 or 6) must have these keywords populated:
+        * EXTNAME (must be DQ)
+        * EXTVER (1 or 2)
+
 Examples
 --------
 To correct a set of ACS FLT images, with one new CTE-corrected image
@@ -81,6 +115,7 @@ from stsci.tools import parseinput
 import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
+
 __taskname__ = "PixCteCorr"
 __version__ = "1.2.1"
 __vdate__ = "11-Oct-2012"
@@ -89,9 +124,11 @@ __vdate__ = "11-Oct-2012"
 ACS_CTE_NAME = 'PixelCTE 2012'
 ACS_CTE_VER = '3.2'
 
+
 # general error for things related to his module
 class PixCteError(Exception):
     pass
+
 
 #--------------------------
 def CteCorr(input, outFits='', read_noise=None, noise_model=None,
@@ -414,6 +451,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     timeEnd = time.time()
     print os.linesep, 'Run time:', timeEnd - timeBeg, 'secs'
 
+
 #--------------------------
 def _PixCteParams(fitsTable, expstart):
     """
@@ -552,6 +590,7 @@ def _PixCteParams(fitsTable, expstart):
 
     return d
 
+
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
     """
@@ -590,6 +629,7 @@ def _ResolveRefFile(refText, sep='$'):
     # End if
     return f
 
+
 #--------------------------
 def _CalcCteFrac(expstart, scalemjd, scaleval):
     """
@@ -616,6 +656,7 @@ def _CalcCteFrac(expstart, scalemjd, scaleval):
     cte_frac = pcfy.CalcCteFrac(expstart, scalemjd, scaleval)
 
     return cte_frac
+
 
 #--------------------------
 def _InterpolatePsi(chg_leak, psi_node):
@@ -655,6 +696,7 @@ def _InterpolatePsi(chg_leak, psi_node):
 
     return chg_leak, chg_open
 
+
 #--------------------------
 def _InterpolatePhi(dtde_l, q_dtde, shft_nit):
     """
@@ -686,6 +728,7 @@ def _InterpolatePhi(dtde_l, q_dtde, shft_nit):
     dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
 
     return dtde_q
+
 
 def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     """
@@ -728,6 +771,7 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
 
     return chg_leak_lt, chg_open_lt, dpde_l
 
+
 #--------------------------
 def _DecomposeRN(data_e, read_noise=4.25, noise_model=1):
     """
@@ -765,6 +809,7 @@ def _DecomposeRN(data_e, read_noise=4.25, noise_model=1):
     sigArr, nseArr = pcfy.DecomposeRN(data_e, read_noise, noise_model)
 
     return sigArr, nseArr
+
 
 def _FixYCte(detector, cte_data, sim_nit, shft_nit, oversub_thresh,
              cte_frac, levels, dpde_l, chg_leak_lt, chg_open_lt):
@@ -1096,24 +1141,27 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
 
     return blurred
 
+
 #--------------------------
 # TEAL Interface functions
 #--------------------------
 def run(configObj):
+    """
+    TEAL interface for the `CteCorr` function.
 
-    CteCorr(configObj['inFits'],outFits=configObj['outFits'],
+    """
+    CteCorr(configObj['inFits'],
+            outFits=configObj['outFits'],
             read_noise=configObj['read_noise'],
             noise_model=configObj['noise_model'],
             oversub_thresh=configObj['oversub_thresh'],
             sim_nit=configObj['sim_nit'],
             shift_nit=configObj['shift_nit'])
 
+
 def getHelpAsString():
-    helpString = ''
-    if teal:
-        helpString += teal.getHelpFileAsString(__taskname__,__file__)
+    """
+    Returns documentation on the `CteCorr` function. Required by TEAL.
 
-    if helpString.strip() == '':
-        helpString += __doc__ + '\n' + CteCorr.__doc__
-
-    return helpString
+    """
+    return CteCorr.__doc__
