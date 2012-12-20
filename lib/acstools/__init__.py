@@ -34,6 +34,10 @@ import acs_destripe
 import PixCteCorr
 import runastrodriz
 import calacs
+import acsccd
+import acs2d
+import acsrej
+import acssum
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.

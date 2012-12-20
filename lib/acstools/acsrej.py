@@ -39,7 +39,7 @@ __version__ = "1.0"
 __vdate__ = "18-Dec-2012"
 
 
-def acrej(input, output, exec_path='', time_stamps=False, verbose=False,
+def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
           shadcorr=False, crrejtab='', crmask=False, scalense=None, initgues='',
           skysub='', crsigmas='', crradius=None, crthresh=None, badinpdq=None,
           newbias=False):

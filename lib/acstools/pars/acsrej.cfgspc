@@ -21,3 +21,5 @@ badinpdq = integer_or_none_kw(default=None, comment="DQ flag for CR rejection")
 
 [For BIAS Inputs]
 newbias = boolean_kw(default=False, comment="Only use readnoise in ERR")
+
+[_RULES_]
