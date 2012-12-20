@@ -55,6 +55,7 @@ ABcrosstalk = 9.1e-5
 
 MJD_SM4 = 54967
 
+logging.basicConfig()
 LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
@@ -233,10 +234,10 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
         # generate output filename for each input based on specification
         # of the output suffix
         output = image.replace('_flt', '_flt_' + suffix)
-        LOG.info('Processing ' + image + ' ...')
+        LOG.info('Processing ' + image)
         perform_correction(image, output, maxiter=maxiter, sigrej=sigrej,
                            clobber=clobber)
-        LOG.info(output + 'created')
+        LOG.info(output + ' created')
 
 
 def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False):
@@ -304,7 +305,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0):
         image.science[i] -= truecorr
 
         # correct the ERR extension
-        image.err[i] = np.sqrt(image.err[i]**2 - truecorr)
+        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - truecorr))
 
 
 def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
