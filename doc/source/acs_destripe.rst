@@ -1,82 +1,13 @@
 .. _acsdestripe:
 
-*****************
-ACS Destripe Task
-*****************
-This task has been written to remove the bias stripe pattern imposed on
-post-SM4 full frame ACS/WFC images.  
+************
+ACS Destripe
+************
 
-It is assumed that the data is an ACS/WFC FLT image - with two SCI extensions.
-The program needs access to the flatfield specified in the image header
-PFLTFILE.
+.. currentmodule:: acstools.acs_destripe
 
-.. note::
-
-    #. Make sure the `acstools` package is on your Python path.
-
-    #. If PFLTFILE has the value "N/A", as is the case with biases and darks,
-       then the program assumes a unity flatfield.
-
-    #. This program also expects an `_flt.fits` file as input, **NOT** a
-       `_raw.fits` file.
-
-
-Parameters
-----------
-input : str or list of str 
-    The name of a single FLT image, or list of FLT images using 
-    either wild-cards (`\*flt.fits`) or an IRAF-style 
-    at-list (`@filename`).
-
-output : str
-    The string to use to add to each input file name to
-    indicate an output product. This string will be appended
-    to the _flt suffix in each input file's name to create the
-    new output filename.  For example, setting 'output=csck' will
-    result in output images with suffixes of '_flt_csck.fits'.
-
-clobber : bool 
-    Specify whether or not to 'clobber' (delete then replace)
-    previously generated products with the same names.  
-
-maxiter : int
-    This parameter controls the maximum number of iterations
-    to perform when computing the statistics used to compute the
-    row-by-row corrections.
-
-sigrej : float
-    This parameters sets the sigma level for the rejection applied
-    during each iteration of statistics computations for the
-    row-by-row corrections. 
-
-
-Examples
---------
-Destripe the given input FLT and append 'csck' suffix to output.
-Do not overwrite if output already exists.
-Set maximum iterations and rejection sigma to given non-default values.
-
->>> from acstools import acs_destripe
->>> acs_destripe.clean('uncorrected_flt.fits','csck', clobber=False, maxiter=15, sigrej=2.0)
-
-Using the TEAL GUI.
-
->>> from acstools import acs_destripe
->>> from stsci.tools import teal
->>> teal.teal('acs_destripe')
-
-To run this task from the operating system command line, make sure the file
-`acs_destripe.py` is on your executable path:
-
-    % ./acs_destripe [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
-
-    -h for help
-
-    -c for clobber
-
-    15 is example of non-default `maxiter`
-
-    2.0 is example of non-default `sigrej`
+.. automodule:: acstools.acs_destripe
+   :members: clean
 
 
 Global Variables
@@ -84,6 +15,7 @@ Global Variables
 
 .. autodata:: acstools.acs_destripe.ABcrosstalk
 .. autodata:: acstools.acs_destripe.CDcrosstalk
+.. autodata:: acstools.acs_destripe.MJD_SM4
 
 
 Version

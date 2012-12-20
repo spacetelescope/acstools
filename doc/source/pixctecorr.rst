@@ -1,12 +1,14 @@
 ************************
 ACS Pixel CTE Correction
 ************************
-This task implements a pixel-based CTE correction for calibrated ACS/WFC images.  
+This task implements a pixel-based CTE correction for calibrated
+ACS/WFC images.  
 
 .. currentmodule:: acstools.PixCteCorr
 
 .. automodule:: acstools.PixCteCorr
    :members: CteCorr, AddYCte
+
 
 Version
 -------
@@ -16,8 +18,10 @@ Version
 .. autodata:: acstools.PixCteCorr.ACS_CTE_NAME
 .. autodata:: acstools.PixCteCorr.ACS_CTE_VER
 
+
 Authors
 -------
 Original Fortran program by Jay Anderson.
 
-Conversion to Python done by (ordered by last name): Matt Davis, Warren Hack, and Pey Lian Lim
+Conversion to Python done by (ordered by last name): Matt Davis, Warren Hack,
+and Pey Lian Lim

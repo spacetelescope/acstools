@@ -17,6 +17,11 @@ Contents:
    :maxdepth: 2
 
    calacs
+   calacs_hstcal
+   acsccd
+   acsrej
+   acs2d
+   acssum
    pixctecorr
    acs_destripe
 
@@ -27,4 +32,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
