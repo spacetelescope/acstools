@@ -89,8 +89,8 @@ class StripeArray(object):
         if flatfile == 'N/A':
             self.invflat = np.ones(self.science.shape)
             return
-        else:
-            hduflat = self.resolve_flatname(flatfile)
+
+        hduflat = self.resolve_flatname(flatfile)
 
         if (self.ampstring == 'ABCD'):
             self.invflat = np.concatenate(
@@ -98,12 +98,13 @@ class StripeArray(object):
                  1 / hduflat['sci',2].data[::-1,:]), axis=1)
         else:
             # complex algorithm to determine proper subarray of flatfield to use
+
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
                 self.invflat = 1 / hduflat['sci',2].data
             else:
-                self.invflat = 1/hduflat['sci',1].data
+                self.invflat = 1 / hduflat['sci',1].data
 
             # now, which section?
             sizaxis1 = self.hdulist[1].header['SIZAXIS1']
@@ -288,9 +289,9 @@ def clean_streak(image, maxiter=15, sigrej=2.0):
         SMean, SSig, SMedian, SMask = djs_iterstat(
             image.science[i], MaxIter=maxiter, SigRej=sigrej)
 
-    # SExtractor-esque central value statistic; slightly sturdier against
-    # skewness of pixel histogram due to faint source flux
-    corr[i] = 2.5 * SMedian - 1.5 * SMean
+        # SExtractor-esque central value statistic; slightly sturdier against
+        # skewness of pixel histogram due to faint source flux
+        corr[i] = 2.5 * SMedian - 1.5 * SMean
 
     # preserve the original mean level of the image
     corr -= np.average(corr)
