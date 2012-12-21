@@ -144,7 +144,7 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
         call_list.append('-shadcorr')
 
     if crrejtab:
-        call_list.append('-table ' + crrejtab)
+        call_list += ['-table', crrejtab]
 
     if crmask:
         call_list.append('-crmask')
@@ -152,29 +152,29 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
     if scalense is not None:
         if scalense < 0 or scalense > 100:
             raise ValueError('SCALENSE must be 0 to 100')
-        call_list.append('-scale ' + str(scalense))
+        call_list += ['-scale', str(scalense)]
 
     if initgues:
         if initgues not in ('med', 'min'):
             raise ValueError('INITGUES must be "med" or "min"')
-        call_list.append('-init ' + initgues)
+        call_list += ['-init', initgues]
 
     if skysub:
         if skysub not in ('none', 'mode'):
             raise ValueError('SKYSUB must be "none" or "mode"')
-        call_list.append('-sky ' + skysub)
+        call_list += ['-sky', skysub]
 
     if crsigmas:
-        call_list.append('-sigmas ' + crsigmas)
+        call_list += ['-sigmas', crsigmas]
 
     if crradius is not None:
-        call_list.append('-radius ' + str(crradius))
+        call_list += ['-radius', str(crradius)]
 
     if crthresh is not None:
-        call_list.append('-thresh ' + str(crthresh))
+        call_list += ['-thresh ', str(crthresh)]
 
     if badinpdq is not None:
-        call_list.append('-pdq ' + str(badinpdq))
+        call_list += ['-pdq', str(badinpdq)]
 
     if newbias:
         call_list.append('-newbias')
