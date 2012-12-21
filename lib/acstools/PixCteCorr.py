@@ -18,8 +18,7 @@ http://adsabs.harvard.edu/abs/2010PASP..122.1035A
     * This algorithm does not account for traps with very long release timescale
       but it is not an issue for ACS/WFC.
     * This code also does not account for second-exposure effect.
-    * Multi-threading support was not implemented in this version as it would
-      interfere with eventual pipeline operation.
+    * Multi-threading support was not implemented in this version.
 
 
 Optional preprocessing for nonstandard FLT input
@@ -29,11 +28,7 @@ you might also need to do one or more of the following before running the task:
 
     * Convert image to unit of electrons.
 
-    * For combined image (e.g., superdark), set noise=0.
-      --- OR ---
-      hedit pctefile_101109.fits[0] RN2_NIT X
-      where X is an integer
-      (0 to 8, inclusive, electrons upper limit for noise mitigation).
+    * For combined image (e.g., superdark), set `noise_model` to 0.
 
     * Primary FITS header (EXT 0) must have these keywords populated:
         * ROOTNAME
@@ -136,7 +131,7 @@ def CteCorr(input, outFits='', read_noise=None, noise_model=None,
     """
     Run all the CTE corrections on all the input files.
 
-    This function simply calls `YCte()` on each input image
+    This function simply calls `YCte` on each input image
     parsed from the `input` parameter, and passes all remaining
     parameter values through unchanged.
 
@@ -150,7 +145,7 @@ def CteCorr(input, outFits='', read_noise=None, noise_model=None,
           * a Python list of filenames
           * a partial filename with wildcards ('\*flt.fits')
           * filename of an ASN table ('j12345670_asn.fits')
-          * an at-file ('@input')
+          * an at-file (``@input``)
 
     outFits : str
         *USE DEFAULT IF `input` HAS MULTIPLE FILES.*
@@ -226,38 +221,14 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
         ROOTNAME_cte.fits instead. Existing file will
         be overwritten.
 
-    read_noise : float, optional
-        Read noise level.
-        If None, takes value from PCTETAB header RN_CLIP keyword.
-
-    noise_model : {0, 1, 2, None}, optional
-        Noise mitigation algorithm.
-        If None, takes value from PCTETAB header NSEMODEL keyword.
-
-        0: No smoothing
-        1: Normal smoothing
-        2: Strong smoothing
-
-    oversub_thresh : float, optional
-        Pixels corrected below this value will be re-corrected.
-        If None, takes value from PCTETAB header SUBTHRSH keyword.
-
-    sim_nit : int, optional
-        Number of times readout simulation is performed per column.
-        If None, takes value from PCTETAB header SIM_NIT keyword.
-
-    shift_nit : int, optional
-        Number of times column is shifted during simulated readout.
-        If None, takes value from PCTETAB header SHFT_NIT keyword.
+    read_noise, noise_model, oversub_thresh, sim_nit, shift_nit : see `CteCorr`
 
     Examples
     --------
-    1.  This task can be used to correct a single FLT image with:
+    Correct a single FLT image and write output to 'j12345678_cte.fits':
 
-            >>> import PixCteCorr
-            >>> PixCteCorr.YCte('j12345678_flt.fits')
-
-        This task will generate a new CTE-corrected image.
+    >>> import PixCteCorr
+    >>> PixCteCorr.YCte('j12345678_flt.fits')
 
     """
     if noise_model not in (0, 1, 2, None):
@@ -882,13 +853,15 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     Add CTE blurring to input image using an inversion of the CTE correction
     code.
 
-    .. note:: No changes are made to the error or data quality arrays.
+    .. note::
 
-              Data should not have bias or prescan regions.
+        No changes are made to the error or data quality arrays.
 
-              Image must have PCTETAB, DETECTOR, and EXPSTART
-              header keywords, as well as gain information if the image
-              is in counts.
+        Data should not have bias or prescan regions.
+
+        Image must have PCTETAB, DETECTOR, and EXPSTART
+        header keywords, as well as gain information if the image
+        is in counts.
 
     Parameters
     ----------

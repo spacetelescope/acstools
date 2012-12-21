@@ -16,10 +16,10 @@ In Python with TEAL:
 >>> from acstools import acssum
 >>> teal.teal('acssum')
 
-In Pyraf:
+In Pyraf::
 
->>> import acstools
->>> epar acssum
+    --> import acstools
+    --> epar acssum
 
 """
 # STDLIB
@@ -52,12 +52,12 @@ def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
             * a Python list of filenames
             * a partial filename with wildcards ('\*flt.fits')
             * filename of an ASN table ('j12345670_asn.fits')
-            * an at-file ('@input')
+            * an at-file (``@input``)
 
     output : str
         Output filename.
-        If `output` is '' and `input` is '*_asn.fits',
-        `output` will be automatically set to '*_sfl.fits'.
+        If `output` is '' and `input` is '\*_asn.fits',
+        `output` will be automatically set to '\*_sfl.fits'.
         Otherwise, it is an error not to provide a specific `output`.
 
     exec_path : str, optional

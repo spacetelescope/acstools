@@ -17,14 +17,14 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> teal.teal('acs_destripe')
 
-In Pyraf:
+In Pyraf::
 
->>> import acstools
->>> teal acs_destripe
+    --> import acstools
+    --> teal acs_destripe
 
 From command line::
 
-    % ./acs_destripe [-h][-c] uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]
+    % ./acs_destripe [-h][-c] input output [maxiter # [sigrej #]]
 
 """
 from __future__ import print_function
@@ -188,14 +188,14 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
             * a Python list of filenames
             * a partial filename with wildcards ('\*flt.fits')
             * filename of an ASN table ('j12345670_asn.fits')
-            * an at-file ('@input')
+            * an at-file (``@input``)
 
     suffix : str
         The string to use to add to each input file name to
         indicate an output product. This string will be appended
         to the _flt suffix in each input filename to create the
         new output filename. For example, setting `suffix='csck'`
-        will create '*_flt_csck.fits' images.
+        will create '\*_flt_csck.fits' images.
 
     maxiter : int
         This parameter controls the maximum number of iterations
@@ -431,8 +431,7 @@ def main():
     """Command line driver."""
     import getopt
 
-    usg_str = 'USAGE: acs_destripe [-h][-c] ' \
-              'uncorrected_flt.fits uncorrected_flt_csck.fits [15 [2.0]]'
+    usg_str = 'USAGE: acs_destripe [-h][-c] input output [maxiter # [sigrej #]]'
 
     try:
         optlist, args = getopt.getopt(sys.argv[1:], 'hc')

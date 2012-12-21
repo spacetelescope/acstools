@@ -18,10 +18,10 @@ In Python with TEAL:
 >>> from acstools import acsccd
 >>> teal.teal('acsccd')
 
-In Pyraf:
+In Pyraf::
 
->>> import acstools
->>> epar acsccd
+    --> import acstools
+    --> epar acsccd
 
 """
 # STDLIB
@@ -59,13 +59,13 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     Output is automatically named based on input and PCTECORR:
 
-        +------------+----------+----------------+
-        | INPUT      | PCTECORR | OUTPUT         |
-        +============+==========+================+
-        | *_raw.fits | OMIT     | *_blv_tmp.fits |
-        +------------+----------+----------------+
-        | *_raw.fits | PERFORM  | *_blc_tmp.fits |
-        +------------+----------+----------------+
+        +----------------+----------+--------------------+
+        | INPUT          | PCTECORR | OUTPUT             |
+        +================+==========+====================+
+        | ``*_raw.fits`` | OMIT     | ``*_blv_tmp.fits`` |
+        +----------------+----------+--------------------+
+        | ``*_raw.fits`` | PERFORM  | ``*_blc_tmp.fits`` |
+        +----------------+----------+--------------------+
 
     .. note:: Calibration flags are controlled by primary header.
 
@@ -80,7 +80,7 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
             * a Python list of filenames
             * a partial filename with wildcards ('\*raw.fits')
             * filename of an ASN table ('j12345670_asn.fits')
-            * an at-file ('@input')
+            * an at-file (``@input``)
 
     exec_path : str, optional
         The complete path to ACSCCD executable.

@@ -7,7 +7,7 @@ ACS/WFC images.
 .. currentmodule:: acstools.PixCteCorr
 
 .. automodule:: acstools.PixCteCorr
-   :members: CteCorr, AddYCte
+   :members: CteCorr, YCte, AddYCte
 
 
 Version

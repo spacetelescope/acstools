@@ -16,10 +16,10 @@ In Python with TEAL:
 >>> from acstools import acs2d
 >>> teal.teal('acs2d')
 
-In Pyraf:
+In Pyraf::
 
->>> import acstools
->>> epar acs2d
+    --> import acstools
+    --> epar acs2d
 
 """
 # STDLIB
@@ -47,19 +47,19 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     Output is automatically named based on input suffix:
 
-        +----------------+------------+------------------------------+
-        | INPUT          | OUTPUT     | EXPECTED DATA                |
-        +================+============+==============================+
-        | *_raw.fits     | *_flt.fits | SBC image.                   |
-        +----------------+------------+------------------------------+
-        | *_blv_tmp.fits | *_flt.fits | ACSCCD output.               |
-        +----------------+------------+------------------------------+
-        | *_blc_tmp.fits | *_flc.fits | ACSCCD output with PCTECORR. |
-        +----------------+------------+------------------------------+
-        | *_crj_tmp.fits | *_crj.fits | ACSREJ output.               |
-        +----------------+------------+------------------------------+
-        | *_crc_tmp.fits | *_crc.fits | ACSREJ output with PCTECORR. |
-        +----------------+------------+------------------------------+
+        +--------------------+----------------+------------------------------+
+        | INPUT              | OUTPUT         | EXPECTED DATA                |
+        +====================+================+==============================+
+        | ``*_raw.fits``     | ``*_flt.fits`` | SBC image.                   |
+        +--------------------+----------------+------------------------------+
+        | ``*_blv_tmp.fits`` | ``*_flt.fits`` | ACSCCD output.               |
+        +--------------------+----------------+------------------------------+
+        | ``*_blc_tmp.fits`` | ``*_flc.fits`` | ACSCCD output with PCTECORR. |
+        +--------------------+----------------+------------------------------+
+        | ``*_crj_tmp.fits`` | ``*_crj.fits`` | ACSREJ output.               |
+        +--------------------+----------------+------------------------------+
+        | ``*_crc_tmp.fits`` | ``*_crc.fits`` | ACSREJ output with PCTECORR. |
+        +--------------------+----------------+------------------------------+
 
     Parameters
     ----------
@@ -70,7 +70,7 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
             * a Python list of filenames
             * a partial filename with wildcards ('\*blv_tmp.fits')
             * filename of an ASN table ('j12345670_asn.fits')
-            * an at-file ('@input')
+            * an at-file (``@input``)
 
     exec_path : str, optional
         The complete path to ACS2D executable.

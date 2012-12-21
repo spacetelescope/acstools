@@ -16,10 +16,10 @@ In Python with TEAL:
 >>> from acstools import acsrej
 >>> teal.teal('acsrej')
 
-In Pyraf:
+In Pyraf::
 
->>> import acstools
->>> epar acsrej
+    --> import acstools
+    --> epar acsrej
 
 """
 # STDLIB
@@ -54,7 +54,7 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
             * a Python list of filenames
             * a partial filename with wildcards ('\*flt.fits')
             * filename of an ASN table ('j12345670_asn.fits')
-            * an at-file ('@input')
+            * an at-file (``@input``)
 
     output : str
         Output filename.

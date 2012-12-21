@@ -16,10 +16,10 @@ In Python with TEAL:
 >>> from acstools import calacs
 >>> teal.teal('calacs')
 
-In Pyraf:
+In Pyraf::
 
->>> import acstools
->>> epar calacs
+    --> import acstools
+    --> epar calacs
 
 """
 
@@ -30,8 +30,7 @@ import subprocess
 def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
            verbose=False, debug=False, quiet=False, single_core=False):
     """
-    Run the calacs.e executable as from the shell. For information on CALACS
-    see http://stsdas.stsci.edu/calacs/.
+    Run the calacs.e executable as from the shell.
 
     By default this will run the calacs given by 'calacs.e'.
 
