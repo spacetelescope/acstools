@@ -2,6 +2,12 @@
 calacs.e (HSTCAL)
 *****************
 
+A detailed description of this new and improved CALACS will be available
+in a future publication of ACS Data Handbook. In the meantime, if you have
+questions not answered in this documentation, please contact STScI Help Desk
+(help[at]stsci.edu).
+
+
 Running CALACS
 ==============
 
@@ -82,7 +88,7 @@ For example::
     import glob
 
     for fits in glob.iglob('j*_raw.fits'):
-        acstools.calacs(fits)
+        calacs.calacs(fits)
    
 
 BIASCORR
@@ -119,11 +125,12 @@ Pixel-Based CTE Correction (PCTECORR)
 For all full-frame WFC exposures, pixel-based CTE correction (ACS ISR 2010-03
 and 2012-03) is applied at the end of the ACSCCD series; i.e., after BLEVCORR.
 
-Because the CTE correction is applied before DARKCORR, it is necessary to use a
-CTE-corrected dark (DRKCFILE) for the PCTECORR step.
+Because the CTE correction is applied before DARKCORR and FLSHCORR, it is
+necessary to use a CTE-corrected dark (DRKCFILE) and post-flash (FLSCFILE) if
+the PCTECORR step is enabled.
 
-Parameters characterizing the CTE correction are stored in a reference table
-(PCTETAB).
+Parameters characterizing the CTE correction are stored in a reference table,
+PCTETAB.
 
 Required Keywords
 -----------------
@@ -240,7 +247,7 @@ Using RAW as input:
     * flt.fits: Same as existing FLT.
     * flc.fits: Similar to FLT, except with pixel-based CTE correction applied.
 
-Using ASN as input with CRREJ:
+Using ASN as input with ACSREJ:
 
     * crj.fits: Same as existing CRJ.
     * crc.fits: Similar to CRJ, except with pixel-based CTE correction applied.
