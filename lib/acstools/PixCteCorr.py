@@ -7,42 +7,94 @@ online at:
 
 http://adsabs.harvard.edu/abs/2010PASP..122.1035A
 
-:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran), Matt Davis
+.. note::
+    * This code only works for ACS/WFC but can be modified to work on other
+      detectors.
+    * It was developed for use with full-frame GAIN=2 FLT images as input.
+    * It has not been fully tested with any other formats.
+    * Noise is slightly enhanced in the output (see [Anderson]_).
+    * This code assumes a linear time dependence for a given set of
+      coefficients.
+    * This algorithm does not account for traps with very long release timescale
+      but it is not an issue for ACS/WFC.
+    * This code also does not account for second-exposure effect.
+    * Multi-threading support was not implemented in this version.
 
-:Organization: Space Telescope Science Institute
 
-:History:
-    * 2010/09/01 PLL created this module.
-    * 2010/10/13 WH added/modified documentations.
-    * 2010/10/15 PLL fixed PCTEFILE lookup logic.
-    * 2010/10/26 WH added support for multiple file processing
-    * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
-    * 2011/04/26 MRD Began updates for new CTE algorithm.
-    * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
-      CTE characterization.
-    * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
-    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
-    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
-    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
+Optional preprocessing for nonstandard FLT input
+================================================
+If you are not using a fully calibrated FLT image as input,
+you might also need to do one or more of the following before running the task:
+
+    * Convert image to unit of electrons.
+
+    * For combined image (e.g., superdark), set `noise_model` to 0.
+
+    * Primary FITS header (EXT 0) must have these keywords populated:
+        * ROOTNAME
+        * INSTRUME (must be ACS)
+        * DETECTOR (must be WFC)
+        * CCDAMP (ABCD, AD, BC, A, B, C, or D)
+        * EXPSTART
+        * ATODGNA, ATODGNB, ATODGNC, ATODGND
+
+    * SCI FITS header (EXT 1 or 4) must have these keywords populated:
+        * EXTNAME (must be SCI)
+        * EXTVER (1 or 2)
+
+    * ERR FITS header (EXT 2 or 5) must have these keywords populated:
+        * EXTNAME (must be ERR)
+        * EXTVER (1 or 2)
+
+    * DQ FITS header (EXT 3 or 6) must have these keywords populated:
+        * EXTNAME (must be DQ)
+        * EXTVER (1 or 2)
+
+Examples
+--------
+To correct a set of ACS FLT images, with one new CTE-corrected image
+for each input.
+
+>>> from acstools import PixCteCorr
+>>> PixCteCorr.CteCorr('j*q_flt.fits')
+
+Using the TEAL GUI.
+
+>>> from acstools import PixCteCorr
+>>> from stsci.tools import teal
+>>> teal.teal('PixCteCorr')
+
+From within PyRAF::
+
+    --> from acstools import PixCteCorr
+    --> epar PixCteCorr
 
 References
 ----------
 .. [Anderson] Anderson J. & Bedin, L.R., 2010, PASP, 122, 1035
 
-Notes
-------
-* This code only works for ACS/WFC but can be modified to work on other detectors.
-* It was developed for use with full-frame GAIN=2 FLT images as input.
-* It has not been fully tested with any other formats.
-* Noise is slightly enhanced in the output (see [Anderson]_).
-* This code assumes a linear time dependence for a given set of coefficients.
-* This algorithm does not account for traps with very long release timescale
-  but it is not an issue for ACS/WFC.
-* This code also does not account for second-exposure effect.
-* Multi-threading support was not implemented in this version as it would
-  interfere with eventual pipeline operation.
-
 """
+
+#### TAKEN OUT FROM FORMAL DOC BUT KEPT FOR HISTORY
+#
+#:Authors: Pey Lian Lim and W.J. Hack (Python), J. Anderson (Fortran), Matt Davis
+#
+#:Organization: Space Telescope Science Institute
+#
+#:History:
+#    * 2010/09/01 PLL created this module.
+#    * 2010/10/13 WH added/modified documentations.
+#    * 2010/10/15 PLL fixed PCTEFILE lookup logic.
+#    * 2010/10/26 WH added support for multiple file processing
+#    * 2010/11/09 PLL modified `YCte`, `_PixCteParams` and `_DecomposeRN` to reflect noise improvement by JA. Also updated documentations.
+#    * 2011/04/26 MRD Began updates for new CTE algorithm.
+#    * 2011/07/20 MRD Updated to handle new PCTETAB containing time dependent
+#      CTE characterization.
+#    * 2011/12/08 MRD Updated with latest CTE algorithm 3.0.
+#    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
+#    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
+#    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
+####################
 
 # External modules
 import os, shutil, time, numpy, pyfits
@@ -58,17 +110,20 @@ from stsci.tools import parseinput
 import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
+
 __taskname__ = "PixCteCorr"
-__version__ = "1.2.0"
-__vdate__ = "22-May-2012"
+__version__ = "1.2.1"
+__vdate__ = "11-Oct-2012"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
 ACS_CTE_VER = '3.2'
 
+
 # general error for things related to his module
 class PixCteError(Exception):
     pass
+
 
 #--------------------------
 def CteCorr(input, outFits='', read_noise=None, noise_model=None,
@@ -76,7 +131,7 @@ def CteCorr(input, outFits='', read_noise=None, noise_model=None,
     """
     Run all the CTE corrections on all the input files.
 
-    This function simply calls `YCte()` on each input image
+    This function simply calls `YCte` on each input image
     parsed from the `input` parameter, and passes all remaining
     parameter values through unchanged.
 
@@ -90,7 +145,7 @@ def CteCorr(input, outFits='', read_noise=None, noise_model=None,
           * a Python list of filenames
           * a partial filename with wildcards ('\*flt.fits')
           * filename of an ASN table ('j12345670_asn.fits')
-          * an at-file ('@input')
+          * an at-file (``@input``)
 
     outFits : str
         *USE DEFAULT IF `input` HAS MULTIPLE FILES.*
@@ -122,24 +177,6 @@ def CteCorr(input, outFits='', read_noise=None, noise_model=None,
     shift_nit : int, optional
         Number of times column is shifted during simulated readout.
         If None, takes value from PCTETAB header SHFT_NIT keyword.
-
-    Examples
-    --------
-    1.  This task can be used to correct a set of ACS images simply with:
-
-            >>> import PixCteCorr
-            >>> PixCteCorr.CteCorr('j*q_flt.fits')
-
-        This task will generate a new CTE-corrected image for each of the FLT images.
-
-    2.  The TEAL GUI can be used to run this task using:
-
-            >>> epar PixCteCorr  # under PyRAF only
-
-        or from a general Python command line:
-
-            >>> from stsci.tools import teal
-            >>> teal.teal('PixCteCorr')
 
     """
     # Parse input to get list of filenames to process
@@ -184,38 +221,14 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
         ROOTNAME_cte.fits instead. Existing file will
         be overwritten.
 
-    read_noise : float, optional
-        Read noise level.
-        If None, takes value from PCTETAB header RN_CLIP keyword.
-
-    noise_model : {0, 1, 2, None}, optional
-        Noise mitigation algorithm.
-        If None, takes value from PCTETAB header NSEMODEL keyword.
-
-        0: No smoothing
-        1: Normal smoothing
-        2: Strong smoothing
-
-    oversub_thresh : float, optional
-        Pixels corrected below this value will be re-corrected.
-        If None, takes value from PCTETAB header SUBTHRSH keyword.
-
-    sim_nit : int, optional
-        Number of times readout simulation is performed per column.
-        If None, takes value from PCTETAB header SIM_NIT keyword.
-
-    shift_nit : int, optional
-        Number of times column is shifted during simulated readout.
-        If None, takes value from PCTETAB header SHFT_NIT keyword.
+    read_noise, noise_model, oversub_thresh, sim_nit, shift_nit : see `CteCorr`
 
     Examples
     --------
-    1.  This task can be used to correct a single FLT image with:
+    Correct a single FLT image and write output to 'j12345678_cte.fits':
 
-            >>> import PixCteCorr
-            >>> PixCteCorr.YCte('j12345678_flt.fits')
-
-        This task will generate a new CTE-corrected image.
+    >>> import PixCteCorr
+    >>> PixCteCorr.YCte('j12345678_flt.fits')
 
     """
     if noise_model not in (0, 1, 2, None):
@@ -409,6 +422,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     timeEnd = time.time()
     print os.linesep, 'Run time:', timeEnd - timeBeg, 'secs'
 
+
 #--------------------------
 def _PixCteParams(fitsTable, expstart):
     """
@@ -547,6 +561,7 @@ def _PixCteParams(fitsTable, expstart):
 
     return d
 
+
 #--------------------------
 def _ResolveRefFile(refText, sep='$'):
     """
@@ -585,6 +600,7 @@ def _ResolveRefFile(refText, sep='$'):
     # End if
     return f
 
+
 #--------------------------
 def _CalcCteFrac(expstart, scalemjd, scaleval):
     """
@@ -611,6 +627,7 @@ def _CalcCteFrac(expstart, scalemjd, scaleval):
     cte_frac = pcfy.CalcCteFrac(expstart, scalemjd, scaleval)
 
     return cte_frac
+
 
 #--------------------------
 def _InterpolatePsi(chg_leak, psi_node):
@@ -650,6 +667,7 @@ def _InterpolatePsi(chg_leak, psi_node):
 
     return chg_leak, chg_open
 
+
 #--------------------------
 def _InterpolatePhi(dtde_l, q_dtde, shft_nit):
     """
@@ -681,6 +699,7 @@ def _InterpolatePhi(dtde_l, q_dtde, shft_nit):
     dtde_q = pcfy.InterpolatePhi(dtde_l, q_dtde, shft_nit)
 
     return dtde_q
+
 
 def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
     """
@@ -723,6 +742,7 @@ def _FillLevelArrays(chg_leak, chg_open, dtde_q, levels):
 
     return chg_leak_lt, chg_open_lt, dpde_l
 
+
 #--------------------------
 def _DecomposeRN(data_e, read_noise=4.25, noise_model=1):
     """
@@ -760,6 +780,7 @@ def _DecomposeRN(data_e, read_noise=4.25, noise_model=1):
     sigArr, nseArr = pcfy.DecomposeRN(data_e, read_noise, noise_model)
 
     return sigArr, nseArr
+
 
 def _FixYCte(detector, cte_data, sim_nit, shft_nit, oversub_thresh,
              cte_frac, levels, dpde_l, chg_leak_lt, chg_open_lt):
@@ -832,13 +853,15 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     Add CTE blurring to input image using an inversion of the CTE correction
     code.
 
-    .. note:: No changes are made to the error or data quality arrays.
+    .. note::
 
-              Data should not have bias or prescan regions.
+        No changes are made to the error or data quality arrays.
 
-              Image must have PCTETAB, DETECTOR, and EXPSTART
-              header keywords, as well as gain information if the image
-              is in counts.
+        Data should not have bias or prescan regions.
+
+        Image must have PCTETAB, DETECTOR, and EXPSTART
+        header keywords, as well as gain information if the image
+        is in counts.
 
     Parameters
     ----------
@@ -913,6 +936,10 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
         shft_nit = pardict['shft_nit']
     else:
         shft_nit = shift_nit
+
+    # The following are only used to update the header of the output, blurred image
+    sim_nit = pardict['sim_nit']
+    rn_clip = pardict['read_noise']
 
     # N in charge tail
     chg_leak_kt, chg_open_kt = pcfy.InterpolatePsi(chg_leak, psi_node)
@@ -1087,24 +1114,27 @@ def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
 
     return blurred
 
+
 #--------------------------
 # TEAL Interface functions
 #--------------------------
 def run(configObj):
+    """
+    TEAL interface for the `CteCorr` function.
 
-    CteCorr(configObj['inFits'],outFits=configObj['outFits'],
+    """
+    CteCorr(configObj['inFits'],
+            outFits=configObj['outFits'],
             read_noise=configObj['read_noise'],
             noise_model=configObj['noise_model'],
             oversub_thresh=configObj['oversub_thresh'],
             sim_nit=configObj['sim_nit'],
             shift_nit=configObj['shift_nit'])
 
+
 def getHelpAsString():
-    helpString = ''
-    if teal:
-        helpString += teal.getHelpFileAsString(__taskname__,__file__)
+    """
+    Returns documentation on the `CteCorr` function. Required by TEAL.
 
-    if helpString.strip() == '':
-        helpString += __doc__ + '\n' + CteCorr.__doc__
-
-    return helpString
+    """
+    return CteCorr.__doc__

@@ -6,36 +6,24 @@ but could be used for other programs as needed.
 Could also be modified to work on other
 detectors.
 
-@author: P. L. Lim
-
-@organization: Space Telescope Science Institute
-
-@change: 2010-09-05 PLL created this class.
 """
-
 # External modules
 import pyfits, numpy
 
-#------------------
+
 class ImageOpByAmp(object):
     """
     Image op by amp readout class.
+
+    .. note:: Can be modified to exclude overscans in RAW.
+
+    Parameters
+    ----------
+    fitsPointer : `pyfits` image pointer
+
     """
 
-    #------------------
     def __init__(self, fitsPointer):
-        """
-        Initialization.
-
-        @note: Can be modified to exclude overscans in RAW.
-
-        @param self: Class instance.
-        @type self: object
-
-        @param fitsPointer: Pyfits instance
-        @type fitsPointer: <class 'pyfits.core.HDUList'>
-        """
-
         self._pf = fitsPointer
         hasMode = False
 
@@ -52,7 +40,7 @@ class ImageOpByAmp(object):
 
         # ----- ACS
         if instrume == 'ACS':
-            
+
             # ----- WFC
             # Amps: A,B,C,D,AC,AD,BC,BD,ABCD
             if detector == 'WFC':
@@ -69,7 +57,7 @@ class ImageOpByAmp(object):
                                     'ERR':{'A':2, 'B':2, 'C':2, 'D':2},
                                     'DQ': {'A':3, 'B':3, 'C':3, 'D':3}}
                 # End if
-                
+
                 # ----- Quadrants
                 # Overscans are not excluded.
                 self._y1, self._y2 = 0, naxis2
@@ -86,7 +74,10 @@ class ImageOpByAmp(object):
 
                 # ----- Gain and noise keywords
                 # Only works on FLT, not populated in RAW.
-                self._hdrKeys =  {'gain':{'A':'ATODGNA', 'B':'ATODGNB', 'C':'ATODGNC', 'D':'ATODGND'}, 'noise':{'A':'READNSEA', 'B':'READNSEB', 'C':'READNSEC', 'D':'READNSED'}}
+                self._hdrKeys =  {'gain':{'A':'ATODGNA', 'B':'ATODGNB',
+                                          'C':'ATODGNC', 'D':'ATODGND'},
+                                  'noise':{'A':'READNSEA', 'B':'READNSEB',
+                                           'C':'READNSEC', 'D':'READNSED'}}
 
                 # ----- Mosaic size and coordinates
                 self._mosaicXsize, self._mosaicYsize = naxis1, yMos
@@ -98,99 +89,98 @@ class ImageOpByAmp(object):
                 if n_amp == 1:
                     self._mosaicYsize = naxis2
                     self._mosaicY1 = {'A':0, 'B':0, 'C':0, 'D':0}
-                    self._mosaicY2 = {'A':naxis2, 'B':naxis2, 'C':naxis2, 'D':naxis2}
+                    self._mosaicY2 = {'A':naxis2, 'B':naxis2,
+                                      'C':naxis2, 'D':naxis2}
                 # End if
 
             # End of DETECTOR check
         # End of INSTRUME check
 
-        if not hasMode: raise ValueError('Unsupported mode')
+        if not hasMode:
+            raise ValueError('Unsupported mode')
 
-    #------------------
     def GetAmps(self):
         """
         Get list of amps used.
 
-        @param self: Class instance.
-        @type self: object
+        Returns
+        -------
+        self._ampList : list of str
 
-        @return: Amp list.
-        @rtype: char array
         """
-
         return self._ampList
 
-    #------------------
     def GetHdrValByAmp(self, key):
         """
         Get gain or noise for each amp.
 
-        @param self: Class instance.
-        @type self: object
+        Parameters
+        ----------
+        key : {'gain', 'noise'}
 
-        @param key: 'gain' or 'noise'.
-        @type key: string
+        Returns
+        -------
+        dataOut : dict
+            Values for each amp.
 
-        @return: Values for each amp.
-        @rtype: {char:float, ...}
         """
-
         dataOut = {}
-        for amp in self._ampList: dataOut[amp] = self._pf['PRIMARY'].header[ self._hdrKeys[key][amp] ]
+        for amp in self._ampList:
+            dataOut[amp] = self._pf['PRIMARY'].header[ self._hdrKeys[key][amp] ]
         return dataOut
 
-    #------------------
     def DataByAmp(self, extName='SCI'):
         """
         Separate data by amp readout such that amp will
         always be on the lower left of the data (when
         displayed in DS9 or Matplotlib in default settings).
 
-        @param self: Class instance.
-        @type self: object
+        Parameters
+        ----------
+        extName : {'SCI', 'ERR', 'DQ'}
+            Extension name of data to extract.
 
-        @keyword extName: Extension name of data to
-            extract. Could be SCI, ERR, or DQ.
-        @type extName: string
+        Returns
+        -------
+        dataOut : `numpy.ndarray`
+            View of data with adjusted amp position.
 
-        @return: View of data with adjusted amp position.
-        @rtype: Numpy array
         """
-
         dataOut = {}
 
         for amp in self._ampList:
-            arr1 = self._pf[ self._extNum[extName][amp] ].data[ self._y1:self._y2, self._x1[amp]:self._x2[amp] ]
+            arr1 = self._pf[ self._extNum[extName][amp] ].data[
+                self._y1:self._y2, self._x1[amp]:self._x2[amp] ]
             dataOut[amp] = self.FlipAmp(arr1, self._transCode[amp])
         # End of amp loop
 
         return dataOut
 
-    #------------------
     def FlipAmp(self, dataArray, transCode, trueCopy=False):
         """
         Flip array with given transformation.
 
-        @param self: Class instance.
-        @type self: object
+        Parameters
+        ----------
+        dataArray : `numpy.ndarray`
+            Array to flip.
 
-        @param dataArray: Array to flip.
-        @type dataArray: Numpy array
+        transCode : int
+            Transformation code:
+                * 0 - None
+                * 1 - Flip vertical
+                * 2 - Flip horizontal
+                * 3 - Flip both
 
-        @param transCode: Transformation code.
-                - 0: None
-                - 1: Flip vertical
-                - 2: Flip horizontal
-                - 3: Flip both
-        @type transCode: int
+        trueCopy : bool
+            Return copy instead of view?
 
-        @keyword trueCopy: Return copy instead of view?
-        @type trueCopy: bool
+        Returns
+        -------
+        arr : `numpy.ndarray`
+            Flipped array.
 
-        @return: Flipped array.
-        @rtype: Numpy array
         """
- 
         if transCode == 1: # Flip vertical
             arr = dataArray[::-1,:]
         elif transCode == 2: # Flip horizontal
@@ -206,33 +196,30 @@ class ImageOpByAmp(object):
         else:
             return arr
 
-    #------------------
     def MosaicTemplate(self):
         """
         Blank array template for mosaic.
 
-        @param self: Class instance.
-        @type self: object
+        Returns
+        -------
+        `numpy.ndarray`
 
-        @return: Blank array for mosaic fill.
-        @rtype: Numpy float array
         """
-
         return numpy.zeros((self._mosaicYsize, self._mosaicXsize))
 
-    #------------------
     def MosaicPars(self, amp):
         """
         Mosaic parameters for a given amp.
 
-        @param self: Class instance.
-        @type self: object
+        Parameters
+        ----------
+        amp : str
+            Amplifier to use.
 
-        @param amp: Amplifier to use.
-        @type amp: char
+        Returns
+        -------
+        X1, X2, Y1, Y2, transformation code : tuple of int
 
-        @return: X1, X2, Y1, Y2, transformation code
-        @rtype: int, int, int, int, int
         """
-
-        return self._mosaicX1[amp], self._mosaicX2[amp], self._mosaicY1[amp], self._mosaicY2[amp], self._transCode[amp]
+        return self._mosaicX1[amp], self._mosaicX2[amp], \
+               self._mosaicY1[amp], self._mosaicY2[amp], self._transCode[amp]

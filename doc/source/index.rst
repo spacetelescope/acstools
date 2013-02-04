@@ -6,14 +6,25 @@
 Welcome to acstools's documentation!
 ====================================
 
+Modules for Advanced Camera for Surveys (ACS).
+
+http://www.stsci.edu/hst/acs/
+
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   acs_destripe
    calacs
+   calacs_hstcal
+   acsccd
+   acsrej
+   acs2d
+   acssum
    pixctecorr
+   acs_destripe
+
 
 Indices and tables
 ==================
@@ -21,4 +32,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

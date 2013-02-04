@@ -1,14 +1,31 @@
 .. _acsdestripe:
 
-*****************
-ACS_DESTRIPE Task
-*****************
-This task has been written to remove the bias stripe pattern imposed on post-SM4 full frame ACS/WFC images.  
+************
+ACS Destripe
+************
 
- 
 .. currentmodule:: acstools.acs_destripe
 
 .. automodule:: acstools.acs_destripe
-   :members:
-   :undoc-members:
-   
+   :members: clean
+
+
+Global Variables
+----------------
+
+.. autodata:: acstools.acs_destripe.ABcrosstalk
+.. autodata:: acstools.acs_destripe.CDcrosstalk
+.. autodata:: acstools.acs_destripe.MJD_SM4
+
+
+Version
+-------
+
+.. autodata:: acstools.acs_destripe.__version__
+.. autodata:: acstools.acs_destripe.__vdate__
+
+
+Author
+------
+
+.. autodata:: acstools.acs_destripe.__author__

@@ -1,0 +1,121 @@
+"""
+The acssum module contains a function `acssum` that calls the ACSSUM executable.
+Use this function to facilitate batch runs of ACSSUM, or for the TEAL interface.
+
+Examples
+--------
+
+In Python without TEAL:
+
+>>> from acstools import acssum
+>>> acssum.acssum('*flt.fits', 'combined_image.fits')
+
+In Python with TEAL:
+
+>>> from stsci.tools import teal
+>>> from acstools import acssum
+>>> teal.teal('acssum')
+
+In Pyraf::
+
+    --> import acstools
+    --> epar acssum
+
+"""
+# STDLIB
+import os.path
+import subprocess
+
+# STSCI
+from stsci.tools import parseinput
+try:
+    from stsci.tools import teal
+except:
+    teal = None
+
+
+__taskname__ = "acssum"
+__version__ = "1.0"
+__vdate__ = "18-Dec-2012"
+
+
+def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
+           quiet=False):
+    """
+    Run the acssum.e executable as from the shell.
+
+    Parameters
+    ----------
+    input : str or list of str
+        Input filenames in one of these formats:
+
+            * a Python list of filenames
+            * a partial filename with wildcards ('\*flt.fits')
+            * filename of an ASN table ('j12345670_asn.fits')
+            * an at-file (``@input``)
+
+    output : str
+        Output filename.
+        If `output` is '' and `input` is '\*_asn.fits',
+        `output` will be automatically set to '\*_sfl.fits'.
+        Otherwise, it is an error not to provide a specific `output`.
+
+    exec_path : str, optional
+        The complete path to ACSSUM executable.
+        If not given, run ACSSUM given by 'acssum.e'.
+
+    time_stamps : bool, optional
+        Set to True to turn on the printing of time stamps.
+
+    verbose : bool, optional
+        Set to True for verbose output.
+
+    quiet : bool, optional
+        Set to True for quiet output.
+
+    """
+    if exec_path:
+        if not os.path.exists(exec_path):
+            raise OSError('Executable not found: ' + exec_path)
+        call_list = [exec_path]
+    else:
+        call_list = ['acssum.e']
+
+    # Parse input to get list of filenames to process.
+    # acssum.e only takes 'file1,file2,...'
+    infiles, dummy_out = parseinput.parseinput(input)
+    call_list.append(','.join(infiles))
+
+    call_list.append(output)
+
+    if time_stamps:
+        call_list.append('-t')
+
+    if verbose:
+        call_list.append('-v')
+
+    if quiet:
+        call_list.append('-q')
+
+    subprocess.call(call_list)
+
+
+def getHelpAsString():
+    """
+    Returns documentation on the `acssum` function. Required by TEAL.
+
+    """
+    return acssum.__doc__
+
+
+def run(configobj=None):
+    """
+    TEAL interface for the `acssum` function.
+
+    """
+    acssum(configobj['input'],
+           configobj['output'],
+           exec_path=configobj['exec_path'],
+           time_stamps=configobj['time_stamps'],
+           verbose=configobj['verbose'],
+           quiet=configobj['quiet'])

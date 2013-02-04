@@ -45,7 +45,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'acstools'
-copyright = u'2010, Warren Hack, Norman Grogin, Matt Davis'
+copyright = u'2012, Warren Hack, Matt Davis, Pey Lian Lim, Jay Anderson, Norman Grogin'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -181,7 +181,7 @@ htmlhelp_basename = 'acstoolsdoc'
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'acstools.tex', u'acstools Documentation',
-   u'Warren Hack, Norman Grogin', 'manual'),
+   u'Warren Hack, Matt Davis, Pey Lian Lim, Jay Anderson, Norman Grogin', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

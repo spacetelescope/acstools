@@ -1,0 +1,7 @@
+_task_name_ = string_kw(default="acssum")
+input = string_kw(default="", comment="Input files (*fits or @list)")
+output = string_kw(default="", comment="Output file")
+exec_path = string_kw(default="", comment="Optional path to ACSSUM executable")
+time_stamps = boolean_kw(default=False, comment="Verbose time stamps in output")
+verbose = boolean_kw(default=False, comment="Verbose output")
+quiet = boolean_kw(default=False, comment="No output")

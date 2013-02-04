@@ -6,4 +6,3 @@ noise_model = integer_or_none_kw(default=None, comment="Noise mitigation algorit
 oversub_thresh = float_or_none_kw(default=None, comment="Oversubtraction threshold.")
 sim_nit = integer_or_none_kw(default=None, comment="Read out simulation iterations.")
 shift_nit = integer_or_none_kw(default=None, comment="Read out column shifts.")
-[ _RULES_ ]
