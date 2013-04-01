@@ -8,7 +8,7 @@ detectors.
 
 """
 # External modules
-import pyfits, numpy
+import numpy as np
 
 
 class ImageOpByAmp(object):
@@ -19,7 +19,7 @@ class ImageOpByAmp(object):
 
     Parameters
     ----------
-    fitsPointer : `pyfits` image pointer
+    fitsPointer : `astropy.io.fits` image pointer
 
     """
 
@@ -205,7 +205,7 @@ class ImageOpByAmp(object):
         `numpy.ndarray`
 
         """
-        return numpy.zeros((self._mosaicYsize, self._mosaicXsize))
+        return np.zeros((self._mosaicYsize, self._mosaicXsize))
 
     def MosaicPars(self, amp):
         """

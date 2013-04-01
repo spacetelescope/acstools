@@ -36,7 +36,7 @@ import sys
 
 # THIRD-PARTY
 import numpy as np
-import pyfits
+from astropy.io import fits
 
 # STSCI
 from stsci.tools import parseinput,teal
@@ -44,7 +44,7 @@ from stsci.tools import parseinput,teal
 
 __taskname__ = 'acs_destripe'
 __version__ = '0.2.4'
-__vdate__ = '17-May-2012'
+__vdate__ = '01-Apr-2013'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 ### here are defined the fractional crosstalk values :
@@ -64,7 +64,7 @@ class StripeArray(object):
     """Class to handle data array to be destriped."""
 
     def __init__(self, image):
-        self.hdulist = pyfits.open(image)
+        self.hdulist = fits.open(image)
         self.ampstring = self.hdulist[0].header['CCDAMP']
         self.flatcorr = self.hdulist[0].header['FLATCORR']
         self.configure_arrays()
@@ -143,7 +143,7 @@ class StripeArray(object):
             errstr = 'Flat-field file ' + flatfile + ' could not be found!'
             raise IOError, errstr
 
-        return(pyfits.open(flatfile))
+        return(fits.open(flatfile))
 
     def write_corrected(self, output, clobber=False):
         """Write out the destriped data."""
@@ -216,19 +216,19 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
 
     for image in flist:
         # Skip processing pre-SM4 images
-        if (pyfits.getval(image, 'EXPSTART') <= MJD_SM4):
+        if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
             LOG.warn(image + ' is pre-SM4. Skipping...'%image)
             continue
 
         # Skip processing non-DARKCORR-ed non-BIAS images
-        if (pyfits.getval(image, 'IMAGETYP') != 'BIAS' and
-                pyfits.getval(image,'DARKCORR') != 'COMPLETE'):
+        if (fits.getval(image, 'IMAGETYP') != 'BIAS' and
+                fits.getval(image,'DARKCORR') != 'COMPLETE'):
             LOG.warn(image + ' is not BIAS and does not have '
                          'DARKCORR=COMPLETE. Skipping...')
             continue
 
         # Data must be in ELECTRONS
-        if (pyfits.getval(image, 'BUNIT', ext=1) != 'ELECTRONS'):
+        if (fits.getval(image, 'BUNIT', ext=1) != 'ELECTRONS'):
             LOG.warn(image + 'is not in ELECTRONS. Skipping...')
             continue
 

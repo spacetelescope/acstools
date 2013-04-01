@@ -48,23 +48,27 @@ W.J. Hack  27 Jun 2012: Implement support to process in different directory
 W.J. Hack  24 Aug 2012: Provided interface for in-memory option
 
 W.J. Hack  26 Nov 2012: Option to write out headerlets added and debugged
-"""
 
+"""
 # Import standard Python modules
 from __future__ import division # confidence high
-import os, sys, string,time, shutil
 import glob
+import os
+import shutil
+import string
+import sys
+import time
 
+# THIRD-PARTY
+from astropy.io import fits
 from stsci.tools import fileutil, asnutil
 
-# Import local modules
-import pyfits
 
 __taskname__ = "runastrodriz"
 
 # Local variables
 __version__ = "1.5.2"
-__vdate__ = "(13-Dec-2012)"
+__vdate__ = "(01-Apr-2013)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -81,6 +85,7 @@ __trlmarker__ = '*** astrodrizzle Processing Version '+__version__+__vdate__+'**
 # History:
 # Version 1.0.0 - Derived from v1.2.0 of wfc3.runwf3driz to run astrodrizzle
 
+
 #### TEAL Interfaces
 def getHelpAsString():
     helpString = 'runastrodriz Version '+__version__+__vdate__+'\n'
@@ -88,13 +93,16 @@ def getHelpAsString():
 
     return helpString
 
+
 def help():
     print getHelpAsString()
+
 
 def run(configobj=None):
     process(configobj['input'],force=configobj['force'],
                 newpath=configobj['newpath'],inmemory=configobj['in_memory'],
                 num_cores=configobj['num_cores'],headerlets=configobj['headerlets'])
+
 
 #### Primary user interface
 def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
@@ -144,7 +152,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         _cal_prodname = string.lower(_asndict['output'])
 
         # Retrieve the first member's rootname for possible use later
-        _fimg = pyfits.open(inFilename)
+        _fimg = fits.open(inFilename)
         for name in _fimg[1].data.field('MEMNAME'):
             if name[-1] != '*':
                 _mname = string.lower(string.split(name,'\0',1)[0])
@@ -196,7 +204,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
     if force: dcorr = 'PERFORM'
     else:
         if _mname :
-            _fimg = pyfits.open(fileutil.buildRootname(_mname,ext=['_raw.fits']))
+            _fimg = fits.open(fileutil.buildRootname(_mname,ext=['_raw.fits']))
             _phdr = _fimg['PRIMARY'].header
             if _phdr.has_key(dkey) > 0:
                 dcorr = _phdr[dkey]
@@ -281,9 +289,9 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
             print 'Updating trailer file %s with astrodrizzle comments.' % _trlfile
             _appendTrlFile(_trlfile,_drizlog)
 
-        # Save this for when PyFITS can modify a file 'in-place'
+        # Save this for when astropy.io.fits can modify a file 'in-place'
         # Update calibration switch
-        _fimg = pyfits.open(_cal_prodname,mode='update')
+        _fimg = fits.open(_cal_prodname,mode='update')
         _fimg['PRIMARY'].header.update(dkey,'COMPLETE')
         _fimg.close()
         del _fimg
@@ -376,7 +384,7 @@ def _lowerAsn(asnfile):
     shutil.copy(asnfile,_new_asn)
 
     # Open up the new copy and convert all MEMNAME's to lower-case
-    fasn = pyfits.open(_new_asn,'update')
+    fasn = fits.open(_new_asn,'update')
     for i in xrange(len(fasn[1].data)):
         fasn[1].data[i].setfield('MEMNAME',fasn[1].data[i].field('MEMNAME').lower())
     fasn.close()
@@ -463,6 +471,7 @@ def _removeWorkingDir(newdir):
     """
     os.rmdir(newdir)
 
+
 #### Functions to support execution from the shell.
 def main():
 
@@ -517,6 +526,7 @@ def main():
             raise Exception, str(errorobj)
 
     sys.exit()
+
 
 if __name__ == "__main__":
     main()
