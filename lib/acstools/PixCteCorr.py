@@ -94,6 +94,7 @@ References
 #    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
 #    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
 #    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
+#    * 2013/04/01 PLL fixed indexing bug in Ticket #992.
 ####################
 
 # External modules
@@ -112,8 +113,8 @@ import PixCte_FixY as pcfy # C extension
 
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.2.1"
-__vdate__ = "11-Oct-2012"
+__version__ = "1.2.2"
+__vdate__ = "01-Apr-2013"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
