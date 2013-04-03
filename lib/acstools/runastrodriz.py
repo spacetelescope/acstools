@@ -68,7 +68,7 @@ __taskname__ = "runastrodriz"
 
 # Local variables
 __version__ = "1.5.2"
-__vdate__ = "(01-Apr-2013)"
+__vdate__ = "(03-Apr-2013)"
 
 # Define parameters which need to be set specifically for
 #    pipeline use of astrodrizzle
@@ -291,8 +291,8 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
 
         # Save this for when astropy.io.fits can modify a file 'in-place'
         # Update calibration switch
-        _fimg = fits.open(_cal_prodname,mode='update')
-        _fimg['PRIMARY'].header.update(dkey,'COMPLETE')
+        _fimg = fits.open(_cal_prodname, mode='update')
+        _fimg['PRIMARY'].header[dkey] = 'COMPLETE'
         _fimg.close()
         del _fimg
 

@@ -119,7 +119,7 @@ import PixCte_FixY as pcfy # C extension
 
 __taskname__ = "PixCteCorr"
 __version__ = "1.2.2"
-__vdate__ = "01-Apr-2013"
+__vdate__ = "03-Apr-2013"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
@@ -409,16 +409,17 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     pf_out[5].data[:,:] = errdata.astype(np.float32)[::-1,:]
 
     # Update header
-    pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
-    pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac, 'CTE time scaling value')
-    pf_out['PRIMARY'].header.update('PCTERNCL', read_noise, 'PCTE readnoise amplitude')
-    pf_out['PRIMARY'].header.update('PCTENSMD', noise_model, 'PCTE readnoise mitigation algorithm')
-    pf_out['PRIMARY'].header.update('PCTETRSH', oversub_thresh, 'PCTE over-subtraction threshold')
-    pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit, 'PCTE readout simulation iterations')
-    pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit, 'PCTE readout number of shifts')
-    pf_out['PRIMARY'].header.update('CTE_NAME', ACS_CTE_NAME, 'name of CTE algorithm')
-    pf_out['PRIMARY'].header.update('CTE_VER', ACS_CTE_VER, 'version of CTE algorithm')
-    pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
+    pri_hdr = pf_out['PRIMARY'].header
+    pri_hdr['PCTECORR'] = 'COMPLETE'
+    pri_hdr['PCTEFRAC'] = (cte_frac, 'CTE time scaling value')
+    pri_hdr['PCTERNCL'] = (read_noise, 'PCTE readnoise amplitude')
+    pri_hdr['PCTENSMD'] = (noise_model, 'PCTE readnoise mitigation algorithm')
+    pri_hdr['PCTETRSH'] = (oversub_thresh, 'PCTE over-subtraction threshold')
+    pri_hdr['PCTESMIT'] = (sim_nit, 'PCTE readout simulation iterations')
+    pri_hdr['PCTESHFT'] = (shft_nit, 'PCTE readout number of shifts')
+    pri_hdr['CTE_NAME'] = (ACS_CTE_NAME, 'name of CTE algorithm')
+    pri_hdr['CTE_VER'] = (ACS_CTE_VER, 'version of CTE algorithm')
+    pri_hdr.add_history('PCTECORR complete ...')
 
     # Close output file
     pf_out.close()
@@ -1055,11 +1056,12 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     fits_ptr[4].data[:,:] = cordata.astype(np.float32)[:,:]
 
     # Update header
-    fits_ptr['PRIMARY'].header.update('PCTEFRAC', cte_frac)
-    fits_ptr['PRIMARY'].header.update('PCTERNCL', rn_clip)
-    fits_ptr['PRIMARY'].header.update('PCTESMIT', sim_nit)
-    fits_ptr['PRIMARY'].header.update('PCTESHFT', shft_nit)
-    fits_ptr['PRIMARY'].header.add_history('CTE blurring performed by PixCteCorr.AddYCte')
+    pri_hdr = fits_ptr['PRIMARY'].header
+    pri_hdr['PCTEFRAC'] = cte_frac
+    pri_hdr['PCTERNCL'] = rn_clip
+    pri_hdr['PCTESMIT'] = sim_nit
+    pri_hdr['PCTESHFT'] = shft_nit
+    pri_hdr.add_history('CTE blurring performed by PixCteCorr.AddYCte')
 
     # close image
     fits_ptr.close()
