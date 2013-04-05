@@ -94,17 +94,23 @@ References
 #    * 2012/01/31 MRD Updated with latest CTE algorithm 3.1.
 #    * 2012/05/11 PLL updated to version 3.2 to be consistent with CALACS.
 #    * 2012/05/22 PLL removed {} formatting for Python 2.5/2.6 compatibility.
+#    * 2013/04/01 PLL fixed indexing bug in Ticket #992. And #994.
 ####################
 
-# External modules
-import os, shutil, time, numpy, pyfits
+# STDLIB
+import os
+import shutil
+import time
+
+# THIRD-PARTY
+import numpy as np
+from astropy.io import fits
+from stsci.tools import parseinput
 
 try:
     from stsci.tools import teal
 except:
     teal = None
-
-from stsci.tools import parseinput
 
 # Local modules
 import ImageOpByAmp
@@ -112,8 +118,8 @@ import PixCte_FixY as pcfy # C extension
 
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.2.1"
-__vdate__ = "11-Oct-2012"
+__version__ = "1.2.2"
+__vdate__ = "03-Apr-2013"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
@@ -240,7 +246,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     # For output files naming.
     # Store in same path as input.
     outPath = os.path.dirname( os.path.abspath(inFits) ) + os.sep
-    rootname = pyfits.getval(inFits, 'ROOTNAME')
+    rootname = fits.getval(inFits, 'ROOTNAME')
     print os.linesep, 'Performing pixel-based CTE correction on', rootname
     rootname = outPath + rootname
 
@@ -252,7 +258,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     shutil.copyfile(inFits, outFits)
 
     # Open output for correction
-    pf_out = pyfits.open(outFits, mode='update')
+    pf_out = fits.open(outFits, mode='update')
 
     # For detector-specific operations
     detector = pf_out['PRIMARY'].header['DETECTOR']
@@ -312,23 +318,23 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     ########################################
 
     # get data for chip 2 (ext. 1)
-    scidata = pf_out[1].data.copy().astype(numpy.float)
-    errdata = pf_out[2].data.copy().astype(numpy.float)
+    scidata = pf_out[1].data.copy().astype(np.float)
+    errdata = pf_out[2].data.copy().astype(np.float)
 
     # separate signal and noise
     if noise_model in (1,2):
         sigdata, nsedata = pcfy.DecomposeRN(scidata, read_noise, noise_model)
     elif noise_model == 0:
         sigdata = scidata.copy()
-        nsedata = numpy.zeros_like(sigdata)
+        nsedata = np.zeros_like(sigdata)
 
     # setup cte frac array for chip 2
     ampc_scale = col_scale['C'][-scidata.shape[1]/2:]
     ampd_scale = col_scale['D'][-scidata.shape[1]/2:][::-1]
-    col_scale_temp = numpy.concatenate((ampc_scale,ampd_scale))
-    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    col_scale_temp = np.concatenate((ampc_scale,ampd_scale))
+    cte_frac_arr = cte_frac * np.ones_like(scidata) * col_scale_temp
     cte_frac_arr = cte_frac_arr * \
-        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+        np.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
@@ -346,13 +352,13 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     findata = cordata + nsedata
 
     # copy corrected data back to image.
-    pf_out[1].data[:,:] = findata.astype(numpy.float32)[:,:]
+    pf_out[1].data[:,:] = findata.astype(np.float32)[:,:]
 
     # add error as 10% of change
-    delta = 0.1 * numpy.abs(scidata - findata)
-    errdata = numpy.sqrt(errdata**2 + delta**2)
+    delta = 0.1 * np.abs(scidata - findata)
+    errdata = np.sqrt(errdata**2 + delta**2)
 
-    pf_out[2].data[:,:] = errdata.astype(numpy.float32)[:,:]
+    pf_out[2].data[:,:] = errdata.astype(np.float32)[:,:]
 
     ########################################
     # perform correction for chip 1 (ext. 4)
@@ -360,23 +366,23 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
 
     # get data for chip 1 (ext. 4)
     # array must be flipped so readout is in row 0
-    scidata = pf_out[4].data.copy().astype(numpy.float)[::-1,:]
-    errdata = pf_out[5].data.copy().astype(numpy.float)[::-1,:]
+    scidata = pf_out[4].data.copy().astype(np.float)[::-1,:]
+    errdata = pf_out[5].data.copy().astype(np.float)[::-1,:]
 
     # separate signal and noise
     if noise_model in (1,2):
         sigdata, nsedata = pcfy.DecomposeRN(scidata, read_noise, noise_model)
     elif noise_model == 0:
         sigdata = scidata.copy()
-        nsedata = numpy.zeros_like(sigdata)
+        nsedata = np.zeros_like(sigdata)
 
     # setup cte frac array for chip 2
     ampc_scale = col_scale['A'][-scidata.shape[1]/2:]
     ampd_scale = col_scale['B'][-scidata.shape[1]/2:][::-1]
-    col_scale_temp = numpy.concatenate((ampc_scale,ampd_scale))
-    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    col_scale_temp = np.concatenate((ampc_scale,ampd_scale))
+    cte_frac_arr = cte_frac * np.ones_like(scidata) * col_scale_temp
     cte_frac_arr = cte_frac_arr * \
-        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+        np.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
@@ -394,25 +400,26 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     findata = cordata + nsedata
 
     # copy corrected data back to image.
-    pf_out[4].data[:,:] = findata.astype(numpy.float32)[::-1,:]
+    pf_out[4].data[:,:] = findata.astype(np.float32)[::-1,:]
 
     # add error as 10% of change
-    delta = 0.1 * numpy.abs(scidata - findata)
-    errdata = numpy.sqrt(errdata**2 + delta**2)
+    delta = 0.1 * np.abs(scidata - findata)
+    errdata = np.sqrt(errdata**2 + delta**2)
 
-    pf_out[5].data[:,:] = errdata.astype(numpy.float32)[::-1,:]
+    pf_out[5].data[:,:] = errdata.astype(np.float32)[::-1,:]
 
     # Update header
-    pf_out['PRIMARY'].header.update('PCTECORR', 'COMPLETE')
-    pf_out['PRIMARY'].header.update('PCTEFRAC', cte_frac, 'CTE time scaling value')
-    pf_out['PRIMARY'].header.update('PCTERNCL', read_noise, 'PCTE readnoise amplitude')
-    pf_out['PRIMARY'].header.update('PCTENSMD', noise_model, 'PCTE readnoise mitigation algorithm')
-    pf_out['PRIMARY'].header.update('PCTETRSH', oversub_thresh, 'PCTE over-subtraction threshold')
-    pf_out['PRIMARY'].header.update('PCTESMIT', sim_nit, 'PCTE readout simulation iterations')
-    pf_out['PRIMARY'].header.update('PCTESHFT', shft_nit, 'PCTE readout number of shifts')
-    pf_out['PRIMARY'].header.update('CTE_NAME', ACS_CTE_NAME, 'name of CTE algorithm')
-    pf_out['PRIMARY'].header.update('CTE_VER', ACS_CTE_VER, 'version of CTE algorithm')
-    pf_out['PRIMARY'].header.add_history('PCTECORR complete ...')
+    pri_hdr = pf_out['PRIMARY'].header
+    pri_hdr['PCTECORR'] = 'COMPLETE'
+    pri_hdr['PCTEFRAC'] = (cte_frac, 'CTE time scaling value')
+    pri_hdr['PCTERNCL'] = (read_noise, 'PCTE readnoise amplitude')
+    pri_hdr['PCTENSMD'] = (noise_model, 'PCTE readnoise mitigation algorithm')
+    pri_hdr['PCTETRSH'] = (oversub_thresh, 'PCTE over-subtraction threshold')
+    pri_hdr['PCTESMIT'] = (sim_nit, 'PCTE readout simulation iterations')
+    pri_hdr['PCTESHFT'] = (shft_nit, 'PCTE readout number of shifts')
+    pri_hdr['CTE_NAME'] = (ACS_CTE_NAME, 'name of CTE algorithm')
+    pri_hdr['CTE_VER'] = (ACS_CTE_VER, 'version of CTE algorithm')
+    pri_hdr.add_history('PCTECORR complete ...')
 
     # Close output file
     pf_out.close()
@@ -487,7 +494,7 @@ def _PixCteParams(fitsTable, expstart):
         raise IOError, 'PCTEFILE not found: %s' % refFile
 
     # Open FITS table
-    pf_ref = pyfits.open(refFile)
+    pf_ref = fits.open(refFile)
 
     # Read RN_CLIP value from header
     read_noise = pf_ref['PRIMARY'].header['RN_CLIP']
@@ -531,7 +538,7 @@ def _PixCteParams(fitsTable, expstart):
         if (expstart >= mjd1) and (expstart < mjd2):
             # read chg_leak data from CHG_LEAK extension
             psi_node = pf_ref[n].data['NODE']
-            chg_leak = numpy.array(pf_ref[n].data.tolist(), dtype=numpy.float32)[:,1:]
+            chg_leak = np.array(pf_ref[n].data.tolist(), dtype=np.float32)[:,1:]
             break
 
     # column-by-column CTE scaling
@@ -663,7 +670,7 @@ def _InterpolatePsi(chg_leak, psi_node):
 
     """
 
-    chg_leak, chg_open = pcfy.InterpolatePsi(chg_leak, psi_node.astype(numpy.int32))
+    chg_leak, chg_open = pcfy.InterpolatePsi(chg_leak, psi_node.astype(np.int32))
 
     return chg_leak, chg_open
 
@@ -903,13 +910,13 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     shutil.copyfile(infile, outfile)
 
     # open file for blurring
-    fits = pyfits.open(outfile, mode='update')
+    fits_ptr = fits.open(outfile, mode='update')
 
     # For detector-specific operations
-    detector = fits['PRIMARY'].header['DETECTOR']
+    detector = fits_ptr['PRIMARY'].header['DETECTOR']
 
     # For epoch-specific operations
-    expstart = fits['PRIMARY'].header['EXPSTART']
+    expstart = fits_ptr['PRIMARY'].header['EXPSTART']
 
     # This is just for WFC for now.
     if detector != 'WFC':
@@ -918,10 +925,10 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
 
     # get units, if necessary
     if units is None:
-        units = fits[1].header['BUNIT'].strip().lower()
+        units = fits_ptr[1].header['BUNIT'].strip().lower()
 
     # Read CTE params from file
-    pctefile = fits['PRIMARY'].header['PCTETAB']
+    pctefile = fits_ptr['PRIMARY'].header['PCTETAB']
     pardict = _PixCteParams(pctefile, expstart)
 
     cte_frac = pardict['cte_frac']
@@ -962,12 +969,12 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     ########################################
 
     # get data for chip 2 (ext. 1)
-    scidata = fits[1].data.copy().astype(numpy.float)
+    scidata = fits_ptr[1].data.copy().astype(np.float)
 
     # convert to electrons if needed
     if units == 'counts':
-        gainc = fits[0].header['atodgnc']
-        gaind = fits[0].header['atodgnd']
+        gainc = fits_ptr[0].header['atodgnc']
+        gaind = fits_ptr[0].header['atodgnd']
 
         scidata[:,:scidata.shape[1]/2] *= gainc
         scidata[:,scidata.shape[1]/2:] *= gaind
@@ -975,10 +982,10 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     # setup cte frac array for chip 2
     ampc_scale = col_scale['C'][-scidata.shape[1]/2:]
     ampd_scale = col_scale['D'][-scidata.shape[1]/2:][::-1]
-    col_scale_temp = numpy.concatenate((ampc_scale,ampd_scale))
-    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    col_scale_temp = np.concatenate((ampc_scale,ampd_scale))
+    cte_frac_arr = cte_frac * np.ones_like(scidata) * col_scale_temp
     cte_frac_arr = cte_frac_arr * \
-        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+        np.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
@@ -997,19 +1004,19 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
         cordata[:,scidata.shape[1]/2:] /= gaind
 
     # copy blurred data back to image.
-    fits[1].data[:,:] = cordata.astype(numpy.float32)[:,:]
+    fits_ptr[1].data[:,:] = cordata.astype(np.float32)[:,:]
 
     ########################################
     # perform correction for chip 1 (ext. 4)
     ########################################
 
     # get data for chip 1 (ext. 4)
-    scidata = fits[4].data.copy().astype(numpy.float)
+    scidata = fits_ptr[4].data.copy().astype(np.float)
 
     # convert to electrons
     if units == 'counts':
-        gaina = fits[0].header['atodgna']
-        gainb = fits[0].header['atodgnb']
+        gaina = fits_ptr[0].header['atodgna']
+        gainb = fits_ptr[0].header['atodgnb']
 
         scidata[:,:scidata.shape[1]/2] *= gaina
         scidata[:,scidata.shape[1]/2:] *= gainb
@@ -1021,10 +1028,10 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     # setup cte frac array for chip 2
     ampa_scale = col_scale['A'][-scidata.shape[1]/2:]
     ampb_scale = col_scale['B'][-scidata.shape[1]/2:][::-1]
-    col_scale_temp = numpy.concatenate((ampa_scale,ampb_scale))
-    cte_frac_arr = cte_frac * numpy.ones_like(scidata) * col_scale_temp
+    col_scale_temp = np.concatenate((ampa_scale,ampb_scale))
+    cte_frac_arr = cte_frac * np.ones_like(scidata) * col_scale_temp
     cte_frac_arr = cte_frac_arr * \
-        numpy.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
+        np.arange(1,scidata.shape[0]+1).reshape((scidata.shape[0],1))
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
@@ -1046,17 +1053,18 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     cordata = cordata[::-1,:]
 
     # copy blurred data back to image.
-    fits[4].data[:,:] = cordata.astype(numpy.float32)[:,:]
+    fits_ptr[4].data[:,:] = cordata.astype(np.float32)[:,:]
 
     # Update header
-    fits['PRIMARY'].header.update('PCTEFRAC', cte_frac)
-    fits['PRIMARY'].header.update('PCTERNCL', rn_clip)
-    fits['PRIMARY'].header.update('PCTESMIT', sim_nit)
-    fits['PRIMARY'].header.update('PCTESHFT', shft_nit)
-    fits['PRIMARY'].header.add_history('CTE blurring performed by PixCteCorr.AddYCte')
+    pri_hdr = fits_ptr['PRIMARY'].header
+    pri_hdr['PCTEFRAC'] = cte_frac
+    pri_hdr['PCTERNCL'] = rn_clip
+    pri_hdr['PCTESMIT'] = sim_nit
+    pri_hdr['PCTESHFT'] = shft_nit
+    pri_hdr.add_history('CTE blurring performed by PixCteCorr.AddYCte')
 
     # close image
-    fits.close()
+    fits_ptr.close()
 
 
 def _AddYCte(detector, input_data, cte_frac, shft_nit, levels, dpde_l,
