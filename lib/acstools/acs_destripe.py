@@ -43,15 +43,10 @@ from stsci.tools import parseinput,teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.2.4'
-__vdate__ = '01-Apr-2013'
+__version__ = '0.2.5'
+__vdate__ = '23-Apr-2013'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
-### here are defined the fractional crosstalk values :
-### flux-independent; intra-chip only; reflexive;
-### (values had been 7.0e-5 before tweak to fit Saturn obsvs.)
-CDcrosstalk = 9.1e-5
-ABcrosstalk = 9.1e-5
 
 MJD_SM4 = 54967
 
@@ -229,7 +224,12 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
 
         # Data must be in ELECTRONS
         if (fits.getval(image, 'BUNIT', ext=1) != 'ELECTRONS'):
-            LOG.warn(image + 'is not in ELECTRONS. Skipping...')
+            LOG.warn(image + ' is not in ELECTRONS. Skipping...')
+            continue
+
+        # Skip processing CTECORR-ed images
+        if (fits.getval(image, 'PCTECORR') == 'COMPLETE'):
+            LOG.warn(image + ' already has PCTECORR applied. Skipping...')
             continue
 
         # generate output filename for each input based on specification
