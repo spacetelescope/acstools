@@ -13,8 +13,6 @@ ACS Destripe
 Global Variables
 ----------------
 
-.. autodata:: acstools.acs_destripe.ABcrosstalk
-.. autodata:: acstools.acs_destripe.CDcrosstalk
 .. autodata:: acstools.acs_destripe.MJD_SM4
 
 
