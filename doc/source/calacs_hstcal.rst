@@ -5,7 +5,7 @@ calacs.e (HSTCAL)
 A detailed description of this new and improved CALACS will be available
 in a future publication of ACS Data Handbook. In the meantime, if you have
 questions not answered in this documentation, please contact STScI Help Desk
-(help[at]stsci.edu).
+(``help[at]stsci.edu``).
 
 
 Running CALACS
@@ -16,8 +16,7 @@ Where to Find CALACS
 --------------------
 
 CALACS is now part of HSTCAL package, which can be downloaded from
-
-http://www.stsci.edu/institute/software_hardware/stsdas/download-stsdas
+`STSDAS download page <http://www.stsci.edu/institute/software_hardware/stsdas/download-stsdas>`_.
 
 
 Usage
@@ -251,3 +250,12 @@ Using ASN as input with ACSREJ:
 
     * crj.fits: Same as existing CRJ.
     * crc.fits: Similar to CRJ, except with pixel-based CTE correction applied.
+
+CALACS uses HSTIO that utilizes ``PIXVALUE`` keyword to represent a data
+extension with constant value. However, this is not a standard FITS behavior
+and is not recognized by PyFITS. Therefore, one should use
+`stsci.tools.stpyfits`, which is distributed as part of ``stsci_python``,
+instead of `pyfits` or `astropy.io.fits` when working with CALACS products.
+To use ``stpyfits`` in Python::
+
+    from stsci.tools import stpyfits as pyfits
