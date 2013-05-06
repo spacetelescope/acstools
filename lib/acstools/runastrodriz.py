@@ -206,7 +206,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         if _mname :
             _fimg = fits.open(fileutil.buildRootname(_mname,ext=['_raw.fits']))
             _phdr = _fimg['PRIMARY'].header
-            if _phdr.has_key(dkey) > 0:
+            if dkey in _phdr:
                 dcorr = _phdr[dkey]
             else:
                 dcorr = None
