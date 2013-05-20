@@ -125,7 +125,7 @@ For all full-frame WFC exposures, pixel-based CTE correction (ACS ISR 2010-03
 and 2012-03) is applied at the end of the ACSCCD series; i.e., after BLEVCORR.
 
 Because the CTE correction is applied before DARKCORR and FLSHCORR, it is
-necessary to use a CTE-corrected dark (DRKCFILE) and post-flash (FLSCFILE) if
+necessary to use a CTE-corrected dark (DRKCFILE) if
 the PCTECORR step is enabled.
 
 Parameters characterizing the CTE correction are stored in a reference table,
@@ -151,12 +151,6 @@ keywords:
   * Similar to DARKFILE but with CTE correction performed. By default, it should
     be in the ``jref`` directory and have the suffix ``_dkc.fits``. This is
     necessary because PCTECORR is done before DARKCORR.
-
-* FLSCFILE (if FLSHCORR=PERFORM)
-
-  * Similar to FLSHFILE but with CTE correction performed. By default, it should
-    be in the ``jref`` directory and have the suffix ``_flsc.fits``. This is
-    necessary because PCTECORR is done before FLSHCORR.
 
 Optional Keywords
 -----------------
@@ -215,8 +209,7 @@ Post-Flash Correction (FLSHCORR)
 ================================
 
 Post-flash correction is now performed after DARKCORR in the ACS2D step.
-When FLSHCORR=PERFORM, it uses FLSHFILE if PCTECORR=OMIT, otherwise it uses
-FLSCFILE (CTE-corrected post-flash reference file).
+When FLSHCORR=PERFORM, it uses FLSHFILE.
 
 
 FLATCORR
