@@ -15,6 +15,7 @@ import PixCteCorr
 import runastrodriz
 import calacs
 import acsccd
+import acscte
 import acs2d
 import acsrej
 import acssum
