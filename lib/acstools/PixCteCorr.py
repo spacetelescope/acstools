@@ -118,12 +118,12 @@ import PixCte_FixY as pcfy # C extension
 
 
 __taskname__ = "PixCteCorr"
-__version__ = "1.2.2"
-__vdate__ = "03-Apr-2013"
+__version__ = "1.2.3"
+__vdate__ = "13-Aug-2013"
 
 # constants related to the CTE algorithm in use
 ACS_CTE_NAME = 'PixelCTE 2012'
-ACS_CTE_VER = '3.2'
+ACS_CTE_VER = '3.3'
 
 
 # general error for things related to his module

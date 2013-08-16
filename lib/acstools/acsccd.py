@@ -37,35 +37,27 @@ except:
 
 
 __taskname__ = "acsccd"
-__version__ = "1.0"
-__vdate__ = "18-Dec-2012"
+__version__ = "2.0"
+__vdate__ = "13-Aug-2013"
 
 
 #
 # These keywords do not work because they get overwritten by header in
 # acsccd/getacsflags.c
 #
-# dqicorr=False, atodcorr=False, blevcorr=False, biascorr=False, pctecorr=False
+# dqicorr=False, atodcorr=False, blevcorr=False, biascorr=False
 #
-# dqicorr, atodcorr, blevcorr, biascorr, pctecorr : bool, optional
+# dqicorr, atodcorr, blevcorr, biascorr : bool, optional
 #     Enable XXXXCORR.
 #     If all False, will set all but ATODCORR to PERFORM.
 #     If any is True, will set that to PERFORM and the rest to OMIT.
 #
-def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
-           single_core=False):
+def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
     """
     Run the acsccd.e executable as from the shell.
 
-    Output is automatically named based on input and PCTECORR:
-
-        +----------------+----------+--------------------+
-        | INPUT          | PCTECORR | OUTPUT             |
-        +================+==========+====================+
-        | ``*_raw.fits`` | OMIT     | ``*_blv_tmp.fits`` |
-        +----------------+----------+--------------------+
-        | ``*_raw.fits`` | PERFORM  | ``*_blc_tmp.fits`` |
-        +----------------+----------+--------------------+
+    Expect input to be ``*_raw.fits``.
+    Output is automatically named ``*_blv_tmp.fits``.
 
     .. note:: Calibration flags are controlled by primary header.
 
@@ -95,11 +87,6 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     quiet : bool, optional
         Set to True for quiet output.
 
-    single_core : bool, optional
-        CTE correction in ACSCCD will by default try to use all available
-        CPUs on your computer. Set this to True to force the use of just
-        one CPU.
-
     """
     if exec_path:
         if not os.path.exists(exec_path):
@@ -122,9 +109,6 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     if quiet:
         call_list.append('-q')
 
-    if single_core:
-        call_list.append('-1')
-
     #if dqicorr:
     #    call_list.append('-dqi')
 
@@ -136,9 +120,6 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     #if biascorr:
     #    call_list.append('-bias')
-
-    #if pctecorr:
-    #    call_list.append('-pcte')
 
     subprocess.call(call_list)
 
@@ -160,13 +141,11 @@ def run(configobj=None):
            exec_path=configobj['exec_path'],
            time_stamps=configobj['time_stamps'],
            verbose=configobj['verbose'],
-           quiet=configobj['quiet'],
-           single_core=configobj['single_core'] #,
+           quiet=configobj['quiet'] #,
            #dqicorr=configobj['dqicorr'],
            #atodcorr=configobj['atodcorr'],
            #blevcorr=configobj['blevcorr'],
-           #biascorr=configobj['biascorr'],
-           #pctecorr=configobj['pctecorr']
+           #biascorr=configobj['biascorr']
            )
 
 
@@ -176,7 +155,6 @@ def run(configobj=None):
 #atodcorr = False
 #blevcorr = False
 #biascorr = False
-#pctecorr = False
 
 # Taken out from pars/acsccd.cfgspc
 #
@@ -184,4 +162,3 @@ def run(configobj=None):
 #atodcorr = boolean_kw(default=False, comment="Apply A-to-D correction")
 #blevcorr = boolean_kw(default=False, comment="Subtract bias from overscan")
 #biascorr = boolean_kw(default=False, comment="Subtract bias image")
-#pctecorr = boolean_kw(default=False, comment="Apply pixel CTE correction")

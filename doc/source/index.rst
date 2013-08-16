@@ -19,6 +19,7 @@ Contents:
    calacs
    calacs_hstcal
    acsccd
+   acscte
    acsrej
    acs2d
    acssum

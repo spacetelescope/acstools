@@ -2,10 +2,10 @@
 calacs.e (HSTCAL)
 *****************
 
-A detailed description of this new and improved CALACS will be available
-in a future publication of ACS Data Handbook. In the meantime, if you have
-questions not answered in this documentation, please contact STScI Help Desk
-(``help[at]stsci.edu``).
+A detailed description of this new and improved CALACS is available in
+`ACS Data Handbook v7.0 or later <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/acs_cover.html>`_.
+If you have questions not answered in the documentation, please contact
+STScI Help Desk (``help[at]stsci.edu``).
 
 
 Running CALACS
@@ -35,23 +35,23 @@ CALACS supports several command line options:
 * -t
 
   * Print verbose time stamps.
-  
+
 * -s
 
   * Save temporary files.
-  
+
 * -v
 
   * Turn on verbose output.
-  
+
 * -d
 
   * Turn on debug output.
-  
+
 * -q
 
   * Turn on quiet output.
-  
+
 * -1
 
   * Turn off parallel processing for PCTECORR. Try this option if you encounter
@@ -88,7 +88,7 @@ For example::
 
     for fits in glob.iglob('j*_raw.fits'):
         calacs.calacs(fits)
-   
+
 
 BIASCORR
 ========
@@ -122,7 +122,8 @@ Pixel-Based CTE Correction (PCTECORR)
 =====================================
 
 For all full-frame WFC exposures, pixel-based CTE correction (ACS ISR 2010-03
-and 2012-03) is applied at the end of the ACSCCD series; i.e., after BLEVCORR.
+and 2012-03) is applied in ACSCTE that occurs after the ACSCCD series;
+i.e., after BLEVCORR.
 
 Because the CTE correction is applied before DARKCORR and FLSHCORR, it is
 necessary to use a CTE-corrected dark (DRKCFILE) if
@@ -130,6 +131,11 @@ the PCTECORR step is enabled.
 
 Parameters characterizing the CTE correction are stored in a reference table,
 PCTETAB.
+
+.. note::
+
+    CALACS 8.2 and later uses a slightly different PCTETAB format, where
+    the COL_SCALE extension does not include overscan columns.
 
 Required Keywords
 -----------------
@@ -139,13 +145,13 @@ keywords:
 
 * PCTECORR
 
-  * By default, set to PERFORM for all full-frame WFC exposures.
-  
+  * By default, set to PERFORM for all full-frame WFC exposures, except BIAS.
+
 * PCTETAB
 
   * Reference table containing CTE correction parameters. By default, it should
     be in the ``jref`` directory and have the suffix ``_cte.fits``.
-    
+
 * DRKCFILE
 
   * Similar to DARKFILE but with CTE correction performed. By default, it should
@@ -163,7 +169,7 @@ not recommended unless you know what you are doing.
 * PCTENSMD
 
   * Read noise mitigation mode:
-  
+
     * 0 - No mitigation
     * 1 - Perform noise smoothing
     * 2 - No noise smoothing
@@ -187,7 +193,7 @@ not recommended unless you know what you are doing.
 
   * Number of iterations of readout simulation per column.
   * Overwrites SIM_NIT in PCTETAB.
-    
+
 * PCTESHFT
 
   * Number of shifts each readout simulation is broken up into.
