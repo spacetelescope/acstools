@@ -113,7 +113,6 @@ except:
     teal = None
 
 # Local modules
-import ImageOpByAmp
 import PixCte_FixY as pcfy # C extension
 
 
