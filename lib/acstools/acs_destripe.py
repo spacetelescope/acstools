@@ -107,16 +107,28 @@ class StripeArray(object):
             centera1 = self.hdulist[1].header['CENTERA1']
             centera2 = self.hdulist[1].header['CENTERA2']
 
+            flataxis1 = hduflat[1].header['NAXIS1']
+            flataxis2 = hduflat[1].header['NAXIS2']
+
             # configure the offset appropriate to left- or right-side of CCD
             if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
                 xdelta = 13
             else:
                 xdelta = 35
 
-            xlo = centera1 - xdelta - sizaxis1 / 2 - 1
-            xhi = centera1 - xdelta + sizaxis1 / 2 - 1
-            ylo = centera2 - sizaxis2 / 2 - 1
-            yhi = centera2 + sizaxis2 / 2 - 1
+            if sizaxis1 == flataxis1:
+                xlo = 0
+                xhi = sizaxis1
+            else:
+                xlo = centera1 - xdelta - sizaxis1 / 2 - 1
+                xhi = centera1 - xdelta + sizaxis1 / 2 - 1
+
+            if sizaxis2 == flataxis2:
+                ylo = 0
+                yhi = sizaxis2
+            else:
+                ylo = centera2 - sizaxis2 / 2 - 1
+                yhi = centera2 + sizaxis2 / 2 - 1
 
             self.invflat = self.invflat[ylo:yhi,xlo:xhi]
 
