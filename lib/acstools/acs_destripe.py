@@ -39,12 +39,12 @@ import numpy as np
 from astropy.io import fits
 
 # STSCI
-from stsci.tools import parseinput,teal
+from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.3.0'
-__vdate__ = '18-Nov-2013'
+__version__ = '0.4.0'
+__vdate__ = '06-Dec-2013'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -62,6 +62,12 @@ class StripeArray(object):
         self.hdulist = fits.open(image)
         self.ampstring = self.hdulist[0].header['CCDAMP']
         self.flatcorr = self.hdulist[0].header['FLATCORR']
+        self.darkcorr = self.hdulist[0].header['DARKCORR']
+
+        self.darktime = self.hdulist[0].header['EXPTIME'] + self.hdulist[0].header['FLASHDUR']
+        if self.hdulist[0].header['EXPTIME'] > 0:  # Not BIAS
+            self.darktime += 3.0
+
         self.configure_arrays()
 
     def configure_arrays(self):
@@ -73,7 +79,38 @@ class StripeArray(object):
                 (self.science, self.hdulist['sci',2].data[::-1,:]), axis=1)
             self.err = np.concatenate(
                 (self.err, self.hdulist['err',2].data[::-1,:]), axis=1)
+        self.ingest_dark()
         self.ingest_flatfield()
+
+    def _get_ref_section(self, refaxis1, refaxis2):
+        """Get reference file section to use."""
+
+        sizaxis1 = self.hdulist[1].header['SIZAXIS1']
+        sizaxis2 = self.hdulist[1].header['SIZAXIS2']
+        centera1 = self.hdulist[1].header['CENTERA1']
+        centera2 = self.hdulist[1].header['CENTERA2']
+
+        # configure the offset appropriate to left- or right-side of CCD
+        if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
+            xdelta = 13
+        else:
+            xdelta = 35
+
+        if sizaxis1 == refaxis1:
+            xlo = 0
+            xhi = sizaxis1
+        else:
+            xlo = centera1 - xdelta - sizaxis1 // 2 - 1
+            xhi = centera1 - xdelta + sizaxis1 // 2 - 1
+
+        if sizaxis2 == refaxis2:
+            ylo = 0
+            yhi = sizaxis2
+        else:
+            ylo = centera2 - sizaxis2 // 2 - 1
+            yhi = centera2 + sizaxis2 // 2 - 1
+
+        return xlo, xhi, ylo, yhi
 
     def ingest_flatfield(self):
         """Process flatfield."""
@@ -85,7 +122,7 @@ class StripeArray(object):
             self.invflat = np.ones(self.science.shape)
             return
 
-        hduflat = self.resolve_flatname(flatfile)
+        hduflat = self.resolve_reffilename(flatfile)
 
         if (self.ampstring == 'ABCD'):
             self.invflat = np.concatenate(
@@ -102,63 +139,85 @@ class StripeArray(object):
                 self.invflat = 1 / hduflat['sci',1].data
 
             # now, which section?
-            sizaxis1 = self.hdulist[1].header['SIZAXIS1']
-            sizaxis2 = self.hdulist[1].header['SIZAXIS2']
-            centera1 = self.hdulist[1].header['CENTERA1']
-            centera2 = self.hdulist[1].header['CENTERA2']
-
             flataxis1 = hduflat[1].header['NAXIS1']
             flataxis2 = hduflat[1].header['NAXIS2']
 
-            # configure the offset appropriate to left- or right-side of CCD
-            if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
-                xdelta = 13
-            else:
-                xdelta = 35
-
-            if sizaxis1 == flataxis1:
-                xlo = 0
-                xhi = sizaxis1
-            else:
-                xlo = centera1 - xdelta - sizaxis1 / 2 - 1
-                xhi = centera1 - xdelta + sizaxis1 / 2 - 1
-
-            if sizaxis2 == flataxis2:
-                ylo = 0
-                yhi = sizaxis2
-            else:
-                ylo = centera2 - sizaxis2 / 2 - 1
-                yhi = centera2 + sizaxis2 / 2 - 1
+            xlo, xhi, ylo, yhi = self._get_ref_section(flataxis1, flataxis2)
 
             self.invflat = self.invflat[ylo:yhi,xlo:xhi]
 
         # apply the flatfield if necessary
         if self.flatcorr != 'COMPLETE':
-            self.science = self.science / self.invflat
-            self.err = self.err / self.invflat
+            self.science = self.science * self.invflat
+            self.err = self.err * self.invflat
 
-    def resolve_flatname(self, flatfile):
+    def ingest_dark(self):
+        """Process dark."""
+
+        if self.hdulist[0].header['PCTECORR'] == 'COMPLETE':
+            darkfile = self.hdulist[0].header['DRKCFILE']
+        else:
+            darkfile = self.hdulist[0].header['DARKFILE']
+
+        # if BIAS or DARK, set dark to zeros
+        if darkfile == 'N/A':
+            self.dark = np.zeros(self.science.shape)
+            return
+
+        hdudark = self.resolve_reffilename(darkfile)
+
+        if (self.ampstring == 'ABCD'):
+            self.dark = np.concatenate(
+                (hdudark['sci',1].data,
+                 hdudark['sci',2].data[::-1,:]), axis=1)
+        else:
+            # complex algorithm to determine proper subarray of dark to use
+
+            # which amp?
+            if (self.ampstring == 'A' or self.ampstring == 'B' or
+                    self.ampstring == 'AB'):
+                self.dark = hdudark['sci',2].data
+            else:
+                self.dark = hdudark['sci',1].data
+
+            # now, which section?\
+            darkaxis1 = hduflat[1].header['NAXIS1']
+            darkaxis2 = hduflat[1].header['NAXIS2']
+
+            xlo, xhi, ylo, yhi = self._get_ref_section(darkaxis1, darkaxis2)
+
+            self.dark = self.dark[ylo:yhi,xlo:xhi]
+
+        # Apply the dark subtraction if necessary.
+        # Effect of DARK on ERR is insignificant for de-striping.
+        if self.darkcorr != 'COMPLETE':
+            self.science = self.science - self.dark * self.darktime
+
+    def resolve_reffilename(self, reffile):
         """Resolve the filename into an absolute pathname (if necessary)."""
-        flatparts = flatfile.partition('$')
-        if flatparts[1] == '$':
-            flatdir = os.getenv(flatparts[0])
-            if flatdir is None:
-                errstr = 'Environment variable ' + flatparts[0] + ' undefined!'
-                raise ValueError(errstr)
-            flatfile = flatdir + flatparts[2]
-        if not os.path.exists(flatfile):
-            errstr = 'Flat-field file ' + flatfile + ' could not be found!'
-            raise IOError, errstr
+        refparts = reffile.partition('$')
+        if refparts[1] == '$':
+            refdir = os.getenv(refparts[0])
+            if refdir is None:
+                raise ValueError(
+                    'Environment variable {0} undefined!'.format(refparts[0]))
+            reffile = os.path.join(refdir, refparts[2])
+        if not os.path.exists(reffile):
+            raise IOError('{0} could not be found!'.format(reffile))
 
-        return(fits.open(flatfile))
+        return(fits.open(reffile))
 
     def write_corrected(self, output, clobber=False):
         """Write out the destriped data."""
 
         # un-apply the flatfield if necessary
         if self.flatcorr != 'COMPLETE':
-            self.science = self.science * self.invflat
-            self.err = self.err * self.invflat
+            self.science = self.science / self.invflat
+            self.err = self.err / self.invflat
+
+        # un-apply the dark if necessary
+        if self.darkcorr != 'COMPLETE':
+            self.science = self.science + self.dark * self.darktime
 
         # reverse the amp merge
         if (self.ampstring == 'ABCD'):
@@ -175,8 +234,7 @@ class StripeArray(object):
 
 
 def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
-    """
-    Remove horizontal stripes from ACS WFC post-SM4 data.
+    """Remove horizontal stripes from ACS WFC post-SM4 data.
 
     .. note::
 
@@ -186,6 +244,9 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
         Uses the flatfield specified by the image header keyword PFLTFILE.
         If keyword value is 'N/A', as is the case with biases and darks,
         then unity flatfield is used.
+
+        Uses the dark image specified by the image header keyword DARKFILE.
+        If keyword value is 'N/A', then dummy dark with zeroes is used.
 
     Parameters
     ----------
@@ -225,13 +286,6 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
         # Skip processing pre-SM4 images
         if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
             LOG.warn(image + ' is pre-SM4. Skipping...'%image)
-            continue
-
-        # Skip processing non-DARKCORR-ed non-BIAS images
-        if (fits.getval(image, 'IMAGETYP') != 'BIAS' and
-                fits.getval(image,'DARKCORR') != 'COMPLETE'):
-            LOG.warn(image + ' is not BIAS and does not have '
-                         'DARKCORR=COMPLETE. Skipping...')
             continue
 
         # Data must be in ELECTRONS
