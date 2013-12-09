@@ -181,8 +181,8 @@ class StripeArray(object):
                 self.dark = hdudark['sci',1].data
 
             # now, which section?\
-            darkaxis1 = hduflat[1].header['NAXIS1']
-            darkaxis2 = hduflat[1].header['NAXIS2']
+            darkaxis1 = hdudark[1].header['NAXIS1']
+            darkaxis2 = hdudark[1].header['NAXIS2']
 
             xlo, xhi, ylo, yhi = self._get_ref_section(darkaxis1, darkaxis2)
 
