@@ -43,8 +43,8 @@ from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.4.0'
-__vdate__ = '06-Dec-2013'
+__version__ = '0.4.1'
+__vdate__ = '05-Feb-2014'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -228,6 +228,9 @@ class StripeArray(object):
             tmp_1, tmp_2 = np.split(self.err, 2, axis=1)
             self.hdulist['err',1].data = tmp_1.copy()
             self.hdulist['err',2].data = tmp_2[::-1,:].copy()
+        else:
+            self.hdulist['sci',1].data = self.science.copy()
+            self.hdulist['err',1].data = self.err.copy()
 
         # Write the output
         self.hdulist.writeto(output, clobber=clobber)
