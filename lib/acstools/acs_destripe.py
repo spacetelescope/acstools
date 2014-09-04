@@ -8,8 +8,8 @@ Examples
 In Python without TEAL:
 
 >>> from acstools import acs_destripe
->>> acs_destripe.clean('uncorrected_flt.fits', 'csck', clobber=False,
-...                    maxiter=15, sigrej=2.0)
+>>> acs_destripe.clean('uncorrected_flt.fits', 'csck', mask='mymask.fits',
+...                    clobber=False, maxiter=15, sigrej=2.0)
 
 In Python with TEAL:
 
@@ -24,7 +24,8 @@ In Pyraf::
 
 From command line::
 
-    % ./acs_destripe [-h][-c] input output [maxiter # [sigrej #]]
+    % acs_destripe [-h] [-c] [-m MASK] [--version]
+                   input suffix [maxiter] [sigrej]
 
 """
 from __future__ import print_function
@@ -43,8 +44,8 @@ from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.4.1'
-__vdate__ = '05-Feb-2014'
+__version__ = '0.5.0'
+__vdate__ = '04-Sep-2014'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -236,7 +237,7 @@ class StripeArray(object):
         self.hdulist.writeto(output, clobber=clobber)
 
 
-def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
+def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False, mask=None):
     """Remove horizontal stripes from ACS WFC post-SM4 data.
 
     .. note::
@@ -282,10 +283,23 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
         Specify whether or not to 'clobber' (delete then replace)
         previously generated products with the same names.
 
-    """
-    flist, alist = parseinput.parseinput(input)
+    mask : str or list of str
+        Mask images, one for each input file.
+        Pixels with zero values will be masked out, in addition to clipping.
 
-    for image in flist:
+    """
+    flist = parseinput.parseinput(input)[0]
+    mlist = parseinput.parseinput(mask)[0]
+
+    n_input = len(flist)
+    n_mask = len(mlist)
+
+    if n_mask == 0:
+        mlist = [None] * n_input
+    elif n_input != n_mask:
+        raise IOError('Each input must have its own mask!')
+
+    for image, maskfile in zip(flist, mlist):
         # Skip processing pre-SM4 images
         if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
             LOG.warn(image + ' is pre-SM4. Skipping...'%image)
@@ -306,13 +320,14 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False):
         output = image.replace('_flt', '_flt_' + suffix)
         LOG.info('Processing ' + image)
         perform_correction(image, output, maxiter=maxiter, sigrej=sigrej,
-                           clobber=clobber)
+                           clobber=clobber, mask=maskfile)
         LOG.info(output + ' created')
 
 
-def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False):
+def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
+                       mask=None):
     """
-    Called by `clean` for each input image.
+    Clean each input image.
 
     Parameters
     ----------
@@ -322,7 +337,11 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False):
     output : str
         Output image name.
 
-    maxiter, sigrej, clobber : see `clean`
+    mask : str
+        Mask image name.
+
+    maxiter, sigrej, clobber
+        See :func:`clean`.
 
     """
 
@@ -330,13 +349,19 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False):
     # associated data stuctures needed for cleaning
     frame = StripeArray(image)
 
+    # Read mask
+    if mask:
+        maskarray = fits.getdata(mask)
+    else:
+        maskarray = None
+
     # Do the stripe cleaning
-    clean_streak(frame, maxiter=maxiter, sigrej=sigrej)
+    clean_streak(frame, maxiter=maxiter, sigrej=sigrej, mask=maskarray)
 
     frame.write_corrected(output, clobber=clobber)
 
 
-def clean_streak(image, maxiter=15, sigrej=2.0):
+def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
     """
     Apply destriping algorithm to input array.
 
@@ -344,6 +369,9 @@ def clean_streak(image, maxiter=15, sigrej=2.0):
     ----------
     image : `StripeArray` object
         Arrays are modifed in-place.
+
+    mask : `numpy.ndarray`
+        Mask array. Pixels with zero values are masked out.
 
     maxiter, sigrej : see `clean`
 
@@ -354,9 +382,14 @@ def clean_streak(image, maxiter=15, sigrej=2.0):
 
     # loop over rows to fit the stripe amplitude
     for i in range(image.science.shape[0]):
+        if mask:
+            mask_arr = mask[i]
+        else:
+            mask_arr = None
+
         # row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
         SMean, SSig, SMedian, SMask = djs_iterstat(
-            image.science[i], MaxIter=maxiter, SigRej=sigrej)
+            image.science[i], MaxIter=maxiter, SigRej=sigrej, Mask=mask_arr)
 
         # SExtractor-esque central value statistic; slightly sturdier against
         # skewness of pixel histogram due to faint source flux
@@ -379,7 +412,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0):
 
 
 def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
-                 RejVal=None):
+                 Mask=None):
     """
     Iterative sigma-clipping.
 
@@ -393,8 +426,10 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     Max, Min : float
         Max and min values for clipping.
 
-    RejVal : float
-        Array value to reject, in addition to clipping.
+    Mask : `numpy.ndarray`
+        Mask array to indicate pixels to reject, in addition to clipping.
+        Pixels where mask is zero will be rejected.
+        If not given, all pixels will be used.
 
     Returns
     -------
@@ -423,13 +458,20 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     if Min is None:
         Min = InputArr.min()
 
-    Mask = np.zeros(ArrShape, dtype=np.byte) + 1
+    # Use all pixels if no mask is provided
+    if Mask is None:
+        Mask = np.ones(ArrShape, dtype=np.byte)
+    elif Mask.shape != ArrShape:
+        raise ValueError('Mask shape {0} does not match image shape '
+                         '{1}'.format(Mask.shape, ArrShape))
 
     # Reject those above Max and those below Min
     Mask[InputArr > Max] = 0
     Mask[InputArr < Min] = 0
-    if RejVal is not None:
-        Mask[InputArr == RejVal] = 0
+
+    # Mask must only have binary values
+    Mask[Mask != 0] = 1
+
     FMean = np.sum(1.0 * InputArr * Mask) / NGood
     FSig  = np.sqrt(np.sum((1.0 * InputArr - FMean)**2 * Mask) / (NGood - 1))
 
@@ -486,6 +528,7 @@ def run(configobj=None):
     """
     clean(configobj['input'],
           configobj['suffix'],
+          mask=configobj['mask'],
           maxiter=configobj['maxiter'],
           sigrej=configobj['sigrej'],
           clobber=configobj['clobber'])
@@ -498,46 +541,35 @@ def run(configobj=None):
 
 def main():
     """Command line driver."""
-    import getopt
+    import argparse
 
-    usg_str = 'USAGE: acs_destripe [-h][-c] input output [maxiter # [sigrej #]]'
+    parser = argparse.ArgumentParser(
+        prog=__taskname__,
+        description='Remove horizontal stripes from ACS WFC post-SM4 data.')
+    parser.add_argument(
+        'arg0', metavar='input', type=str, help='Input file')
+    parser.add_argument(
+        'arg1', metavar='suffix', type=str, help='Output suffix')
+    parser.add_argument(
+        'maxiter', nargs='?', type=int, default=15, help='Max #iterations')
+    parser.add_argument(
+        'sigrej', nargs='?', type=float, default=2.0, help='Rejection sigma')
+    parser.add_argument(
+        '-c', '--clobber', action="store_true", help='Clobber output')
+    parser.add_argument(
+        '-m', '--mask', nargs=1, type=str, default=None, help='Mask image')
+    parser.add_argument(
+        '--version', action="version",
+        version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
+    args = parser.parse_args()
 
-    try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'hc')
-    except getopt.error as e:
-      print(str(e))
-      print(usg_str)
-      print('\t', __version__)
+    if args.mask:
+        mask = args.mask[0]
+    else:
+        mask = args.mask
 
-    # initialize default values
-    help = False
-    clobber = False
-    maxiter = 15
-    sigrej = 2.0
-
-    # read options
-    for opt, value in optlist:
-        if opt == '-h':
-            help = True
-        elif opt == '-c':
-            clobber = True
-
-    if help:
-        print(usg_str)
-        print('\t', __version__, '(', __vdate__, ')')
-        return
-
-    if len(args) < 2:
-        LOG.error(usg_str)
-        return
-
-    if len(args) > 2:
-        # User provided parameters for maxiter, and possibly sigrej
-        maxiter = int(args[2])
-        if len(args) == 4:
-            sigrej = float(args[3])
-
-    clean(args[0], args[1], clobber=clobber, maxiter=maxiter, sigrej=sigrej)
+    clean(args.arg0, args.arg1, clobber=args.clobber, maxiter=args.maxiter,
+          sigrej=args.sigrej, mask=mask)
 
 
 if __name__ == '__main__':
