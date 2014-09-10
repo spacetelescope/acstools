@@ -8,7 +8,8 @@ Examples
 In Python without TEAL:
 
 >>> from acstools import acs_destripe
->>> acs_destripe.clean('uncorrected_flt.fits', 'csck', mask='mymask.fits',
+>>> acs_destripe.clean('uncorrected_flt.fits', 'csck',
+...                    mask1='mymask_sci1.fits', mask2='mymask_sci2.fits',
 ...                    clobber=False, maxiter=15, sigrej=2.0)
 
 In Python with TEAL:
@@ -24,7 +25,7 @@ In Pyraf::
 
 From command line::
 
-    % acs_destripe [-h] [-c] [-m MASK] [--version]
+    % acs_destripe [-h] [-c] [-m1 MASK1] [-m2 MASK2] [--version]
                    input suffix [maxiter] [sigrej]
 
 """
@@ -44,8 +45,8 @@ from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.5.0'
-__vdate__ = '04-Sep-2014'
+__version__ = '0.5.1'
+__vdate__ = '10-Sep-2014'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -237,12 +238,31 @@ class StripeArray(object):
         self.hdulist.writeto(output, clobber=clobber)
 
 
-def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False, mask=None):
+def _read_mask(mask1, mask2):
+    if mask1 is None and mask2 is None:
+        mask = None
+    elif mask2 is None:
+        mask = fits.getdata(mask1)
+    elif mask1 is None:
+        mask = fits.getdata(mask2)
+    else:
+        dat1 = fits.getdata(mask1)
+        dat2 = fits.getdata(mask2)
+        mask = np.concatenate((dat1, dat2[::-1,:]), axis=1)
+
+    # Mask must only have binary values
+    if mask is not None:
+        mask[mask != 0] = 1
+
+    return mask
+
+
+def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
+          mask1=None, mask2=None):
     """Remove horizontal stripes from ACS WFC post-SM4 data.
 
     .. note::
 
-        Input data must be an ACS/WFC FLT image, with 2 SCI extensions.
         Does not work on RAW image.
 
         Uses the flatfield specified by the image header keyword PFLTFILE.
@@ -265,9 +285,9 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False, mask=None):
     suffix : str
         The string to use to add to each input file name to
         indicate an output product. This string will be appended
-        to the _flt suffix in each input filename to create the
+        to the suffix in each input filename to create the
         new output filename. For example, setting `suffix='csck'`
-        will create '\*_flt_csck.fits' images.
+        will create '\*_csck.fits' images.
 
     maxiter : int
         This parameter controls the maximum number of iterations
@@ -283,23 +303,35 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False, mask=None):
         Specify whether or not to 'clobber' (delete then replace)
         previously generated products with the same names.
 
-    mask : str or list of str
-        Mask images, one for each input file.
+    mask1 : str or list of str
+        Mask images for ``SCI,1``, one for each input file.
         Pixels with zero values will be masked out, in addition to clipping.
+
+    mask2 : str or list of str
+        Mask images for ``SCI,2``, one for each input file.
+        Pixels with zero values will be masked out, in addition to clipping.
+        This is not used for subarrays.
 
     """
     flist = parseinput.parseinput(input)[0]
-    mlist = parseinput.parseinput(mask)[0]
+    mlist1 = parseinput.parseinput(mask1)[0]
+    mlist2 = parseinput.parseinput(mask2)[0]
 
     n_input = len(flist)
-    n_mask = len(mlist)
+    n_mask1 = len(mlist1)
+    n_mask2 = len(mlist2)
 
-    if n_mask == 0:
-        mlist = [None] * n_input
-    elif n_input != n_mask:
-        raise IOError('Each input must have its own mask!')
+    if n_mask1 == 0:
+        mlist1 = [None] * n_input
+    elif n_mask1 != n_input:
+        raise ValueError('Insufficient masks for [SCI,1]')
 
-    for image, maskfile in zip(flist, mlist):
+    if n_mask2 == 0:
+        mlist2 = [None] * n_input
+    elif n_mask2 != n_input:
+        raise ValueError('Insufficient masks for [SCI,2]')
+
+    for image, maskfile1, maskfile2 in zip(flist, mlist1, mlist2):
         # Skip processing pre-SM4 images
         if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
             LOG.warn(image + ' is pre-SM4. Skipping...'%image)
@@ -317,10 +349,11 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False, mask=None):
 
         # generate output filename for each input based on specification
         # of the output suffix
-        output = image.replace('_flt', '_flt_' + suffix)
+        output = image.replace('.fits', '_' + suffix + '.fits')
         LOG.info('Processing ' + image)
+        maskdata = _read_mask(maskfile1, maskfile2)
         perform_correction(image, output, maxiter=maxiter, sigrej=sigrej,
-                           clobber=clobber, mask=maskfile)
+                           clobber=clobber, mask=maskdata)
         LOG.info(output + ' created')
 
 
@@ -337,8 +370,8 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
     output : str
         Output image name.
 
-    mask : str
-        Mask image name.
+    mask : `numpy.ndarray`
+        Mask array.
 
     maxiter, sigrej, clobber
         See :func:`clean`.
@@ -349,14 +382,8 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
     # associated data stuctures needed for cleaning
     frame = StripeArray(image)
 
-    # Read mask
-    if mask:
-        maskarray = fits.getdata(mask)
-    else:
-        maskarray = None
-
     # Do the stripe cleaning
-    clean_streak(frame, maxiter=maxiter, sigrej=sigrej, mask=maskarray)
+    clean_streak(frame, maxiter=maxiter, sigrej=sigrej, mask=mask)
 
     frame.write_corrected(output, clobber=clobber)
 
@@ -376,13 +403,15 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
     maxiter, sigrej : see `clean`
 
     """
+    if mask is not None and image.science.shape != mask.shape:
+        raise ValueError('Mask shape does not match science data')
 
     # create the array to hold the stripe amplitudes
     corr = np.empty(image.science.shape[0])
 
     # loop over rows to fit the stripe amplitude
     for i in range(image.science.shape[0]):
-        if mask:
+        if mask is not None:
             mask_arr = mask[i]
         else:
             mask_arr = None
@@ -461,16 +490,10 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     # Use all pixels if no mask is provided
     if Mask is None:
         Mask = np.ones(ArrShape, dtype=np.byte)
-    elif Mask.shape != ArrShape:
-        raise ValueError('Mask shape {0} does not match image shape '
-                         '{1}'.format(Mask.shape, ArrShape))
 
     # Reject those above Max and those below Min
     Mask[InputArr > Max] = 0
     Mask[InputArr < Min] = 0
-
-    # Mask must only have binary values
-    Mask[Mask != 0] = 1
 
     FMean = np.sum(1.0 * InputArr * Mask) / NGood
     FSig  = np.sqrt(np.sum((1.0 * InputArr - FMean)**2 * Mask) / (NGood - 1))
@@ -528,7 +551,8 @@ def run(configobj=None):
     """
     clean(configobj['input'],
           configobj['suffix'],
-          mask=configobj['mask'],
+          mask1=configobj['mask1'],
+          mask2=configobj['mask2'],
           maxiter=configobj['maxiter'],
           sigrej=configobj['sigrej'],
           clobber=configobj['clobber'])
@@ -557,19 +581,28 @@ def main():
     parser.add_argument(
         '-c', '--clobber', action="store_true", help='Clobber output')
     parser.add_argument(
-        '-m', '--mask', nargs=1, type=str, default=None, help='Mask image')
+        '-m1', '--mask1', nargs=1, type=str, default=None,
+        help='Mask image for [SCI,1]')
+    parser.add_argument(
+        '-m2', '--mask2', nargs=1, type=str, default=None,
+        help='Mask image for [SCI,2]')
     parser.add_argument(
         '--version', action="version",
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
     args = parser.parse_args()
 
-    if args.mask:
-        mask = args.mask[0]
+    if args.mask1:
+        mask1 = args.mask1[0]
     else:
-        mask = args.mask
+        mask1 = args.mask1
+
+    if args.mask2:
+        mask2 = args.mask2[0]
+    else:
+        mask2 = args.mask2
 
     clean(args.arg0, args.arg1, clobber=args.clobber, maxiter=args.maxiter,
-          sigrej=args.sigrej, mask=mask)
+          sigrej=args.sigrej, mask1=mask1, mask2=mask2)
 
 
 if __name__ == '__main__':
