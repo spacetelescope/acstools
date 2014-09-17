@@ -45,8 +45,8 @@ from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.6.0'
-__vdate__ = '16-Sep-2014'
+__version__ = '0.6.1'
+__vdate__ = '17-Sep-2014'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -132,7 +132,7 @@ class StripeArray(object):
 
         # if BIAS or DARK, set flatfield to unity
         if flatfile == 'N/A':
-            self.invflat = np.ones(self.science.shape)
+            self.invflat = np.ones_like(self.science)
             return
 
         hduflat = self.resolve_reffilename(flatfile)
@@ -172,7 +172,7 @@ class StripeArray(object):
 
         # Set post-flash to zeros
         if flshfile == 'N/A' or self.flashdur <= 0:
-            self.flash = np.zeros(self.science.shape)
+            self.flash = np.zeros_like(self.science)
             return
 
         if flashsta != 'SUCCESSFUL':
@@ -217,7 +217,7 @@ class StripeArray(object):
 
         # if BIAS or DARK, set dark to zeros
         if darkfile == 'N/A':
-            self.dark = np.zeros(self.science.shape)
+            self.dark = np.zeros_like(self.science)
             return
 
         hdudark = self.resolve_reffilename(darkfile)
