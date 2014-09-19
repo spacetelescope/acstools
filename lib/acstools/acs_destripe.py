@@ -45,8 +45,8 @@ from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.5.1'
-__vdate__ = '10-Sep-2014'
+__version__ = '0.6.1'
+__vdate__ = '17-Sep-2014'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -59,16 +59,21 @@ LOG.setLevel(logging.INFO)
 
 class StripeArray(object):
     """Class to handle data array to be destriped."""
+    _IDLE_TIME = 3.0
 
     def __init__(self, image):
         self.hdulist = fits.open(image)
         self.ampstring = self.hdulist[0].header['CCDAMP']
         self.flatcorr = self.hdulist[0].header['FLATCORR']
+        self.flshcorr = self.hdulist[0].header['FLSHCORR']
         self.darkcorr = self.hdulist[0].header['DARKCORR']
 
-        self.darktime = self.hdulist[0].header['EXPTIME'] + self.hdulist[0].header['FLASHDUR']
-        if self.hdulist[0].header['EXPTIME'] > 0:  # Not BIAS
-            self.darktime += 3.0
+        exptime = self.hdulist[0].header['EXPTIME']
+        self.flashdur = self.hdulist[0].header['FLASHDUR']
+        self.darktime = exptime + self.flashdur
+
+        if exptime > 0:  # Not BIAS
+            self.darktime += self._IDLE_TIME
 
         self.configure_arrays()
 
@@ -82,6 +87,7 @@ class StripeArray(object):
             self.err = np.concatenate(
                 (self.err, self.hdulist['err',2].data[::-1,:]), axis=1)
         self.ingest_dark()
+        self.ingest_flash()
         self.ingest_flatfield()
 
     def _get_ref_section(self, refaxis1, refaxis2):
@@ -117,11 +123,16 @@ class StripeArray(object):
     def ingest_flatfield(self):
         """Process flatfield."""
 
+        for ff in ['DFLTFILE', 'LFLTFILE']:
+            vv = self.hdulist[0].header[ff]
+            if vv != 'N/A':
+                LOG.warning('{0}={1} is not accounted for!'.format(ff, vv))
+
         flatfile = self.hdulist[0].header['PFLTFILE']
 
         # if BIAS or DARK, set flatfield to unity
         if flatfile == 'N/A':
-            self.invflat = np.ones(self.science.shape)
+            self.invflat = np.ones_like(self.science)
             return
 
         hduflat = self.resolve_reffilename(flatfile)
@@ -153,6 +164,49 @@ class StripeArray(object):
             self.science = self.science * self.invflat
             self.err = self.err * self.invflat
 
+    def ingest_flash(self):
+        """Process post-flash."""
+
+        flshfile = self.hdulist[0].header['FLSHFILE']
+        flashsta = self.hdulist[0].header['FLASHSTA']
+
+        # Set post-flash to zeros
+        if flshfile == 'N/A' or self.flashdur <= 0:
+            self.flash = np.zeros_like(self.science)
+            return
+
+        if flashsta != 'SUCCESSFUL':
+            LOG.warning('Flash status is {0}'.format(flashsta))
+
+        hduflash = self.resolve_reffilename(flshfile)
+
+        if (self.ampstring == 'ABCD'):
+            self.flash = np.concatenate(
+                (hduflash['sci',1].data,
+                 hduflash['sci',2].data[::-1,:]), axis=1)
+        else:
+            # complex algorithm to determine proper subarray of flash to use
+
+            # which amp?
+            if (self.ampstring == 'A' or self.ampstring == 'B' or
+                    self.ampstring == 'AB'):
+                self.flash = hduflash['sci',2].data
+            else:
+                self.flash = hduflash['sci',1].data
+
+            # now, which section?
+            flashaxis1 = hduflash[1].header['NAXIS1']
+            flashaxis2 = hduflash[1].header['NAXIS2']
+
+            xlo, xhi, ylo, yhi = self._get_ref_section(flashaxis1, flashaxis2)
+
+            self.flash = self.flash[ylo:yhi,xlo:xhi]
+
+        # Apply the flash subtraction if necessary.
+        # Not applied to ERR, to be consistent with ingest_dark()
+        if self.flshcorr != 'COMPLETE':
+            self.science = self.science - self.flash * self.flashdur
+
     def ingest_dark(self):
         """Process dark."""
 
@@ -163,7 +217,7 @@ class StripeArray(object):
 
         # if BIAS or DARK, set dark to zeros
         if darkfile == 'N/A':
-            self.dark = np.zeros(self.science.shape)
+            self.dark = np.zeros_like(self.science)
             return
 
         hdudark = self.resolve_reffilename(darkfile)
@@ -182,7 +236,7 @@ class StripeArray(object):
             else:
                 self.dark = hdudark['sci',1].data
 
-            # now, which section?\
+            # now, which section?
             darkaxis1 = hdudark[1].header['NAXIS1']
             darkaxis2 = hdudark[1].header['NAXIS2']
 
@@ -216,6 +270,10 @@ class StripeArray(object):
         if self.flatcorr != 'COMPLETE':
             self.science = self.science / self.invflat
             self.err = self.err / self.invflat
+
+        # un-apply the post-flash if necessary
+        if self.flshcorr != 'COMPLETE':
+            self.science = self.science + self.flash * self.flashdur
 
         # un-apply the dark if necessary
         if self.darkcorr != 'COMPLETE':
@@ -268,6 +326,9 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
         Uses the flatfield specified by the image header keyword PFLTFILE.
         If keyword value is 'N/A', as is the case with biases and darks,
         then unity flatfield is used.
+
+        Uses post-flash image specified by the image header keyword FLSHFILE.
+        If keyword value is 'N/A', then dummy post-flash with zeroes is used.
 
         Uses the dark image specified by the image header keyword DARKFILE.
         If keyword value is 'N/A', then dummy dark with zeroes is used.
