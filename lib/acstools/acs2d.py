@@ -35,13 +35,11 @@ except:
 
 
 __taskname__ = "acs2d"
-__version__ = "1.0"
-__vdate__ = "18-Dec-2012"
+__version__ = "2.0"
+__vdate__ = "10-Oct-2014"
 
 
-def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
-          dqicorr=False, glincorr=False, lflgcorr=False, darkcorr=False,
-          flshcorr=False, flatcorr=False, shadcorr=False, photcorr=False):
+def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
     """
     Run the acs2d.e executable as from the shell.
 
@@ -85,13 +83,6 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     quiet : bool, optional
         Set to True for quiet output.
 
-    dqicorr, glincorr, lflgcorr, darkcorr, flshcorr, flatcorr, shadcorr, photcorr : bool, optional
-        Enable XXXXCORR.
-        If all False, will set all but FLSHCORR and SHADCORR to PERFORM.
-        If any is True, will set that to PERFORM and the rest to OMIT.
-        GLINCORR and LFLGCORR are used for SBC MAMA only.
-        FLSHCORR and SHADCORR are used for CCD only.
-
     """
     if exec_path:
         if not os.path.exists(exec_path):
@@ -114,30 +105,6 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     if quiet:
         call_list.append('-q')
 
-    if dqicorr:
-        call_list.append('-dqi')
-
-    if glincorr:
-        call_list.append('-glin')
-
-    if lflgcorr:
-        call_list.append('-lflg')
-
-    if darkcorr:
-        call_list.append('-dark')
-
-    if flshcorr:
-        call_list.append('-flash')
-
-    if flatcorr:
-        call_list.append('-flat')
-
-    if shadcorr:
-        call_list.append('-shad')
-
-    if photcorr:
-        call_list.append('-phot')
-
     subprocess.call(call_list)
 
 
@@ -158,12 +125,4 @@ def run(configobj=None):
           exec_path=configobj['exec_path'],
           time_stamps=configobj['time_stamps'],
           verbose=configobj['verbose'],
-          quiet=configobj['quiet'],
-          dqicorr=configobj['dqicorr'],
-          glincorr=configobj['glincorr'],
-          lflgcorr=configobj['lflgcorr'],
-          darkcorr=configobj['darkcorr'],
-          flshcorr=configobj['flshcorr'],
-          flatcorr=configobj['flatcorr'],
-          shadcorr=configobj['shadcorr'],
-          photcorr=configobj['photcorr'])
+          quiet=configobj['quiet'])
