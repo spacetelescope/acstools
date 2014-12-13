@@ -11,6 +11,7 @@ module.
 from .version import *
 
 import acs_destripe
+import acs_destripe_plus
 import PixCteCorr
 import runastrodriz
 import calacs

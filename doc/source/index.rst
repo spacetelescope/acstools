@@ -25,6 +25,7 @@ Contents:
    acssum
    pixctecorr
    acs_destripe
+   acs_destripe_plus
 
 
 Indices and tables

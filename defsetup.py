@@ -23,15 +23,14 @@ ext = [ distutils.core.Extension(
     include_dirs = [pythoninc,numpyinc] ) ]
 
 setupargs = {
-    'version': '1.7.1',
+    'version': '1.8.0',
     'description': 'Python Tools for ACS Data',
-    'author': 'Warren Hack, Matt Davis, Pey Lian Lim, '
-              'Jay Anderson, Norman Grogin',
+    'author': 'Jay Anderson, Matt Davis, Warren Hack, Norman Grogin, Pey Lian Lim, Sara Ogaz, Leornado Ubeda'
     'author_email': 'help@stsci.edu',
     'license': 'http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE',
     'data_files': [(pkg + '/pars', ['lib/acstools/pars/*']),
                    (pkg, ['LICENSE.txt'])],
-    'scripts': ['lib/acstools/acs_destripe', 'lib/acstools/runastrodriz'],
+    'scripts': ['lib/acstools/acs_destripe', 'lib/acstools/acs_destripe_plus', 'lib/acstools/runastrodriz'],
     'platforms': ['Linux', 'Solaris', 'Mac OS X', 'Win'],
     'ext_modules': ext,
     'package_dir': {'acstools': 'lib/acstools'}
