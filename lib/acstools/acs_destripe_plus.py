@@ -12,6 +12,9 @@ FLT and FLC (if applicable) files.
 This script is useful for when built-in CALACS destriping algorithm
 using overscans is insufficient or unavailable.
 
+For more information, see
+`Removal of Bias Striping Noise from Post-SM4 ACS WFC Images <http://www.stsci.edu/hst/acs/software/destripe/>`_.
+
 Examples
 --------
 
@@ -19,8 +22,9 @@ In Python without TEAL:
 
 >>> from acstools import acs_destripe_plus
 >>> acs_destripe_plus.destripe_plus(
-...     'j12345678_raw.fits', scimask1='mymask_sci1.fits',
-...     scimask2='mymask_sci2.fits', cte_correct=True)
+...     'j12345678_raw.fits', suffix='strp', maxiter=15, sigrej=2.0,
+...     scimask1='mymask_sci1.fits', scimask2='mymask_sci2.fits',
+...     clobber=False, cte_correct=True)
 
 In Python with TEAL:
 
@@ -35,8 +39,9 @@ In Pyraf::
 
 From command line::
 
-    % acs_destripe_plus [-h] [--sci1_mask SCI1_MASK] [--sci2_mask SCI2_MASK]
-                        [--nocte] [--version]
+    % acs_destripe_plus [-h] [--suffix SUFFIX] [--maxiter MAXITER]
+                        [--sigrej SIGREJ] [--clobber] [--sci1_mask SCI1_MASK]
+                        [--sci2_mask SCI2_MASK] [--nocte] [--version]
                         input
 
 """
@@ -49,6 +54,7 @@ From command line::
 # 29OCT2014 Ogaz clean up for posting final script for users
 # 18NOV2014 Ogaz changed options/switches
 # 12DEC2014 Lim incorporated script into ACSTOOLS
+# 11MAR2015 Lim added parameters to be passed into acs_destripe
 #
 from __future__ import division, print_function
 
@@ -69,8 +75,8 @@ from . import acscte
 
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.1.0'
-__vdate__ = '12-Dec-2014'
+__version__ = '0.2.0'
+__vdate__ = '11-Mar-2015'
 __author__ = 'Leonardo Ubeda & Sara Ogaz, ACS Team, STScI'
 
 SM4_DATE = Time('2008-01-01')
@@ -85,7 +91,9 @@ LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
 
-def destripe_plus(inputfile, scimask1=None, scimask2=None, cte_correct=True):
+def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
+                  clobber=False, scimask1=None, scimask2=None,
+                  cte_correct=True):
     """Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -102,6 +110,27 @@ def destripe_plus(inputfile, scimask1=None, scimask2=None, cte_correct=True):
             * a partial filename with wildcards ('\*raw.fits')
             * filename of an ASN table ('j12345670_asn.fits')
             * an at-file (``@input``)
+
+    suffix : str
+        The string to use to add to each input file name to
+        indicate an output product. This string will be appended
+        to the suffix in each input filename to create the
+        new output filename. For example, setting `suffix='strp'`
+        will create '\*_strp.fits' images.
+
+    maxiter : int
+        This parameter controls the maximum number of iterations
+        to perform when computing the statistics used to compute the
+        row-by-row corrections.
+
+    sigrej : float
+        This parameters sets the sigma level for the rejection applied
+        during each iteration of statistics computations for the
+        row-by-row corrections.
+
+    clobber : bool
+        Specify whether or not to 'clobber' (delete then replace)
+        previously generated products with the same names.
 
     scimask1 : str or list of str
         Mask images for ``SCI,1``, one for each input file.
@@ -168,9 +197,10 @@ def destripe_plus(inputfile, scimask1=None, scimask2=None, cte_correct=True):
 
     # execute destriping of the subarray (post-SM4 data only)
     acs_destripe.clean(
-        blvtmp_name, 'strp', clobber=False,
-        maxiter=15, sigrej=2.0, mask1=scimask1, mask2=scimask2)
-    os.rename(inputfile.replace('raw', 'blv_tmp_strp'), blvtmp_name)
+        blvtmp_name, suffix, maxiter=maxiter, sigrej=sigrej, clobber=clobber,
+        mask1=scimask1, mask2=scimask2)
+    blvtmpsfx = 'blv_tmp_{0}'.format(suffix)
+    os.rename(inputfile.replace('raw', blvtmpsfx), blvtmp_name)
 
     # update subarray header
     if is_sub2K and cte_correct:
@@ -215,9 +245,13 @@ def run(configobj=None):
     """TEAL interface for :func:`destripe_plus`."""
     destripe_plus(
         configobj['input'],
-        configobj['scimask1'],
-        configobj['scimask2'],
-        configobj['cte_correct'])
+        suffix=configobj['suffix'],
+        scimask1=configobj['scimask1'],
+        scimask2=configobj['scimask2'],
+        maxiter=configobj['maxiter'],
+        sigrej=configobj['sigrej'],
+        clobber=configobj['clobber'],
+        cte_correct=configobj['cte_correct'])
 
 
 #-----------------------------#
@@ -237,6 +271,14 @@ def main():
     parser.add_argument(
         'arg0', metavar='input', type=str, help='Input file')
     parser.add_argument(
+        '--suffix', type=str, default='strp', help='Output suffix')
+    parser.add_argument(
+        '--maxiter', type=int, default=15, help='Max #iterations')
+    parser.add_argument(
+        '--sigrej', type=float, default=2.0, help='Rejection sigma')
+    parser.add_argument(
+        '--clobber', action='store_true', help='Clobber output')
+    parser.add_argument(
         '--sci1_mask', nargs=1, type=str, default=None,
         help='Mask image for [SCI,1]')
     parser.add_argument(
@@ -245,7 +287,7 @@ def main():
     parser.add_argument(
         '--nocte', action='store_false', help='Turn off CTE correction.')
     parser.add_argument(
-        '--version', action="version",
+        '--version', action='version',
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
     options = parser.parse_args()
 
@@ -259,8 +301,9 @@ def main():
     else:
         mask2 = options.sci2_mask
 
-    destripe_plus(options.arg0, scimask1=mask1, scimask2=mask2,
-                  cte_correct=options.nocte)
+    destripe_plus(options.arg0, suffix=options.suffix, clobber=options.clobber,
+                  maxiter=options.maxiter, sigrej=options.sigrej,
+                  scimask1=mask1, scimask2=mask2, cte_correct=options.nocte)
 
 
 if __name__=='__main__':

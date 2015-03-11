@@ -2,6 +2,9 @@
 """
 Remove horizontal stripes from ACS WFC post-SM4 data.
 
+For more information, see
+`Removal of Bias Striping Noise from Post-SM4 ACS WFC Images <http://www.stsci.edu/hst/acs/software/destripe/>`_.
+
 Examples
 --------
 
@@ -25,7 +28,7 @@ In Pyraf::
 
 From command line::
 
-    % acs_destripe [-h] [-c] [-m1 MASK1] [-m2 MASK2] [--version]
+    % acs_destripe [-h] [-c] [--mask1 MASK1] [--mask2 MASK2] [--version]
                    input suffix [maxiter] [sigrej]
 
 """
@@ -45,8 +48,8 @@ from stsci.tools import parseinput, teal
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.6.1'
-__vdate__ = '17-Sep-2014'
+__version__ = '0.6.2'
+__vdate__ = '11-Mar-2015'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -642,10 +645,10 @@ def main():
     parser.add_argument(
         '-c', '--clobber', action="store_true", help='Clobber output')
     parser.add_argument(
-        '-m1', '--mask1', nargs=1, type=str, default=None,
+        '--mask1', nargs=1, type=str, default=None,
         help='Mask image for [SCI,1]')
     parser.add_argument(
-        '-m2', '--mask2', nargs=1, type=str, default=None,
+        '--mask2', nargs=1, type=str, default=None,
         help='Mask image for [SCI,2]')
     parser.add_argument(
         '--version', action="version",
