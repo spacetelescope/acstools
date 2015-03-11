@@ -113,10 +113,9 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
 
     suffix : str
         The string to use to add to each input file name to
-        indicate an output product. This string will be appended
-        to the suffix in each input filename to create the
-        new output filename. For example, setting `suffix='strp'`
-        will create '\*_strp.fits' images.
+        indicate an output product of ``acs_destripe``.
+        This only affects the intermediate output file that will
+        be automatically renamed to ``*blv_tmp.fits`` during the processing.
 
     maxiter : int
         This parameter controls the maximum number of iterations
@@ -133,11 +132,11 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         previously generated products with the same names.
 
     scimask1 : str or list of str
-        Mask images for ``SCI,1``, one for each input file.
+        Mask images for *calibrated* ``SCI,1``, one for each input file.
         Pixels with zero values will be masked out, in addition to clipping.
 
     scimask2 : str or list of str
-        Mask images for ``SCI,2``, one for each input file.
+        Mask images for *calibrated* ``SCI,2``, one for each input file.
         Pixels with zero values will be masked out, in addition to clipping.
         This is not used for subarrays.
 
@@ -177,6 +176,11 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
     blvtmp_name = inputfile.replace('raw', 'blv_tmp')
     blctmp_name = inputfile.replace('raw', 'blc_tmp')
 
+    # output filenames
+    tra_name = inputfile.replace('_raw.fits', '.tra')
+    flt_name = inputfile.replace('raw', 'flt')
+    flc_name = inputfile.replace('raw', 'flc')
+
     if detector != 'WFC':
         raise ValueError("{0} is not a WFC image, please check the 'DETECTOR'"
                          " keyword.".format(inputfile))
@@ -191,6 +195,13 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         else:
             LOG.warning('Using non-2K subarray, turning CTE correction off')
             cte_correct = False
+
+    # delete files from previous CALACS runs
+    if clobber:
+        for tmpfilename in [blvtmp_name, blctmp_name, flt_name, flc_name,
+                            tra_name]:
+            if os.path.exists(tmpfilename):
+                os.remove(tmpfilename)
 
     # run ACSCCD on RAW subarray
     acsccd.acsccd(inputfile)
@@ -226,9 +237,9 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
     if cte_correct:
         os.remove(blctmp_name)
 
-    info_str = 'Done.\nFLT: {0}\n'.format(inputfile.replace('raw', 'flt'))
+    info_str = 'Done.\nFLT: {0}\n'.format(flt_name)
     if cte_correct:
-        info_str += 'FLC: {0}\n'.format(inputfile.replace('raw', 'flc'))
+        info_str += 'FLC: {0}\n'.format(flc_name)
     LOG.info(info_str)
 
 
@@ -271,7 +282,8 @@ def main():
     parser.add_argument(
         'arg0', metavar='input', type=str, help='Input file')
     parser.add_argument(
-        '--suffix', type=str, default='strp', help='Output suffix')
+        '--suffix', type=str, default='strp',
+        help='Output suffix for acs_destripe')
     parser.add_argument(
         '--maxiter', type=int, default=15, help='Max #iterations')
     parser.add_argument(
@@ -280,10 +292,10 @@ def main():
         '--clobber', action='store_true', help='Clobber output')
     parser.add_argument(
         '--sci1_mask', nargs=1, type=str, default=None,
-        help='Mask image for [SCI,1]')
+        help='Mask image for calibrated [SCI,1]')
     parser.add_argument(
         '--sci2_mask', nargs=1, type=str, default=None,
-        help='Mask image for [SCI,2]')
+        help='Mask image for calibrated [SCI,2]')
     parser.add_argument(
         '--nocte', action='store_false', help='Turn off CTE correction.')
     parser.add_argument(
