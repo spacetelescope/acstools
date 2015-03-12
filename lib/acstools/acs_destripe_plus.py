@@ -55,6 +55,7 @@ From command line::
 # 18NOV2014 Ogaz changed options/switches
 # 12DEC2014 Lim incorporated script into ACSTOOLS
 # 11MAR2015 Lim added parameters to be passed into acs_destripe
+# 12MAR2015 (v0.3.0) Cara added cpability to use DQ mask
 #
 from __future__ import division, print_function
 
@@ -67,6 +68,13 @@ import subprocess
 from astropy.io import fits
 from astropy.time import Time
 
+# THIRD-PARTY
+import numpy as np
+
+# STSCI
+from stsci.tools import parseinput, teal
+from drizzlepac.util import interpret_bits_value
+
 # LOCAL
 from . import acs_destripe
 from . import acs2d
@@ -75,8 +83,8 @@ from . import acscte
 
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.2.0'
-__vdate__ = '11-Mar-2015'
+__version__ = '0.3.0'
+__vdate__ = '12-Mar-2015'
 __author__ = 'Leonardo Ubeda & Sara Ogaz, ACS Team, STScI'
 
 SM4_DATE = Time('2008-01-01')
@@ -93,7 +101,7 @@ LOG.setLevel(logging.INFO)
 
 def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
                   clobber=False, scimask1=None, scimask2=None,
-                  cte_correct=True):
+                  dqbits=None, cte_correct=True):
     """Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -140,6 +148,45 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         Pixels with zero values will be masked out, in addition to clipping.
         This is not used for subarrays.
 
+    dqbits : int, str, None (Default = None)
+        Integer sum of all the DQ bit values from the input image's DQ array
+        that should be considered "good" when building masks for de-striping
+        computations. For example, if pixels in the DQ array can be
+        combinations of 1, 2, 4, and 8 flags and one wants to consider
+        DQ "defects" having flags 2 and 4 as being acceptable for de-striping
+        computations, then `dqbits` should be set to 2+4=6. Then a DQ pixel
+        having values 2,4, or 6 will be considered a good pixel, while a DQ
+        pixel with a value, e.g., 1+2=3, 4+8=12, etc. will be flagged
+        as a "bad" pixel.
+
+        Alternatively, one can enter a comma- or '+'-separated list of
+        integer bit flags that should be added to obtain the final
+        "good" bits. For example, both ``4,8`` and ``4+8`` are equivalent to
+        setting `dqbits` to 12.
+
+        | Set `dqbits` to 0 to make *all* non-zero pixels in the DQ
+          mask to be considered "bad" pixels, and the corresponding image
+          pixels not to be used for de-striping computations.
+
+        | Default value (`None`) will turn off the use of image's DQ array
+          for de-striping computations.
+
+        | In order to reverse the meaning of the `dqbits`
+          parameter from indicating values of the "good" DQ flags
+          to indicating the "bad" DQ flags, prepend '~' to the string
+          value. For example, in order not to use pixels with
+          DQ flags 4 and 8 for sky computations and to consider
+          as "good" all other pixels (regardless of their DQ flag),
+          set `dqbits` to ``~4+8``, or ``~4,8``. To obtain the
+          same effect with an `int` input value (except for 0),
+          enter -(4+8+1)=-9. Following this convention,
+          a `dqbits` string value of ``'~0'`` would be equivalent to
+          setting ``dqbits=None``.
+
+        .. note::
+            DQ masks (if used), *will be* combined with user masks specified
+            in the `scimask1` and `scimask2` parameters (if any).
+
     cte_correct : bool
         Perform CTE correction.
 
@@ -152,10 +199,97 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         Invalid header values or CALACS version.
 
     """
+
+    # process input file(s) and if we have multiple input files - recursively
+    # call acs_destripe_plus for each input image:
+    flist = parseinput.parseinput(inputfile)[0]
+
+    if isinstance(scimask1, str):
+        mlist1 = parseinput.parseinput(scimask1)[0]
+    elif isinstance(scimask1, np.ndarray):
+        mlist1 = [ scimask1.copy() ]
+    elif scimask1 is None:
+        mlist1 = []
+    elif isinstance(scimask1, list):
+        mlist1 = []
+        for m in scimask1:
+            if isinstance(m, np.ndarray):
+                mlist1.append(m.copy())
+            elif isinstance(m, str):
+                mlist1 += parseinput.parseinput(m)[0]
+            else:
+                raise TypeError("'scimask1' must be a list of str or "
+                                "numpy.ndarray values.")
+    else:
+        raise TypeError("'scimask1' must be either a str, or a "
+                        "numpy.ndarray, or a list of the two type of "
+                        "values.")
+
+    if isinstance(scimask2, str):
+        mlist2 = parseinput.parseinput(scimask2)[0]
+    elif isinstance(scimask2, np.ndarray):
+        mlist2 = [ scimask2.copy() ]
+    elif scimask2 is None:
+        mlist2 = []
+    elif isinstance(scimask2, list):
+        mlist2 = []
+        for m in scimask2:
+            if isinstance(m, np.ndarray):
+                mlist2.append(m.copy())
+            elif isinstance(m, str):
+                mlist2 += parseinput.parseinput(m)[0]
+            else:
+                raise TypeError("'scimask2' must be a list of str or "
+                                "numpy.ndarray values.")
+    else:
+        raise TypeError("'scimask2' must be either a str, or a "
+                        "numpy.ndarray, or a list of the two type of "
+                        "values.")
+
+    n_input = len(flist)
+    n_mask1 = len(mlist1)
+    n_mask2 = len(mlist2)
+
+    if n_input == 0:
+        raise ValueError("No input file(s) provided or the file(s) do not exist")
+
+    if n_mask1 == 0:
+        mlist1 = [None] * n_input
+    elif n_mask1 != n_input:
+        raise ValueError('Insufficient masks for [SCI,1]')
+
+    if n_mask2 == 0:
+        mlist2 = [None] * n_input
+    elif n_mask2 != n_input:
+        raise ValueError('Insufficient masks for [SCI,2]')
+
+    if n_input > 1:
+        for img, mf1, mf2 in zip(flist, mlist1, mlist2):
+            destripe_plus(
+                inputfile=img, suffix=suffix, maxiter=maxiter,
+                sigrej=sigrej, clobber=clobber,
+                scimask1=scimask1, scimask2=scimask2,
+                dqbits=dqbits, cte_correct=cte_correct
+            )
+
+    inputfile = flist[0]
+    scimask1 = mlist1[0]
+    scimask2 = mlist2[0]
+
     # verify that the RAW image exists in cwd
     cwddir = os.getcwd()
     if not os.path.exists(os.path.join(cwddir, inputfile)):
         raise IOError("{0} does not exist.".format(inputfile))
+
+    # get image's primary header:
+    header = fits.getheader(inputfile)
+
+    # verify masks defined (or not) simultaneously:
+    if header['CCDAMP'] == 'ABCD' and \
+       ((scimask1 is not None and scimask2 is None) or \
+        (scimask1 is None and scimask2 is not None)):
+        raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
+                         "or not specified together.")
 
     # verify CALACS is comptible
     calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
@@ -166,7 +300,6 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
 
     # check date for post-SM4 and if 2K subarray or full frame
     is_sub2K = False
-    header = fits.getheader(inputfile)
     ctecorr = header['PCTECORR']
     aperture = header['APERTURE']
     detector = header['DETECTOR']
@@ -206,10 +339,74 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
     # run ACSCCD on RAW subarray
     acsccd.acsccd(inputfile)
 
+    # modify user mask with DQ masks if requested
+    dqbits = interpret_bits_value(dqbits)
+    if dqbits is not None:
+        # save 'tra' file in memory to trick the log file
+        # not to save first acs2d log as this is done only
+        # for the purpose of obtaining DQ masks.
+        # WISH: it would have been nice is there was an easy way of obtaining
+        #       just the DQ masks as if data were calibrated but without
+        #       having to recalibrate them with acs2d.
+        if os.path.isfile(tra_name):
+            fh = open(tra_name)
+            tra_lines = fh.readlines()
+            fh.close()
+        else:
+            tra_lines = None
+
+        # apply flats, etc.
+        acs2d.acs2d(blvtmp_name, verbose=False, quiet=True)
+
+        # extract DQ arrays from the FLT image:
+        dq1, dq2 = _read_DQ_arrays(flt_name)
+        if isinstance(scimask1, str):
+            if scimask1.strip() is '':
+                mask1 = None
+                scimask1 = None
+            else:
+                mask1 = fits.getdata(scimask1)
+        elif isinstance(scimask1, np.ndarray):
+            mask1 = scimask1.copy()
+        elif scimask1 is None:
+            mask1 = None
+        else:
+            raise TypeError("'scimask1' must be either a str file name, "
+                            "a numpy.ndarray, or None.")
+
+        scimask1 = acs_destripe._mergeUserMaskAndDQ(dq1, mask1, dqbits)
+
+        if isinstance(scimask2, str):
+            if scimask2.strip() is '':
+                mask2 = None
+                scimask2 = None
+            else:
+                mask2 = fits.getdata(scimask2)
+        elif isinstance(scimask2, np.ndarray):
+            mask2 = scimask2.copy()
+        elif scimask2 is None:
+            mask2 = None
+        else:
+            raise TypeError("'scimask2' must be either a str file name, "
+                            "a numpy.ndarray, or None.")
+
+        if dq2 is not None:
+            scimask2 = acs_destripe._mergeUserMaskAndDQ(dq2, mask2, dqbits)
+
+        # reconstruct trailer file:
+        if tra_lines is not None:
+            fh = open(tra_name, mode='w')
+            fh.writelines(tra_lines)
+            fh.close()
+
+        # delete temporary FLT image:
+        if os.path.isfile(flt_name):
+            os.remove(flt_name)
+
     # execute destriping of the subarray (post-SM4 data only)
     acs_destripe.clean(
         blvtmp_name, suffix, maxiter=maxiter, sigrej=sigrej, clobber=clobber,
-        mask1=scimask1, mask2=scimask2)
+        mask1=scimask1, mask2=scimask2, dqbits=dqbits)
     blvtmpsfx = 'blv_tmp_{0}'.format(suffix)
     os.rename(inputfile.replace('raw', blvtmpsfx), blvtmp_name)
 
@@ -220,7 +417,7 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
 
     # perform CTE correction on destriped image
     if cte_correct:
-    	if ctecorr == 'PERFORM':
+        if ctecorr == 'PERFORM':
             acscte.acscte(blvtmp_name)
         else:
             LOG.warning(
@@ -243,6 +440,16 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
     LOG.info(info_str)
 
 
+def _read_DQ_arrays(flt_name):
+    h = fits.open(flt_name)
+    ampstring = h[0].header['CCDAMP']
+    dq1 = h['dq',1].data
+    if (ampstring == 'ABCD'):
+        dq2 = h['dq',2].data
+    else:
+        dq2 = None
+    return (dq1, dq2)
+
 #-------------------------#
 # Interfaces used by TEAL #
 #-------------------------#
@@ -259,6 +466,7 @@ def run(configobj=None):
         suffix=configobj['suffix'],
         scimask1=configobj['scimask1'],
         scimask2=configobj['scimask2'],
+        dqbits=configobj['dqbits'],
         maxiter=configobj['maxiter'],
         sigrej=configobj['sigrej'],
         clobber=configobj['clobber'],
