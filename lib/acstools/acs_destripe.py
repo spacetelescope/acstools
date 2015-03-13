@@ -517,9 +517,9 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
 
         # verify masks defined (or not) simultaneously:
         if fits.getval(image, 'CCDAMP') == 'ABCD' and \
-           ((scimask1 is not None and scimask2 is None) or \
-            (scimask1 is None and scimask2 is not None)):
-            raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
+           ((mask1 is not None and mask2 is None) or \
+            (mask1 is None and mask2 is not None)):
+            raise ValueError("Both 'mask1' and 'mask2' must be specified "
                              "or not specified together.")
 
         maskdata = _read_mask(maskfile1, maskfile2)
