@@ -41,8 +41,8 @@ From command line::
 
     % acs_destripe_plus [-h] [--suffix SUFFIX] [--maxiter MAXITER]
                         [--sigrej SIGREJ] [--clobber] [--sci1_mask SCI1_MASK]
-                        [--sci2_mask SCI2_MASK] [--nocte] [--version]
-                        input
+                        [--sci2_mask SCI2_MASK] [--nocte] [--dqbits [DQBITS]]
+                        [--version] input
 
 """
 #
@@ -507,6 +507,9 @@ def main():
     parser.add_argument(
         '--nocte', action='store_false', help='Turn off CTE correction.')
     parser.add_argument(
+        '--dqbits', nargs='?', type=str, default=None,
+        help='DQ bits to be considered "good".')
+    parser.add_argument(
         '--version', action='version',
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
     options = parser.parse_args()
@@ -523,7 +526,8 @@ def main():
 
     destripe_plus(options.arg0, suffix=options.suffix, clobber=options.clobber,
                   maxiter=options.maxiter, sigrej=options.sigrej,
-                  scimask1=mask1, scimask2=mask2, cte_correct=options.nocte)
+                  scimask1=mask1, scimask2=mask2, cte_correct=options.nocte,
+                  dqbits=options.dqbits)
 
 
 if __name__=='__main__':

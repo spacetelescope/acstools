@@ -28,15 +28,11 @@ In Pyraf::
 
 From command line::
 
-    % acs_destripe [-h] [-c] [--mask1 MASK1] [--mask2 MASK2] [--version]
-                   input suffix [maxiter] [sigrej]
+    % acs_destripe [-h] [-c] [--mask1 MASK1] [--mask2 MASK2]
+                    [--dqbits [DQBITS]] [--version]
+                    input suffix [maxiter] [sigrej]
 
 """
-#
-# HISTORY:
-# .........
-# 12MAR2015 (v0.6.3) Cara added cpability to use DQ mask
-#
 from __future__ import print_function
 
 # STDLIB
@@ -55,7 +51,7 @@ from drizzlepac.buildmask import buildMask
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.6.3'
+__version__ = '0.7.0'
 __vdate__ = '12-Mar-2015'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
