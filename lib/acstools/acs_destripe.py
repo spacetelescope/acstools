@@ -51,8 +51,8 @@ from drizzlepac.buildmask import buildMask
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.7.0'
-__vdate__ = '12-Mar-2015'
+__version__ = '0.7.1'
+__vdate__ = '23-Mar-2015'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
@@ -557,7 +557,19 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
     mask = _mergeUserMaskAndDQ(frame.dq, mask, dqbits)
 
     # Do the stripe cleaning
-    clean_streak(frame, maxiter=maxiter, sigrej=sigrej, mask=mask)
+    Success, NUpdRows, NMaxIter, STDDEVCorr, MaxCorr = clean_streak(
+        frame, maxiter=maxiter, sigrej=sigrej, mask=mask
+    )
+
+    if (NMaxIter >= maxiter):
+        LOG.warn('perform_correction - User specified limit on clipping '
+                 'iterations has been reached.')
+
+    if (STDDEVCorr > 0.9):
+        LOG.warn('perform_correction - STDDEV of applied destripe '
+                 'corrections {} exceeds known bias striping '
+                 'STDDEV of 0.9e (see ISR ACS 2011-05).'.format(STDDEVCorr))
+        LOG.warn('perform_correction - Maximum applied correction: {}.'.format(MaxCorr))
 
     frame.write_corrected(output, clobber=clobber)
 
@@ -565,7 +577,7 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
     dqbits = interpret_bits_value(dqbits)
     if dqbits is None:
-        return mask
+        return mask.copy()
 
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
@@ -576,9 +588,7 @@ def _mergeUserMaskAndDQ(dq, mask, dqbits):
         return dqmask
 
     # merge user mask with DQ mask:
-    mask *= dqmask
-    # alternatively:
-    # mask = np.logical_and(mask, dqmask).astype(np.uint8)
+    mask = np.logical_and(mask, dqmask).astype(np.uint8)
 
     return mask
 
@@ -597,43 +607,94 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
 
     maxiter, sigrej : see `clean`
 
+    Returns
+    -------
+    Success : bool
+        Indicates successful execution.
+
+    NUpdRows : int
+        Number of updated rows in the image.
+
+    NMaxIter : int
+        Maximum number of clipping iterations performed on image rows.
+
+    STDDEVCorr, MaxCorr : float
+        Standard deviation of corrections and maximum correction applied
+        to the non-flat-field-corrected (i.e., RAW) image rows.
+
     """
     if mask is not None and image.science.shape != mask.shape:
-        raise ValueError('Mask shape does not match science data')
+        raise ValueError('Mask shape does not match science data shape')
 
     # create the array to hold the stripe amplitudes
-    corr = np.empty(image.science.shape[0])
+    corr = np.zeros(image.science.shape[0], dtype=image.science.dtype)
+    npix = np.zeros(image.science.shape[0], dtype=np.int)
+    tcorr = 0.0
+    tnpix = 0
+    tnpix2 = 0
+    NMaxIter = 0
+    NUpdRows = 0
+    MaxCorr = 0.0
 
     # loop over rows to fit the stripe amplitude
-    for i in range(image.science.shape[0]):
+    mask_arr = None
+    for i in xrange(image.science.shape[0]):
         if mask is not None:
             mask_arr = mask[i]
-        else:
-            mask_arr = None
 
         # row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
-        SMean, SSig, SMedian, SMask = djs_iterstat(
-            image.science[i], MaxIter=maxiter, SigRej=sigrej, Mask=mask_arr,
-            lineno=i)
+        SMean, SSig, SMedian, NPix, NIter, BMask = djs_iterstat(
+            image.science[i], MaxIter=maxiter, SigRej=sigrej,
+            Mask=mask_arr, lineno=i+1
+        )
 
         # SExtractor-esque central value statistic; slightly sturdier against
         # skewness of pixel histogram due to faint source flux
+        npix[i] = NPix
         corr[i] = 2.5 * SMedian - 1.5 * SMean
+        tnpix += NPix
+        tnpix2 += NPix*NPix
+        tcorr += corr[i] * NPix
+        if NIter > NMaxIter:
+            NMaxIter = NIter
+
+    if tnpix <= 0:
+        LOG.warn('clean_streak - No good data points; cannot de-stripe.')
+        return False, 0, 0, 0.0, 0.0
+
+    if NMaxIter >= maxiter:
+        LOG.warn('clean_streak - Maximum number of clipping iterations '
+                 'has been reached.')
 
     # preserve the original mean level of the image
-    corr -= np.average(corr)
+    wmean = tcorr / tnpix
+    corr[npix > 0] -= wmean
+
+    # weighted sample variance:
+    wvar = np.sum(npix * corr**2) / tnpix
+    uwvar = wvar / (1.0 - float(tnpix2)/float(tnpix)**2)
+    STDDEVCorr = float(np.sqrt(uwvar))
 
     # apply the correction row-by-row
-    for i in range(image.science.shape[0]):
+    for i in xrange(image.science.shape[0]):
+        if npix[i] < 1:
+            continue
+        NUpdRows += 1
+
+        if np.abs(corr[i]) > MaxCorr:
+            MaxCorr = np.abs(corr[i])
+
         # stripe is constant along the row, before flatfielding;
         # afterwards it has the shape of the inverse flatfield
-        truecorr = corr[i] * image.invflat[i] / np.average(image.invflat[i])
+        truecorr = corr[i] * image.invflat[i] / np.average(image.invflat[i][BMask])
 
         # correct the SCI extension
         image.science[i] -= truecorr
 
         # correct the ERR extension
-        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - truecorr))
+        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - truecorr)).astype(image.science.dtype)
+
+    return True, NUpdRows, NMaxIter, STDDEVCorr, MaxCorr
 
 
 def _write_row_number(lineno, offset=1, pad=1):
@@ -642,8 +703,8 @@ def _write_row_number(lineno, offset=1, pad=1):
     return (pad*' ' + '(row #{:d})'.format(lineno+offset))
 
 
-def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
-                 Mask=None, lineno=None):
+def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
+                 Max=None, Min=None, Mask=None, lineno=None):
     """
     Iterative sigma-clipping.
 
@@ -667,27 +728,30 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
 
     Returns
     -------
-    FMean, FSig, FMedian : float
+    FMean, FSig, FMedian, NPix : float
         Mean, sigma, and median of final result.
 
-    SaveMask : `numpy.ndarray`
-        Image mask from the final iteration.
+    NIter : int
+        Number of performed clipping iterations
+
+    BMask : `numpy.ndarray`
+        Logical image mask from the final iteration.
 
     """
     NGood    = InputArr.size
     ArrShape = InputArr.shape
     if NGood == 0:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - No data points given' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
     if NGood == 1:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - Only one data point; cannot compute stats' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
     if np.unique(InputArr).size == 1:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - Only one value in data; cannot compute stats' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
 
     # Determine Max and Min
     if Max is None:
@@ -698,6 +762,8 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     # Use all pixels if no mask is provided
     if Mask is None:
         Mask = np.ones(ArrShape, dtype=np.byte)
+    else:
+        Mask = Mask.copy()
 
     # Reject those above Max and those below Min
     Mask[InputArr > Max] = 0
@@ -710,34 +776,41 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     Iter  =  0
     NGood = np.sum(Mask)
     if NGood < 2:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - No good data points; cannot compute stats' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
+
+    if Iter >= MaxIter: # to support MaxIter=0
+        SaveMask = Mask.copy()
+        NLast = NGood
 
     while (Iter < MaxIter) and (NLast != NGood) and (NGood >= 2):
         LoVal = FMean - SigRej * FSig
         HiVal = FMean + SigRej * FSig
-        NLast = NGood
 
         Mask[InputArr < LoVal] = 0
         Mask[InputArr > HiVal] = 0
-        NGood = np.sum(Mask)
+        NLast = NGood
+        npix = np.sum(Mask)
 
-        if NGood >= 2:
-            FMean = np.sum(1.0 * InputArr * Mask) / NGood
+        if npix >= 2:
+            FMean = np.sum(1.0 * InputArr * Mask) / npix
             FSig  = np.sqrt(np.sum(
-                (1.0 * InputArr - FMean)**2 * Mask) / (NGood - 1))
+                (1.0 * InputArr - FMean)**2 * Mask) / (npix - 1))
+            SaveMask = Mask.copy() # last mask used for computation of mean
+            NGood = npix
+            Iter += 1
+        else:
+            break
 
-        SaveMask = Mask.copy()
+    logical_mask = SaveMask.astype(np.bool)
 
-        Iter += 1
-
-    if np.sum(SaveMask) > 2:
-        FMedian = np.median(InputArr[SaveMask == 1])
+    if NLast > 1:
+        FMedian = np.median(InputArr[logical_mask])
     else:
         FMedian = FMean
 
-    return FMean, FSig, FMedian, SaveMask
+    return FMean, FSig, FMedian, NLast, Iter, logical_mask
 
 
 #-------------------------#
