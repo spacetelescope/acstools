@@ -577,7 +577,10 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
     dqbits = interpret_bits_value(dqbits)
     if dqbits is None:
-        return mask.copy()
+        if mask is None:
+            return None
+        else:
+            return mask.copy()
 
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
@@ -692,7 +695,11 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
         image.science[i] -= truecorr
 
         # correct the ERR extension
-        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - truecorr)).astype(image.science.dtype)
+        q = np.minimum(image.science[i], truecorr)
+        # NOTE: in the next line, np.abs is used as a safeguard against
+        #       *rounding errors* especially important when
+        #       readout-noise is 0 (generally, this should not happen).
+        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - q)).astype(image.science.dtype)
 
     return True, NUpdRows, NMaxIter, STDDEVCorr, MaxCorr
 
