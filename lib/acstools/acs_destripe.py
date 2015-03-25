@@ -51,8 +51,8 @@ from drizzlepac.buildmask import buildMask
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.7.1'
-__vdate__ = '23-Mar-2015'
+__version__ = '0.7.2'
+__vdate__ = '24-Mar-2015'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
 
