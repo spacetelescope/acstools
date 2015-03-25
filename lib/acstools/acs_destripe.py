@@ -561,10 +561,6 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
         frame, maxiter=maxiter, sigrej=sigrej, mask=mask
     )
 
-    if (NMaxIter >= maxiter):
-        LOG.warn('perform_correction - User specified limit on clipping '
-                 'iterations has been reached.')
-
     if (STDDEVCorr > 0.9):
         LOG.warn('perform_correction - STDDEV of applied destripe '
                  'corrections {} exceeds known bias striping '
@@ -670,7 +666,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
 
     if NMaxIter >= maxiter:
         LOG.warn('clean_streak - Maximum number of clipping iterations '
-                 'has been reached.')
+                 'specified by the user ({}) has been reached.'.format(maxiter))
 
     # preserve the original mean level of the image
     wmean = tcorr / tnpix
