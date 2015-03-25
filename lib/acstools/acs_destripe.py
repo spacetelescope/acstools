@@ -630,8 +630,9 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
         raise ValueError('Mask shape does not match science data shape')
 
     # create the array to hold the stripe amplitudes
-    corr = np.zeros(image.science.shape[0], dtype=image.science.dtype)
+    corr = np.zeros(image.science.shape[0], dtype=np.float64)
     npix = np.zeros(image.science.shape[0], dtype=np.int)
+    sigcorr2 = np.zeros(image.science.shape[0], dtype=np.float64)
     tcorr = 0.0
     tnpix = 0
     tnpix2 = 0
@@ -655,6 +656,8 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
         # skewness of pixel histogram due to faint source flux
         npix[i] = NPix
         corr[i] = 2.5 * SMedian - 1.5 * SMean
+        if NPix > 0:
+            sigcorr2[i] = np.sum((image.err[i][BMask])**2)/NPix**2
         tnpix += NPix
         tnpix2 += NPix*NPix
         tcorr += corr[i] * NPix
@@ -687,19 +690,29 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
         if np.abs(corr[i]) > MaxCorr:
             MaxCorr = np.abs(corr[i])
 
+        ffdark = image.darktime * image.dark[i] * image.invflat[i]
+        t1 = np.maximum(image.science[i] + ffdark, 0.0)
+
         # stripe is constant along the row, before flatfielding;
         # afterwards it has the shape of the inverse flatfield
-        truecorr = corr[i] * image.invflat[i] / np.average(image.invflat[i][BMask])
+        corr_ff = image.invflat[i] / np.average(image.invflat[i][BMask])
+        truecorr = corr[i] * corr_ff
+        truecorr_sig2 = sigcorr2[i] * corr_ff**2
 
         # correct the SCI extension
         image.science[i] -= truecorr
 
+        t2 = np.maximum(image.science[i] + ffdark, 0.0)
+
+        T = (t1 - t2) * image.invflat[i]
+
         # correct the ERR extension
-        q = np.minimum(image.science[i], truecorr)
-        # NOTE: in the next line, np.abs is used as a safeguard against
-        #       *rounding errors* especially important when
-        #       readout-noise is 0 (generally, this should not happen).
-        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - q)).astype(image.science.dtype)
+        # NOTE: np.abs() in the err array recomputation is used for safety only
+        #       and, in principle, assuming no errors have been made in
+        #       the derivation of the formula, np.abs() should not be necessary.
+        # NOTE: for debugging purposes, one may want to uncomment next line:
+        #assert( np.all(image.err[i]**2 + truecorr_sig2[i] - T >= 0.0))
+        image.err[i] = np.sqrt(np.abs(image.err[i]**2 + truecorr_sig2[i] - T)).astype(image.science.dtype)
 
     return True, NUpdRows, NMaxIter, STDDEVCorr, MaxCorr
 
