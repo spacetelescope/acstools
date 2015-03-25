@@ -627,6 +627,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
 
     # create the array to hold the stripe amplitudes
     corr = np.zeros(image.science.shape[0], dtype=np.float64)
+    corr_scale = np.zeros(image.science.shape[0], dtype=np.float64)
     npix = np.zeros(image.science.shape[0], dtype=np.int)
     sigcorr2 = np.zeros(image.science.shape[0], dtype=np.float64)
     tcorr = 0.0
@@ -654,6 +655,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
         corr[i] = 2.5 * SMedian - 1.5 * SMean
         if NPix > 0:
             sigcorr2[i] = np.sum((image.err[i][BMask])**2)/NPix**2
+            corr_scale[i] = 1.0 / np.average(image.invflat[i][BMask])
         tnpix += NPix
         tnpix2 += NPix*NPix
         tcorr += corr[i] * NPix
@@ -691,7 +693,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
 
         # stripe is constant along the row, before flatfielding;
         # afterwards it has the shape of the inverse flatfield
-        corr_ff = image.invflat[i] / np.average(image.invflat[i][BMask])
+        corr_ff = image.invflat[i] * corr_scale[i]
         truecorr = corr[i] * corr_ff
         truecorr_sig2 = sigcorr2[i] * corr_ff**2
 
