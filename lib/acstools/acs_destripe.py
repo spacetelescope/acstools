@@ -710,7 +710,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
         #       the derivation of the formula, np.abs() should not be necessary.
         # NOTE: for debugging purposes, one may want to uncomment next line:
         #assert( np.all(image.err[i]**2 + truecorr_sig2[i] - T >= 0.0))
-        image.err[i] = np.sqrt(np.abs(image.err[i]**2 + truecorr_sig2[i] - T)).astype(image.science.dtype)
+        image.err[i] = np.sqrt(np.abs(image.err[i]**2 + truecorr_sig2 - T)).astype(image.science.dtype)
 
     return True, NUpdRows, NMaxIter, STDDEVCorr, MaxCorr
 
