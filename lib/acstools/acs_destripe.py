@@ -45,9 +45,7 @@ import numpy as np
 from astropy.io import fits
 
 # STSCI
-from stsci.tools import parseinput, teal
-from drizzlepac.util import interpret_bits_value
-from drizzlepac.buildmask import buildMask
+from stsci.tools import parseinput, teal, bitmask
 
 
 __taskname__ = 'acs_destripe'
@@ -571,7 +569,7 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
 
 
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
-    dqbits = interpret_bits_value(dqbits)
+    dqbits = bitmask.interpret_bits_value(dqbits)
     if dqbits is None:
         if mask is None:
             return None
@@ -581,13 +579,13 @@ def _mergeUserMaskAndDQ(dq, mask, dqbits):
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
 
-    dqmask = buildMask(dq, dqbits)
-
+    dqmask = bitmask.bitmask2mask(bitmask=dq, ignore_bits=dqbits,
+                                  good_mask_value=1, dtype=np.uint8)
     if mask is None:
         return dqmask
 
     # merge user mask with DQ mask:
-    mask = np.logical_and(mask, dqmask).astype(np.uint8)
+    dqmask[mask != 0] = 1
 
     return mask
 
@@ -657,7 +655,7 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
             sigcorr2[i] = np.sum((image.err[i][BMask])**2)/NPix**2
             corr_scale[i] = 1.0 / np.average(image.invflat[i][BMask])
         tnpix += NPix
-        tnpix2 += NPix*NPix
+        tnpix2 += NPix * NPix
         tcorr += corr[i] * NPix
         if NIter > NMaxIter:
             NMaxIter = NIter
@@ -674,8 +672,12 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
     wmean = tcorr / tnpix
     corr[npix > 0] -= wmean
 
-    # weighted sample variance:
-    wvar = np.sum(npix * corr**2) / tnpix
+    # convert corrections to the "RAW" space:
+    corr *= corr_scale
+
+    # weighted sample variance (in "RAW" space):
+    wrmean = np.sum(npix * corr) / tnpix
+    wvar = np.sum(npix * (corr-wrmean)**2) / tnpix
     uwvar = wvar / (1.0 - float(tnpix2)/float(tnpix)**2)
     STDDEVCorr = float(np.sqrt(uwvar))
 
@@ -693,9 +695,8 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
 
         # stripe is constant along the row, before flatfielding;
         # afterwards it has the shape of the inverse flatfield
-        corr_ff = image.invflat[i] * corr_scale[i]
-        truecorr = corr[i] * corr_ff
-        truecorr_sig2 = sigcorr2[i] * corr_ff**2
+        truecorr = corr[i] * image.invflat[i]
+        truecorr_sig2 = sigcorr2[i] * (corr_scale[i] * image.invflat[i])**2
 
         # correct the SCI extension
         image.science[i] -= truecorr
@@ -798,8 +799,8 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
         LOG.warn('djs_iterstat - No good data points; cannot compute stats' + imrow)
         return 0, 0, 0, 0, 0, None
 
+    SaveMask = Mask.copy()
     if Iter >= MaxIter: # to support MaxIter=0
-        SaveMask = Mask.copy()
         NLast = NGood
 
     while (Iter < MaxIter) and (NLast != NGood) and (NGood >= 2):
