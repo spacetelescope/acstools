@@ -271,6 +271,7 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
                 scimask1=scimask1, scimask2=scimask2,
                 dqbits=dqbits, cte_correct=cte_correct
             )
+        return
 
     inputfile = flist[0]
     scimask1 = mlist1[0]
