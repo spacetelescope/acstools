@@ -898,7 +898,8 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
                 continue
             updrows[i] = 1
 
-            ffdark = image.darktime * image.dark[i] * image.invflat[i]
+            ffdark = (image.darktime * image.dark[i] +
+                      image.flashdur * image.flash[i]) * image.invflat[i]
             t1 = np.maximum(image.science[i] + ffdark, 0.0)
 
             # stripe is constant along the row, before flatfielding;
