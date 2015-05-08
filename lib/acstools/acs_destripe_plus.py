@@ -39,10 +39,14 @@ In Pyraf::
 
 From command line::
 
-    % acs_destripe_plus [-h] [--suffix SUFFIX] [--maxiter MAXITER]
-                        [--sigrej SIGREJ] [--clobber] [--sci1_mask SCI1_MASK]
-                        [--sci2_mask SCI2_MASK] [--nocte] [--dqbits [DQBITS]]
-                        [--version] input
+    % acs_destripe_plus [-h] [--suffix SUFFIX] [--stat STAT]
+                        [--maxiter MAXITER] [--sigrej SIGREJ]
+                        [--lower [LOWER]] [--upper [UPPER]]
+                        [--binwidth BINWIDTH] [--sci1_mask SCI1_MASK]
+                        [--sci2_mask SCI2_MASK] [--dqbits [DQBITS]]
+                        [--rpt_clean RPT_CLEAN] [--atol [ATOL]] [--nocte]
+                        [--clobber] [-q] [--version]
+                        input
 
 """
 #
@@ -55,8 +59,16 @@ From command line::
 # 18NOV2014 Ogaz changed options/switches
 # 12DEC2014 Lim incorporated script into ACSTOOLS
 # 11MAR2015 Lim added parameters to be passed into acs_destripe
-# 12MAR2015 (v0.3.0) Cara added cpability to use DQ mask
-#
+# 12MAR2015 (v0.3.0) Cara added capability to use DQ mask;
+#           added support for multiple input files and wildcards in the file
+#           names. Cara added weighted (by NPix) background computations
+#           (especially important for vigneted filters).
+#           See Tickets #1178 & #1180.
+# 31MAR2015 (v0.4.0) Cara added repeated de-stripe iterations (to improve
+#           corrections in the "RAW" space) and support for various
+#           statistics modes. See Ticket #1183.
+
+
 from __future__ import division, print_function
 
 # STDLIB
@@ -83,9 +95,10 @@ from . import acscte
 
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.3.0'
-__vdate__ = '12-Mar-2015'
-__author__ = 'Leonardo Ubeda & Sara Ogaz, ACS Team, STScI'
+__version__ = '0.4.0'
+__vdate__ = '31-Mar-2015'
+__author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
+
 
 SM4_DATE = Time('2008-01-01')
 SUBARRAY_LIST = [
@@ -99,9 +112,11 @@ LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
 
-def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
-                  clobber=False, scimask1=None, scimask2=None,
-                  dqbits=None, cte_correct=True):
+def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.0,
+                  lower=None, upper=None, binwidth=0.3,
+                  scimask1=None, scimask2=None,
+                  dqbits=None, rpt_clean=0, atol=0.01,
+                  cte_correct=True, clobber=False, verbose=True):
     """Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -125,6 +140,35 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         This only affects the intermediate output file that will
         be automatically renamed to ``*blv_tmp.fits`` during the processing.
 
+    stat : { 'pmode1', 'pmode2', 'mean', 'mode', 'median', 'midpt' } (Default = 'pmode1')
+        Specifies the statistics to be used for computation of the
+        background in image rows:
+
+        * 'pmode1' - SEXTRACTOR-like mode estimate based on a
+          modified `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          ``2.5*median-1.5*mean``;
+        * 'pmode2' - mode estimate based on
+          `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          ``3*median-2*mean``;
+        * 'mean' - the mean of the distribution of the "good" pixels (after
+          clipping, masking, etc.);
+        * 'mode' - the mode of the distribution of the "good" pixels;
+        * 'median' - the median of the distribution of the "good" pixels;
+        * 'midpt' - estimate of the median of the distribution of the "good"
+          pixels based on an algorithm similar to IRAF's `imagestats` task
+          (``CDF(midpt)=1/2``).
+
+        .. note::
+            The midpoint and mode are computed in two passes through the
+            image. In the first pass the standard deviation of the pixels
+            is calculated and used with the *binwidth* parameter to compute
+            the resolution of the data histogram. The midpoint is estimated
+            by integrating the histogram and computing by interpolation
+            the data value at which exactly half the pixels are below that
+            data value and half are above it. The mode is computed by
+            locating the maximum of the data histogram and fitting the peak
+            by parabolic interpolation.
+
     maxiter : int
         This parameter controls the maximum number of iterations
         to perform when computing the statistics used to compute the
@@ -134,6 +178,20 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         This parameters sets the sigma level for the rejection applied
         during each iteration of statistics computations for the
         row-by-row corrections.
+
+    lower : float, None (Default = None)
+        Lower limit of usable pixel values for computing the background.
+        This value should be specified in the units of the input image(s).
+
+    upper : float, None (Default = None)
+        Upper limit of usable pixel values for computing the background.
+        This value should be specified in the units of the input image(s).
+
+    binwidth : float (Default = 0.1)
+        Histogram's bin width, in sigma units, used to sample the
+        distribution of pixel brightness values in order to compute the
+        background statistics. This parameter is aplicable *only* to *stat*
+        parameter values of `'mode'` or `'midpt'`.
 
     clobber : bool
         Specify whether or not to 'clobber' (delete then replace)
@@ -187,8 +245,21 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
             DQ masks (if used), *will be* combined with user masks specified
             in the `scimask1` and `scimask2` parameters (if any).
 
+    rpt_clean : int
+        An integer indicating how many *additional* times stripe cleaning
+        should be performed on the input image. Default = 0.
+
+    atol : float, None
+        The threshold for maximum absolute value of bias stripe correction
+        below which repeated cleanings can stop. When `atol` is `None`
+        cleaning will be repeated `rpt_clean` number of times.
+        Default = 0.01 [e].
+
     cte_correct : bool
         Perform CTE correction.
+
+    verbose : bool
+        Print informational messages. Default = True.
 
     Raises
     ------
@@ -199,7 +270,6 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
         Invalid header values or CALACS version.
 
     """
-
     # process input file(s) and if we have multiple input files - recursively
     # call acs_destripe_plus for each input image:
     flist = parseinput.parseinput(inputfile)[0]
@@ -266,11 +336,13 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
     if n_input > 1:
         for img, mf1, mf2 in zip(flist, mlist1, mlist2):
             destripe_plus(
-                inputfile=img, suffix=suffix, maxiter=maxiter,
-                sigrej=sigrej, clobber=clobber,
-                scimask1=scimask1, scimask2=scimask2,
-                dqbits=dqbits, cte_correct=cte_correct
+                inputfile=img, suffix=suffix, stat=stat,
+                lower=lower, upper=upper, binwidth=binwidth,
+                maxiter=maxiter, sigrej=sigrej,
+                scimask1=scimask1, scimask2=scimask2, dqbits=dqbits,
+                cte_correct=cte_correct, clobber=clobber, verbose=verbose
             )
+        return
 
     inputfile = flist[0]
     scimask1 = mlist1[0]
@@ -405,8 +477,10 @@ def destripe_plus(inputfile, suffix='strp', maxiter=15, sigrej=2.0,
 
     # execute destriping of the subarray (post-SM4 data only)
     acs_destripe.clean(
-        blvtmp_name, suffix, maxiter=maxiter, sigrej=sigrej, clobber=clobber,
-        mask1=scimask1, mask2=scimask2, dqbits=dqbits)
+        blvtmp_name, suffix, stat=stat, maxiter=maxiter, sigrej=sigrej,
+        lower=lower, upper=upper, binwidth=binwidth,
+        mask1=scimask1, mask2=scimask2, dqbits=dqbits,
+        rpt_clean=rpt_clean, atol=atol, clobber=clobber, verbose=verbose)
     blvtmpsfx = 'blv_tmp_{0}'.format(suffix)
     os.rename(inputfile.replace('raw', blvtmpsfx), blvtmp_name)
 
@@ -464,13 +538,20 @@ def run(configobj=None):
     destripe_plus(
         configobj['input'],
         suffix=configobj['suffix'],
+        stat=configobj['stat'],
+        maxiter=configobj['maxiter'],
+        sigrej=configobj['sigrej'],
+        lower=configobj['lower'],
+        upper=configobj['upper'],
+        binwidth=configobj['binwidth'],
         scimask1=configobj['scimask1'],
         scimask2=configobj['scimask2'],
         dqbits=configobj['dqbits'],
-        maxiter=configobj['maxiter'],
-        sigrej=configobj['sigrej'],
+        rpt_clean=configobj['rpt_clean'],
+        atol=configobj['atol'],
+        cte_correct=configobj['cte_correct'],
         clobber=configobj['clobber'],
-        cte_correct=configobj['cte_correct'])
+        verbose=configobj['verbose'])
 
 
 #-----------------------------#
@@ -493,11 +574,20 @@ def main():
         '--suffix', type=str, default='strp',
         help='Output suffix for acs_destripe')
     parser.add_argument(
+        '--stat', type=str, default='pmode1', help='Background statistics')
+    parser.add_argument(
         '--maxiter', type=int, default=15, help='Max #iterations')
     parser.add_argument(
         '--sigrej', type=float, default=2.0, help='Rejection sigma')
     parser.add_argument(
-        '--clobber', action='store_true', help='Clobber output')
+        '--lower', nargs='?', type=float, default=None,
+        help='Lower limit for "good" pixels.')
+    parser.add_argument(
+        '--upper', nargs='?', type=float, default=None,
+        help='Upper limit for "good" pixels.')
+    parser.add_argument(
+        '--binwidth', type=float, default=0.1,
+        help='Bin width for distribution sampling.')
     parser.add_argument(
         '--sci1_mask', nargs=1, type=str, default=None,
         help='Mask image for calibrated [SCI,1]')
@@ -505,10 +595,20 @@ def main():
         '--sci2_mask', nargs=1, type=str, default=None,
         help='Mask image for calibrated [SCI,2]')
     parser.add_argument(
-        '--nocte', action='store_false', help='Turn off CTE correction.')
-    parser.add_argument(
         '--dqbits', nargs='?', type=str, default=None,
         help='DQ bits to be considered "good".')
+    parser.add_argument(
+        '--rpt_clean', type=int, default=0,
+        help='Number of *repeated* bias de-stripes to perform.')
+    parser.add_argument(
+        '--atol', nargs='?', type=float, default=0.01,
+        help='Absolute tolerance to stop *repeated* bias de-stripes.')
+    parser.add_argument(
+        '--nocte', action='store_true', help='Turn off CTE correction.')
+    parser.add_argument(
+        '--clobber', action='store_true', help='Clobber output')
+    parser.add_argument(
+        '-q', '--quiet', action="store_true", help='Do not print informational messages')
     parser.add_argument(
         '--version', action='version',
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
@@ -524,10 +624,13 @@ def main():
     else:
         mask2 = options.sci2_mask
 
-    destripe_plus(options.arg0, suffix=options.suffix, clobber=options.clobber,
+    destripe_plus(options.arg0, suffix=options.suffix,
                   maxiter=options.maxiter, sigrej=options.sigrej,
-                  scimask1=mask1, scimask2=mask2, cte_correct=options.nocte,
-                  dqbits=options.dqbits)
+                  lower=options.lower, upper=options.upper, binwidth=options.binwidth,
+                  scimask1=mask1, scimask2=mask2, dqbits=options.dqbits,
+                  rpt_clean=options.rpt_clean, atol=options.atol,
+                  cte_correct=not options.nocte, clobber=options.clobber,
+                  verbose=not options.quiet)
 
 
 if __name__=='__main__':

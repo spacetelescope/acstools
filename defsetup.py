@@ -25,7 +25,7 @@ ext = [ distutils.core.Extension(
 setupargs = {
     'version': '1.8.0',
     'description': 'Python Tools for ACS Data',
-    'author': 'Jay Anderson, Matt Davis, Warren Hack, Norman Grogin, Pey Lian Lim, Sara Ogaz, Leornado Ubeda'
+    'author': 'Jay Anderson, Matt Davis, Warren Hack, Norman Grogin, Pey Lian Lim, Sara Ogaz, Leornado Ubeda, Mihai Cara'
     'author_email': 'help@stsci.edu',
     'license': 'http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE',
     'data_files': [(pkg + '/pars', ['lib/acstools/pars/*']),

@@ -28,9 +28,11 @@ In Pyraf::
 
 From command line::
 
-    % acs_destripe [-h] [-c] [--mask1 MASK1] [--mask2 MASK2]
-                    [--dqbits [DQBITS]] [--version]
-                    input suffix [maxiter] [sigrej]
+    % acs_destripe [-h] [--stat STAT] [--lower [LOWER]] [--upper [UPPER]]
+                   [--binwidth BINWIDTH] [--mask1 MASK1] [--mask2 MASK2]
+                   [--dqbits [DQBITS]] [--rpt_clean RPT_CLEAN]
+                   [--atol [ATOL]] [-c] [-q] [--version]
+                   input suffix [maxiter] [sigrej]
 
 """
 from __future__ import print_function
@@ -45,16 +47,26 @@ import numpy as np
 from astropy.io import fits
 
 # STSCI
-from stsci.tools import parseinput, teal
-from drizzlepac.util import interpret_bits_value
-from drizzlepac.buildmask import buildMask
+from stsci.tools import parseinput, teal, bitmask
+from stsci.imagestats import ImageStats
 
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.7.0'
-__vdate__ = '12-Mar-2015'
+__version__ = '0.8.0'
+__vdate__ = '31-Mar-2015'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 
+#
+# HISTORY:
+# .........
+# 12MAR2015 (v0.6.3) Cara added capability to use DQ mask;
+#           added support for multiple input files and wildcards in the file
+#           names. See Ticket #1178.
+# 23MAR2015 (v0.7.1) Cara added weighted (by NPix) background computations
+#           (especially important for vigneted filters). See Ticket #1180.
+# 31MAR2015 (v0.8.0) Cara added repeated de-stripe iterations (to improve
+#           corrections in the "RAW" space) and support for various
+#           statistics modes. See Ticket #1183.
 
 MJD_SM4 = 54967
 
@@ -331,8 +343,10 @@ def _read_mask(mask1, mask2):
     return mask
 
 
-def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
-          mask1=None, mask2=None, dqbits=None):
+def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
+          lower=None, upper=None, binwidth=0.3,
+          mask1=None, mask2=None, dqbits=None,
+          rpt_clean=0, atol=0.01, clobber=False, verbose=True):
     """Remove horizontal stripes from ACS WFC post-SM4 data.
 
     .. note::
@@ -366,6 +380,35 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
         new output filename. For example, setting `suffix='csck'`
         will create '\*_csck.fits' images.
 
+    stat : { 'pmode1', 'pmode2', 'mean', 'mode', 'median', 'midpt' } (Default = 'pmode1')
+        Specifies the statistics to be used for computation of the
+        background in image rows:
+
+        * 'pmode1' - SEXTRACTOR-like mode estimate based on a
+          modified `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          ``2.5*median-1.5*mean``;
+        * 'pmode2' - mode estimate based on
+          `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          ``3*median-2*mean``;
+        * 'mean' - the mean of the distribution of the "good" pixels (after
+          clipping, masking, etc.);
+        * 'mode' - the mode of the distribution of the "good" pixels;
+        * 'median' - the median of the distribution of the "good" pixels;
+        * 'midpt' - estimate of the median of the distribution of the "good"
+          pixels based on an algorithm similar to IRAF's `imagestats` task
+          (``CDF(midpt)=1/2``).
+
+        .. note::
+            The midpoint and mode are computed in two passes through the
+            image. In the first pass the standard deviation of the pixels
+            is calculated and used with the *binwidth* parameter to compute
+            the resolution of the data histogram. The midpoint is estimated
+            by integrating the histogram and computing by interpolation
+            the data value at which exactly half the pixels are below that
+            data value and half are above it. The mode is computed by
+            locating the maximum of the data histogram and fitting the peak
+            by parabolic interpolation.
+
     maxiter : int
         This parameter controls the maximum number of iterations
         to perform when computing the statistics used to compute the
@@ -375,6 +418,20 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
         This parameters sets the sigma level for the rejection applied
         during each iteration of statistics computations for the
         row-by-row corrections.
+
+    lower : float, None (Default = None)
+        Lower limit of usable pixel values for computing the background.
+        This value should be specified in the units of the input image(s).
+
+    upper : float, None (Default = None)
+        Upper limit of usable pixel values for computing the background.
+        This value should be specified in the units of the input image(s).
+
+    binwidth : float (Default = 0.1)
+        Histogram's bin width, in sigma units, used to sample the
+        distribution of pixel brightness values in order to compute the
+        background statistics. This parameter is aplicable *only* to *stat*
+        parameter values of `'mode'` or `'midpt'`.
 
     clobber : bool
         Specify whether or not to 'clobber' (delete then replace)
@@ -427,6 +484,19 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
         .. note::
             DQ masks (if used), *will be* combined with user masks specified
             in the `mask1` and `mask2` parameters (if any).
+
+    rpt_clean : int
+        An integer indicating how many *additional* times stripe cleaning
+        should be performed on the input image. Default = 0.
+
+    atol : float, None
+        The threshold for maximum absolute value of bias stripe correction
+        below which repeated cleanings can stop. When `atol` is `None`
+        cleaning will be repeated `rpt_clean` number of times.
+        Default = 0.01 [e].
+
+    verbose : bool
+        Print informational messages. Default = True.
 
     """
     flist = parseinput.parseinput(input)[0]
@@ -519,13 +589,18 @@ def clean(input, suffix, maxiter=15, sigrej=2.0, clobber=False,
                              "or not specified together.")
 
         maskdata = _read_mask(maskfile1, maskfile2)
-        perform_correction(image, output, maxiter=maxiter, sigrej=sigrej,
-                           clobber=clobber, mask=maskdata, dqbits=dqbits)
+        perform_correction(image, output, stat=stat, maxiter=maxiter,
+                           sigrej=sigrej, lower=lower, upper=upper,
+                           binwidth=binwidth, mask=maskdata, dqbits=dqbits,
+                           rpt_clean=rpt_clean, atol=atol,
+                           clobber=clobber, verbose=verbose)
         LOG.info(output + ' created')
 
 
-def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
-                       mask=None, dqbits=None):
+def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
+                       lower=None, upper=None, binwidth=0.3,
+                       mask=None, dqbits=None,
+                       rpt_clean=0, atol=0.01, clobber=False, verbose=True):
     """
     Clean each input image.
 
@@ -547,8 +622,20 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
         Data quality bits to be considered as "good" (or "bad").
         See :func:`clean` for more details.
 
-    """
+    rpt_clean : int
+        An integer indicating how many *additional* times stripe cleaning
+        should be performed on the input image. Default = 0.
 
+    atol : float, None
+        The threshold for maximum absolute value of bias stripe correction
+        below which repeated cleanings can stop. When `atol` is `None`
+        cleaning will be repeated `rpt_clean` number of times.
+        Default = 0.01 [e].
+
+    verbose : bool
+        Print informational messages. Default = True.
+
+    """
     # construct the frame to be cleaned, including the
     # associated data stuctures needed for cleaning
     frame = StripeArray(image)
@@ -557,33 +644,61 @@ def perform_correction(image, output, maxiter=15, sigrej=2.0, clobber=False,
     mask = _mergeUserMaskAndDQ(frame.dq, mask, dqbits)
 
     # Do the stripe cleaning
-    clean_streak(frame, maxiter=maxiter, sigrej=sigrej, mask=mask)
+    Success, NUpdRows, NMaxIter, Bkgrnd, STDDEVCorr, MaxCorr, Nrpt = clean_streak(
+        frame, stat=stat, maxiter=maxiter, sigrej=sigrej,
+        lower=lower, upper=upper, binwidth=binwidth, mask=mask,
+        rpt_clean=rpt_clean, atol=atol, verbose=verbose
+    )
+
+    if Success:
+        if verbose:
+            LOG.info('perform_correction - =====  Overall statistics for de-stripe corrections:  =====')
+
+        if (STDDEVCorr > 1.5*0.9):
+            LOG.warn('perform_correction - STDDEV of applied de-stripe '
+                     'corrections ({:.3g}) exceeds\nknown bias striping '
+                     'STDDEV of 0.9e (see ISR ACS 2011-05) more than 1.5 times.'
+                     .format(STDDEVCorr))
+
+        elif verbose:
+            LOG.info('perform_correction - STDDEV of applied de-stripe '
+                     'corrections {:.3g}.'.format(STDDEVCorr))
+
+        if verbose:
+            LOG.info('perform_correction - Estimated background: {:.5g}.'.format(Bkgrnd))
+            LOG.info('perform_correction - Maximum applied correction: {:.3g}.'.format(MaxCorr))
+            LOG.info('perform_correction - Effective number of clipping iterations: {}.'.format(NMaxIter))
+            LOG.info('perform_correction - Effective number of additional (repeated) cleanings: {}.'.format(Nrpt))
+            LOG.info('perform_correction - Total number of corrected rows: {}.'.format(NUpdRows))
 
     frame.write_corrected(output, clobber=clobber)
 
 
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
-    dqbits = interpret_bits_value(dqbits)
+    dqbits = bitmask.interpret_bits_value(dqbits)
     if dqbits is None:
-        return mask
+        if mask is None:
+            return None
+        else:
+            return mask.copy()
 
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
 
-    dqmask = buildMask(dq, dqbits)
-
+    dqmask = bitmask.bitmask2mask(bitmask=dq, ignore_bits=dqbits,
+                                  good_mask_value=1, dtype=np.uint8)
     if mask is None:
         return dqmask
 
     # merge user mask with DQ mask:
-    mask *= dqmask
-    # alternatively:
-    # mask = np.logical_and(mask, dqmask).astype(np.uint8)
+    dqmask[mask != 0] = 1
 
     return mask
 
 
-def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
+def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
+                 lower=None, upper=None, binwidth=0.3, mask=None,
+                 rpt_clean=0, atol=0.01, verbose=True):
     """
     Apply destriping algorithm to input array.
 
@@ -592,48 +707,283 @@ def clean_streak(image, maxiter=15, sigrej=2.0, mask=None):
     image : `StripeArray` object
         Arrays are modifed in-place.
 
+    stat : str
+        Statistics for background computations (see :py:func:`clean` for more details)
+
     mask : `numpy.ndarray`
         Mask array. Pixels with zero values are masked out.
 
     maxiter, sigrej : see `clean`
 
+    rpt_clean : int
+        An integer indicating how many *additional* times stripe cleaning
+        should be performed on the input image. Default = 0.
+
+    atol : float, None
+        The threshold for maximum absolute value of bias stripe correction
+        below which repeated cleanings can stop. When `atol` is `None`
+        cleaning will be repeated `rpt_clean` number of times.
+        Default = 0.01 [e].
+
+    verbose : bool
+        Print informational messages. Default = True.
+
+    Returns
+    -------
+    Success : bool
+        Indicates successful execution.
+
+    NUpdRows : int
+        Number of updated rows in the image.
+
+    NMaxIter : int
+        Maximum number of clipping iterations performed on image rows.
+
+    Bkgrnd, STDDEVCorr, MaxCorr : float
+        Background, standard deviation of corrections and maximum correction
+        applied to the non-flat-field-corrected (i.e., RAW) image rows.
+
+    Nrpt : int
+        Number of *additional* (performed *after* initial run) cleanings.
+
     """
     if mask is not None and image.science.shape != mask.shape:
-        raise ValueError('Mask shape does not match science data')
+        raise ValueError('Mask shape does not match science data shape')
 
-    # create the array to hold the stripe amplitudes
-    corr = np.empty(image.science.shape[0])
+    Nrpt = 0
+    warn_maxiter = False
+    NUpdRows = 0
+    NMaxIter = 0
+    STDDEVCorr = 0.0
+    MaxCorr = 0.0
+    wmean = 0.0
 
-    # loop over rows to fit the stripe amplitude
-    for i in range(image.science.shape[0]):
-        if mask is not None:
-            mask_arr = mask[i]
-        else:
-            mask_arr = None
+    stat = stat.lower().strip()
+    if stat not in ['pmode1', 'pmode2', 'mean', 'mode', 'median', 'midpt']:
+        raise ValueError("Unsupported value for 'stat'.")
 
-        # row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
-        SMean, SSig, SMedian, SMask = djs_iterstat(
-            image.science[i], MaxIter=maxiter, SigRej=sigrej, Mask=mask_arr,
-            lineno=i)
+    # array to hold the stripe amplitudes
+    corr = np.empty(image.science.shape[0], dtype=np.float64)
 
+    # array to hold cumulative stripe amplitudes and latest row npix:
+    cumcorr = np.zeros(image.science.shape[0], dtype=np.float64)
+    cnpix = np.zeros(image.science.shape[0], dtype=np.int)
+
+    # other arrays
+    corr_scale = np.empty(image.science.shape[0], dtype=np.float64)
+    npix = np.empty(image.science.shape[0], dtype=np.int)
+    sigcorr2 = np.zeros(image.science.shape[0], dtype=np.float64)
+    updrows = np.zeros(image.science.shape[0], dtype=np.int)
+
+    # for speed-up and to reduce rounding errors in ERR computations,
+    # keep a copy of the squared error array:
+    imerr2 = image.err**2
+
+    # arrays for detecting oscillatory behaviour:
+    nonconvi0 = np.arange(image.science.shape[0])
+    corr0 = np.zeros(image.science.shape[0], dtype=np.float64)
+
+    if stat == 'pmode1':
         # SExtractor-esque central value statistic; slightly sturdier against
         # skewness of pixel histogram due to faint source flux
-        corr[i] = 2.5 * SMedian - 1.5 * SMean
+        def getcorr(): return (2.5 * SMedian - 1.5 * SMean)
 
-    # preserve the original mean level of the image
-    corr -= np.average(corr)
+    elif stat == 'pmode2':
+        # "Original Pearson"-ian estimate for mode:
+        def getcorr(): return (3.0 * SMedian - 2.0 * SMean)
 
-    # apply the correction row-by-row
-    for i in range(image.science.shape[0]):
-        # stripe is constant along the row, before flatfielding;
-        # afterwards it has the shape of the inverse flatfield
-        truecorr = corr[i] * image.invflat[i] / np.average(image.invflat[i])
+    elif stat == 'mean':
+        def getcorr(): return (SMean)
 
-        # correct the SCI extension
-        image.science[i] -= truecorr
+    elif stat == 'median':
+        def getcorr(): return (SMedian)
 
-        # correct the ERR extension
-        image.err[i] = np.sqrt(np.abs(image.err[i]**2 - truecorr))
+    elif stat == 'mode':
+        def getcorr():
+            imstat = ImageStats(image.science[i][BMask], 'mode',
+                                lower=lower, upper=upper, nclip=0)
+            assert(imstat.npix == NPix)
+            return (imstat.mode)
+
+    elif stat == 'midpt':
+        def getcorr():
+            imstat = ImageStats(image.science[i][BMask], 'midpt',
+                                lower=lower, upper=upper, nclip=0)
+            assert(imstat.npix == NPix)
+            return (imstat.midpt)
+
+    nmax_rpt = 1 if rpt_clean is None else max(1, rpt_clean+1)
+
+    for rpt in xrange(nmax_rpt):
+        Nrpt += 1
+
+        if verbose:
+            if Nrpt <= 1:
+                if nmax_rpt > 1:
+                    LOG.info("clean_streak - Performing initial image bias de-stripe:")
+                else:
+                    LOG.info("clean_streak - Performing image bias de-stripe:")
+            else:
+                LOG.info("clean_streak - Performing repeated image bias de-stripe #{}:".format(Nrpt-1))
+
+        # reset accumulators and arrays:
+        corr[:] = 0.0
+        corr_scale[:] = 0.0
+        npix[:] = 0
+
+        tcorr = 0.0
+        tnpix = 0
+        tnpix2 = 0
+        NMaxIter = 0
+
+        # loop over rows to fit the stripe amplitude
+        mask_arr = None
+        for i in xrange(image.science.shape[0]):
+            if mask is not None:
+                mask_arr = mask[i]
+
+            # row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
+            SMean, SSig, SMedian, NPix, NIter, BMask = djs_iterstat(
+                image.science[i], MaxIter=maxiter, SigRej=sigrej,
+                Min=lower, Max=upper, Mask=mask_arr, lineno=i+1
+            )
+
+            if NPix > 0:
+                corr[i] = getcorr()
+                npix[i] = NPix
+                corr_scale[i] = 1.0 / np.average(image.invflat[i][BMask])
+                sigcorr2[i] = corr_scale[i]**2 * \
+                    np.sum((image.err[i][BMask])**2)/NPix**2
+                cnpix[i] = NPix
+                tnpix += NPix
+                tnpix2 += NPix*NPix
+                tcorr += corr[i] * NPix
+
+            if NIter > NMaxIter:
+                NMaxIter = NIter
+
+        if tnpix <= 0:
+            LOG.warn('clean_streak - No good data points; cannot de-stripe.')
+            return False, 0, 0, 0.0, 0.0, 0
+
+        if NMaxIter >= maxiter:
+            warn_maxiter = True
+
+        # require that bias stripe corrections have zero mean:
+        # 1. compute weighted background of the flat-fielded image:
+        wmean = tcorr / tnpix
+        Bkgrnd = wmean
+        # 2. estimate corrections:
+        corr[npix > 0] -= wmean
+
+        # convert corrections to the "raw" space:
+        corr *= corr_scale
+
+        # weighted mean and max value for current corrections
+        # to the *RAW* image:
+        trim_npix = npix[npix > 0]
+        trim_corr = corr[npix > 0]
+        cwmean = np.sum(trim_npix * trim_corr) / tnpix
+        current_max_corr = np.amax(np.abs(trim_corr - cwmean))
+        wvar = np.sum(trim_npix * (trim_corr - cwmean)**2) / tnpix
+        uwvar = wvar / (1.0 - float(tnpix2)/float(tnpix)**2)
+        STDDEVCorr = np.sqrt(uwvar)
+
+        # keep track of total corrections:
+        cumcorr += corr
+
+        # apply corrections row-by-row
+        for i in xrange(image.science.shape[0]):
+            if npix[i] < 1:
+                continue
+            updrows[i] = 1
+
+            ffdark = (image.darktime * image.dark[i] +
+                      image.flashdur * image.flash[i]) * image.invflat[i]
+            t1 = np.maximum(image.science[i] + ffdark, 0.0)
+
+            # stripe is constant along the row, before flatfielding;
+            # afterwards it has the shape of the inverse flatfield
+            truecorr = corr[i] * image.invflat[i]
+            #truecorr_sig2 = sigcorr2[i] * image.invflat[i]**2 # DEBUG
+
+            # correct the SCI extension
+            image.science[i] -= truecorr
+
+            t2 = np.maximum(image.science[i] + ffdark, 0.0)
+
+            T = (t1 - t2) * image.invflat[i]
+
+            # correct the ERR extension
+            # NOTE: np.abs() in the err array recomputation is used for safety only
+            #       and, in principle, assuming no errors have been made in
+            #       the derivation of the formula, np.abs() should not be necessary.
+            imerr2[i] -= T
+            image.err[i] = np.sqrt(np.abs(imerr2[i]))
+            # NOTE: for debugging purposes, one may want to uncomment next line:
+            #assert( np.all(imerr2 >= 0.0))
+
+        if atol is not None:
+            if current_max_corr < atol:
+                break
+
+            # detect oscilatory non-convergence:
+            nonconvi = np.nonzero(np.abs(corr)>atol)[0]
+            nonconvi_int = np.intersect1d(nonconvi, nonconvi0)
+            if nonconvi.shape[0] == nonconvi0.shape[0] and \
+               nonconvi.shape[0] == nonconvi_int.shape[0] and \
+               np.all(corr0[nonconvi]*corr[nonconvi] < 0.0) and Nrpt > 1:
+                LOG.warn("clean_streak - Repeat bias stripe cleaning\n"
+                         "process appears to be oscillatory for {:d} image "
+                         "rows.\nTry to adjust 'sigrej', 'maxiter', and/or "
+                         "'dqbits' parameters.\n"
+                         "In addition,  consider using masks or adjust "
+                         "existing masks.".format(nonconvi.shape[0]))
+                break
+
+            nonconvi0 = nonconvi.copy()
+            corr0 = corr.copy()
+
+        if verbose:
+            if Nrpt <= 1:
+                LOG.info("clean_streak - Image bias de-stripe: Done.")
+            else:
+                LOG.info("clean_streak - Repeated (#{}) image bias de-stripe: Done.".format(Nrpt-1))
+
+    if verbose and Nrpt > 1:
+        LOG.info('clean_streak - =====  Repeated de-stripe "residual"  estimates:  =====')
+        LOG.info('clean_streak - STDDEV of the last applied de-stripe '
+                 'corrections {:.3g}'.format(STDDEVCorr))
+        LOG.info('clean_streak - Maximum of the last applied correction: {:.3g}.'
+                 .format(current_max_corr))
+
+    # add (in quadratures) an error term associated with the accuracy of
+    # bias stripe correction:
+    truecorr_sig2 = ((sigcorr2 * (image.invflat**2).T).T).astype(image.err.dtype)
+
+    # update the ERR extension
+    image.err[:,:] = np.sqrt(np.abs(imerr2 + truecorr_sig2))
+
+    if warn_maxiter:
+        LOG.warn('clean_streak - Maximum number of clipping iterations '
+                 'specified by the user ({}) has been reached.'.format(maxiter))
+
+    # weighted mean, sample variance, and max value for
+    # total (cummulative) corrections to the *RAW* image:
+    trim_cnpix = cnpix[cnpix > 0]
+    trim_cumcorr = cumcorr[cnpix > 0]
+    tcnpix = np.sum(trim_cnpix)
+    tcnpix2 = np.sum(trim_cnpix**2)
+    cwmean = np.sum(trim_cnpix * trim_cumcorr) / tcnpix
+    trim_cumcorr -= cwmean
+    wvar = np.sum(trim_cnpix * trim_cumcorr**2) / tcnpix
+    uwvar = wvar / (1.0 - float(tcnpix2)/float(tcnpix)**2)
+    STDDEVCorr = np.sqrt(uwvar)
+    MaxCorr = np.amax(np.abs(trim_cumcorr))
+
+    NUpdRows = np.sum(updrows)
+
+    return True, NUpdRows, NMaxIter, Bkgrnd, STDDEVCorr, MaxCorr, Nrpt-1
 
 
 def _write_row_number(lineno, offset=1, pad=1):
@@ -642,8 +992,8 @@ def _write_row_number(lineno, offset=1, pad=1):
     return (pad*' ' + '(row #{:d})'.format(lineno+offset))
 
 
-def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
-                 Mask=None, lineno=None):
+def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
+                 Max=None, Min=None, Mask=None, lineno=None):
     """
     Iterative sigma-clipping.
 
@@ -667,27 +1017,30 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
 
     Returns
     -------
-    FMean, FSig, FMedian : float
+    FMean, FSig, FMedian, NPix : float
         Mean, sigma, and median of final result.
 
-    SaveMask : `numpy.ndarray`
-        Image mask from the final iteration.
+    NIter : int
+        Number of performed clipping iterations
+
+    BMask : `numpy.ndarray`
+        Logical image mask from the final iteration.
 
     """
     NGood    = InputArr.size
     ArrShape = InputArr.shape
     if NGood == 0:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - No data points given' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
     if NGood == 1:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - Only one data point; cannot compute stats' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
     if np.unique(InputArr).size == 1:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - Only one value in data; cannot compute stats' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
 
     # Determine Max and Min
     if Max is None:
@@ -698,6 +1051,8 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     # Use all pixels if no mask is provided
     if Mask is None:
         Mask = np.ones(ArrShape, dtype=np.byte)
+    else:
+        Mask = Mask.copy()
 
     # Reject those above Max and those below Min
     Mask[InputArr > Max] = 0
@@ -710,34 +1065,42 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0, Max=None, Min=None,
     Iter  =  0
     NGood = np.sum(Mask)
     if NGood < 2:
-        imrow =  _write_row_number(lineno=lineno, offset=1, pad=1)
+        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - No good data points; cannot compute stats' + imrow)
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0, None
+
+    SaveMask = Mask.copy()
+    if Iter >= MaxIter: # to support MaxIter=0
+        NLast = NGood
 
     while (Iter < MaxIter) and (NLast != NGood) and (NGood >= 2):
         LoVal = FMean - SigRej * FSig
         HiVal = FMean + SigRej * FSig
-        NLast = NGood
 
         Mask[InputArr < LoVal] = 0
         Mask[InputArr > HiVal] = 0
-        NGood = np.sum(Mask)
+        NLast = NGood
+        npix = np.sum(Mask)
 
-        if NGood >= 2:
-            FMean = np.sum(1.0 * InputArr * Mask) / NGood
+        if npix >= 2:
+            FMean = np.sum(1.0 * InputArr * Mask) / npix
             FSig  = np.sqrt(np.sum(
-                (1.0 * InputArr - FMean)**2 * Mask) / (NGood - 1))
+                (1.0 * InputArr - FMean)**2 * Mask) / (npix - 1))
+            SaveMask = Mask.copy() # last mask used for computation of mean
+            NGood = npix
+            Iter += 1
+        else:
+            break
 
-        SaveMask = Mask.copy()
+    logical_mask = SaveMask.astype(np.bool)
 
-        Iter += 1
-
-    if np.sum(SaveMask) > 2:
-        FMedian = np.median(InputArr[SaveMask == 1])
+    if NLast > 1:
+        FMedian = np.median(InputArr[logical_mask])
+        NLast = NGood
     else:
         FMedian = FMean
 
-    return FMean, FSig, FMedian, SaveMask
+    return FMean, FSig, FMedian, NLast, Iter, logical_mask
 
 
 #-------------------------#
@@ -759,13 +1122,21 @@ def run(configobj=None):
 
     """
     clean(configobj['input'],
-          configobj['suffix'],
+          suffix=configobj['suffix'],
+          stat=configobj['stat'],
+          maxiter=configobj['maxiter'],
+          sigrej=configobj['sigrej'],
+          lower=configobj['lower'],
+          upper=configobj['upper'],
+          binwidth=configobj['binwidth'],
           mask1=configobj['mask1'],
           mask2=configobj['mask2'],
           dqbits=configobj['dqbits'],
-          maxiter=configobj['maxiter'],
-          sigrej=configobj['sigrej'],
-          clobber=configobj['clobber'])
+          rpt_clean=configobj['rpt_clean'],
+          atol=configobj['atol'],
+          cte_correct=configobj['cte_correct'],
+          clobber=configobj['clobber'],
+          verbose=configobj['verbose'])
 
 
 #-----------------------------#
@@ -789,7 +1160,16 @@ def main():
     parser.add_argument(
         'sigrej', nargs='?', type=float, default=2.0, help='Rejection sigma')
     parser.add_argument(
-        '-c', '--clobber', action="store_true", help='Clobber output')
+        '--stat', type=str, default='pmode1', help='Background statistics')
+    parser.add_argument(
+        '--lower', nargs='?', type=float, default=None,
+        help='Lower limit for "good" pixels.')
+    parser.add_argument(
+        '--upper', nargs='?', type=float, default=None,
+        help='Upper limit for "good" pixels.')
+    parser.add_argument(
+        '--binwidth', type=float, default=0.1,
+        help='Bin width for distribution sampling.')
     parser.add_argument(
         '--mask1', nargs=1, type=str, default=None,
         help='Mask image for [SCI,1]')
@@ -799,6 +1179,16 @@ def main():
     parser.add_argument(
         '--dqbits', nargs='?', type=str, default=None,
         help='DQ bits to be considered "good".')
+    parser.add_argument(
+        '--rpt_clean', type=int, default=0,
+        help='Number of *repeated* bias de-stripes to perform.')
+    parser.add_argument(
+        '--atol', nargs='?', type=float, default=0.01,
+        help='Absolute tolerance to stop *repeated* bias de-stripes.')
+    parser.add_argument(
+        '-c', '--clobber', action="store_true", help='Clobber output')
+    parser.add_argument(
+        '-q', '--quiet', action="store_true", help='Do not print informational messages')
     parser.add_argument(
         '--version', action="version",
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
@@ -814,8 +1204,12 @@ def main():
     else:
         mask2 = args.mask2
 
-    clean(args.arg0, args.arg1, clobber=args.clobber, maxiter=args.maxiter,
-          sigrej=args.sigrej, mask1=mask1, mask2=mask2, dqbits=args.dqbits)
+    clean(args.arg0, args.arg1, stat=args.stat, maxiter=args.maxiter,
+          sigrej=args.sigrej, lower=args.lower, upper=args.upper,
+          binwidth=args.binwidth,
+          mask1=mask1, mask2=mask2, dqbits=args.dqbits,
+          rpt_clean=args.rpt_clean, atol=args.atol,
+          clobber=args.clobber, verbose=not args.quiet)
 
 
 if __name__ == '__main__':
