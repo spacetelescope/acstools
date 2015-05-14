@@ -97,6 +97,8 @@ References
 #    * 2013/04/01 PLL fixed indexing bug in Ticket #992. And #994.
 ####################
 
+from __future__ import absolute_import, division, print_function
+
 # STDLIB
 import os
 import shutil
@@ -113,7 +115,7 @@ except:
     teal = None
 
 # Local modules
-import PixCte_FixY as pcfy # C extension
+from . import PixCte_FixY as pcfy # C extension
 
 
 __taskname__ = "PixCteCorr"
@@ -246,7 +248,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     # Store in same path as input.
     outPath = os.path.dirname( os.path.abspath(inFits) ) + os.sep
     rootname = fits.getval(inFits, 'ROOTNAME')
-    print os.linesep, 'Performing pixel-based CTE correction on', rootname
+    print(os.linesep, 'Performing pixel-based CTE correction on', rootname)
     rootname = outPath + rootname
 
     # Construct output filename
@@ -337,7 +339,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
-    print 'Performing CTE correction for science extension 1.'
+    print('Performing CTE correction for science extension 1.')
 
     t1 = time.time()
     cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, oversub_thresh,
@@ -345,7 +347,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
                            chg_open_lt)
     t2 = time.time()
 
-    print 'FixYCte took %f seconds for science extension 1.' % (t2-t1)
+    print('FixYCte took %f seconds for science extension 1.' % (t2-t1))
 
     # add noise back in
     findata = cordata + nsedata
@@ -385,7 +387,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
-    print 'Performing CTE correction for science extension 4.'
+    print('Performing CTE correction for science extension 4.')
 
     t1 = time.time()
     cordata = pcfy.FixYCte(sigdata, sim_nit, shft_nit, oversub_thresh,
@@ -393,7 +395,7 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
                            chg_open_lt)
     t2 = time.time()
 
-    print 'FixYCte took %f seconds for science extension 4.' % (t2-t1)
+    print('FixYCte took %f seconds for science extension 4.' % (t2-t1))
 
     # add noise back in
     findata = cordata + nsedata
@@ -422,11 +424,11 @@ def YCte(inFits, outFits='', read_noise=None, noise_model=None,
 
     # Close output file
     pf_out.close()
-    print os.linesep, outFits, 'written'
+    print(os.linesep, outFits, 'written')
 
     # Stop timer
     timeEnd = time.time()
-    print os.linesep, 'Run time:', timeEnd - timeBeg, 'secs'
+    print(os.linesep, 'Run time:', timeEnd - timeBeg, 'secs')
 
 
 #--------------------------
@@ -490,7 +492,7 @@ def _PixCteParams(fitsTable, expstart):
     # Resolve path to PCTEFILE
     refFile = _ResolveRefFile(fitsTable)
     if not os.path.isfile(refFile):
-        raise IOError, 'PCTEFILE not found: %s' % refFile
+        raise IOError('PCTEFILE not found: %s' % refFile)
 
     # Open FITS table
     pf_ref = fits.open(refFile)
@@ -988,14 +990,14 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
-    print 'Performing CTE blurring for science extension 1.'
+    print('Performing CTE blurring for science extension 1.')
 
     t1 = time.time()
     cordata = _AddYCte(detector, scidata, cte_frac_arr, shft_nit,
                         levels, dpde_l, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
-    print 'AddYCte took %f seconds for science extension 1.' % (t2-t1)
+    print('AddYCte took %f seconds for science extension 1.' % (t2-t1))
 
     # convert blurred data back to DN
     if units == 'counts':
@@ -1034,14 +1036,14 @@ def AddYCte(infile, outfile, shift_nit=None, units=None):
     cte_frac_arr /= 2048.
 
     # call CTE blurring routine. data must be in units of electrons.
-    print 'Performing CTE blurring for science extension 2.'
+    print('Performing CTE blurring for science extension 2.')
 
     t1 = time.time()
     cordata = _AddYCte(detector, scidata, cte_frac_arr, shft_nit,
                         levels, dpde_l, chg_leak_lt, chg_open_lt)
     t2 = time.time()
 
-    print 'AddYCte took %f seconds for science extension 2.' % (t2-t1)
+    print('AddYCte took %f seconds for science extension 2.' % (t2-t1))
 
     # convert blurred data back to DN
     if units == 'counts':

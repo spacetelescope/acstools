@@ -7,19 +7,19 @@ module.
 
 
 """
-
+from __future__ import absolute_import
 from .version import *
 
-import acs_destripe
-import acs_destripe_plus
-import PixCteCorr
-import runastrodriz
-import calacs
-import acsccd
-import acscte
-import acs2d
-import acsrej
-import acssum
+from . import acs_destripe
+from . import acs_destripe_plus
+from . import PixCteCorr
+from . import runastrodriz
+from . import calacs
+from . import acsccd
+from . import acscte
+from . import acs2d
+from . import acsrej
+from . import acssum
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.

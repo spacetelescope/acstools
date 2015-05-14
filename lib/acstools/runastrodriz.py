@@ -51,11 +51,10 @@ W.J. Hack  26 Nov 2012: Option to write out headerlets added and debugged
 
 """
 # Import standard Python modules
-from __future__ import division # confidence high
+from __future__ import division, print_function # confidence high
 import glob
 import os
 import shutil
-import string
 import sys
 import time
 
@@ -95,7 +94,7 @@ def getHelpAsString():
 
 
 def help():
-    print getHelpAsString()
+    print(getHelpAsString())
 
 
 def run(configobj=None):
@@ -123,10 +122,10 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         # Make sure given filename is complete and exists...
         inFilename = fileutil.buildRootname(inFile,ext=['.fits'])
         if not os.path.exists(inFilename):
-            print "ERROR: Input file - %s - does not exist." % inFilename
+            print("ERROR: Input file - %s - does not exist." % inFilename)
             return
     except TypeError:
-        print "ERROR: Inappropriate input file."
+        print("ERROR: Inappropriate input file.")
         return
 
     #If newpath was specified, move all files to that directory for processing
@@ -148,14 +147,14 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         inFilename = _lowerAsn(inFilename)
         _new_asn = [inFilename]
         _asndict = asnutil.readASNTable(inFilename,None,prodonly=False)
-        _fname = fileutil.buildRootname(string.lower(_asndict['output']),ext=['_drz.fits'])
-        _cal_prodname = string.lower(_asndict['output'])
+        _cal_prodname = _asndict['output'].lower()
+        _fname = fileutil.buildRootname(_cal_prodname,ext=['_drz.fits'])
 
         # Retrieve the first member's rootname for possible use later
         _fimg = fits.open(inFilename)
         for name in _fimg[1].data.field('MEMNAME'):
             if name[-1] != '*':
-                _mname = string.lower(string.split(name,'\0',1)[0])
+                _mname = name.split('\0', 1)[0].lower()
                 break
         _fimg.close()
         del _fimg
@@ -163,7 +162,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
     else:
         # Check to see if input is a _RAW file
         # If it is, strip off the _raw.fits extension...
-        _indx = string.find(inFilename,'_raw')
+        _indx = inFilename.find('_raw')
         if _indx < 0: _indx = len(inFilename)
         # ... and build the CALXXX product rootname.
         _mname = fileutil.buildRootname(inFilename[:_indx])
@@ -174,7 +173,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
 
         if _mname == None:
             errorMsg = 'Could not find calibrated product!'
-            raise Exception,errorMsg
+            raise Exception(errorMsg)
 
     # Create trailer filenames based on ASN output filename or
     # on input name for single exposures
@@ -259,7 +258,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
             _trlmsg = _timestamp('astrodrizzle started ')
             _trlmsg = _trlmsg+ __trlmarker__
             _trlmsg = _trlmsg + '%s: Processing %s with astrodrizzle Version %s\n' % (time_str,_infile,_pyver)
-            print _trlmsg
+            print(_trlmsg)
 
             # Write out trailer comments to trailer file...
             ftmp = open(_tmptrl,'w')
@@ -273,20 +272,20 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
                 b = drizzlepac.astrodrizzle.AstroDrizzle(input=_infile,runfile=_drizfile,
                                             configobj='defaults',in_memory=inmemory,
                                             num_cores=num_cores, **pipeline_pars)
-            except Exception, errorobj:
+            except Exception as errorobj:
                 _appendTrlFile(_trlfile,_drizlog)
                 _appendTrlFile(_trlfile,_pyd_err)
                 _ftrl = open(_trlfile,'a')
                 _ftrl.write('ERROR: Could not complete astrodrizzle processing of %s.\n' % _infile)
-                _ftrl.write(str(sys.exc_type)+': ')
+                _ftrl.write(str(sys.exc_info()[0])+': ')
                 _ftrl.writelines(str(errorobj))
                 _ftrl.write('\n')
                 _ftrl.close()
-                print 'ERROR: Could not complete astrodrizzle processing of %s.' % _infile
-                raise Exception, str(errorobj)
+                print('ERROR: Could not complete astrodrizzle processing of %s.' % _infile)
+                raise Exception(str(errorobj))
 
             # Now, append comments created by PyDrizzle to CALXXX trailer file
-            print 'Updating trailer file %s with astrodrizzle comments.' % _trlfile
+            print('Updating trailer file %s with astrodrizzle comments.' % _trlfile)
             _appendTrlFile(_trlfile,_drizlog)
 
         # Save this for when astropy.io.fits can modify a file 'in-place'
@@ -312,7 +311,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         _trlmsg = _trlmsg + __trlmarker__
         _trlmsg = _trlmsg + '%s: astrodrizzle processing not requested for %s.\n' % (time_str,inFilename)
         _trlmsg = _trlmsg + '       astrodrizzle will not be run at this time.\n'
-        print _trlmsg
+        print(_trlmsg)
 
         # Write message out to temp file and append it to full trailer file
         ftmp = open(_tmptrl,'w')
@@ -341,7 +340,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         if len(flist) == 0:
             os.rmdir("OrIg_files")
         else:
-            print 'OrIg_files directory NOT removed as it still contained images...'
+            print('OrIg_files directory NOT removed as it still contained images...')
     if headerlets:
         # Generate headerlets for each updated FLT image
         hlet_msg = _timestamp("Writing Headerlets started")
@@ -369,7 +368,7 @@ def process(inFile,force=False,newpath=None, inmemory=False, num_cores=None,
         _removeWorkingDir(new_processing_dir)
 
     # Provide feedback to user
-    print _final_msg
+    print(_final_msg)
 
 def _lowerAsn(asnfile):
     """ Create a copy of the original asn file and change
@@ -385,7 +384,7 @@ def _lowerAsn(asnfile):
 
     # Open up the new copy and convert all MEMNAME's to lower-case
     fasn = fits.open(_new_asn,'update')
-    for i in xrange(len(fasn[1].data)):
+    for i in range(len(fasn[1].data)):
         fasn[1].data[i].setfield('MEMNAME',fasn[1].data[i].field('MEMNAME').lower())
     fasn.close()
 
@@ -479,10 +478,10 @@ def main():
 
     try:
         optlist, args = getopt.getopt(sys.argv[1:], 'bhfin:')
-    except getopt.error, e:
-        print str(e)
-        print __doc__
-        print "\t", __version__
+    except getopt.error as e:
+        print(str(e))
+        print(__doc__)
+        print("\t", __version__)
 
     # initialize default values
     help = 0
@@ -502,28 +501,28 @@ def main():
             inmemory = True
         if opt == '-n':
             if not value.isdigit():
-                print 'ERROR: num_cores value must be an integer!'
+                print('ERROR: num_cores value must be an integer!')
                 raise ValueError
             num_cores = int(value)
         if opt == '-b':
             # turn off writing headerlets
             headerlets=False
     if len(args) < 1:
-        print "syntax: runastrodriz.py [-fhibn] inputFilename [newpath]"
+        print("syntax: runastrodriz.py [-fhibn] inputFilename [newpath]")
         sys.exit()
     if len(args) > 1:
         newdir = args[-1]
     if (help):
-        print __doc__
-        print "\t", __version__+'('+__vdate__+')'
+        print(__doc__)
+        print("\t", __version__+'('+__vdate__+')')
     else:
         try:
             process(args[0],force=force,newpath=newdir, inmemory=inmemory,
                     num_cores=num_cores, headerlets=headerlets)
-        except Exception, errorobj:
-            print str(errorobj)
-            print "ERROR: Cannot run astrodrizzle on %s." % sys.argv[1]
-            raise Exception, str(errorobj)
+        except Exception as errorobj:
+            print(str(errorobj))
+            print("ERROR: Cannot run astrodrizzle on %s." % sys.argv[1])
+            raise Exception(str(errorobj))
 
     sys.exit()
 
