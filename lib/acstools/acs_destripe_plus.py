@@ -69,7 +69,7 @@ From command line::
 #           statistics modes. See Ticket #1183.
 
 
-from __future__ import division, print_function
+from __future__ import absolute_import, division, print_function
 
 # STDLIB
 import logging
