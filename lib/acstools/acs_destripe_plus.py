@@ -84,8 +84,7 @@ from astropy.time import Time
 import numpy as np
 
 # STSCI
-from stsci.tools import parseinput, teal
-from drizzlepac.util import interpret_bits_value
+from stsci.tools import parseinput, teal, bitmask
 
 # LOCAL
 from . import acs_destripe
@@ -412,7 +411,7 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
     acsccd.acsccd(inputfile)
 
     # modify user mask with DQ masks if requested
-    dqbits = interpret_bits_value(dqbits)
+    dqbits = bitmask.interpret_bits_value(dqbits)
     if dqbits is not None:
         # save 'tra' file in memory to trick the log file
         # not to save first acs2d log as this is done only
