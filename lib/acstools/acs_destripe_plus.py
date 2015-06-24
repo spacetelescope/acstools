@@ -364,8 +364,8 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
 
     # verify CALACS is comptible
     calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
-    calacs_ver = tuple(map(int, calacs_str.split('.')))
-    if calacs_ver < (8, 3, 1):
+    calacs_ver = [int(x) for x in calacs_str.split('.')]
+    if calacs_ver < [8, 3, 1]:
         raise ValueError('CALACS {0} is incomptible. '
                          'Must be 8.3.1 or later.'.format(calacs_str))
 
