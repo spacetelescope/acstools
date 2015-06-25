@@ -84,8 +84,7 @@ from astropy.time import Time
 import numpy as np
 
 # STSCI
-from stsci.tools import parseinput, teal
-from drizzlepac.util import interpret_bits_value
+from stsci.tools import parseinput, teal, bitmask
 
 # LOCAL
 from . import acs_destripe
@@ -365,8 +364,8 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
 
     # verify CALACS is comptible
     calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
-    calacs_ver = tuple(map(int, calacs_str.split('.')))
-    if calacs_ver < (8, 3, 1):
+    calacs_ver = [int(x) for x in calacs_str.split('.')]
+    if calacs_ver < [8, 3, 1]:
         raise ValueError('CALACS {0} is incomptible. '
                          'Must be 8.3.1 or later.'.format(calacs_str))
 
@@ -412,7 +411,7 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
     acsccd.acsccd(inputfile)
 
     # modify user mask with DQ masks if requested
-    dqbits = interpret_bits_value(dqbits)
+    dqbits = bitmask.interpret_bits_value(dqbits)
     if dqbits is not None:
         # save 'tra' file in memory to trick the log file
         # not to save first acs2d log as this is done only
