@@ -5,6 +5,20 @@ Remove horizontal stripes from ACS WFC post-SM4 data.
 For more information, see
 `Removal of Bias Striping Noise from Post-SM4 ACS WFC Images <http://www.stsci.edu/hst/acs/software/destripe/>`_.
 
+.. note::
+
+    * Does not work on RAW image.
+
+    * Uses the flatfield specified by the image header keyword PFLTFILE.
+      If keyword value is 'N/A', as is the case with biases and darks,
+      then unity flatfield is used.
+
+    * Uses post-flash image specified by the image header keyword FLSHFILE.
+      If keyword value is 'N/A', then dummy post-flash with zeroes is used.
+
+    * Uses the dark image specified by the image header keyword DARKFILE.
+      If keyword value is 'N/A', then dummy dark with zeroes is used.
+
 Examples
 --------
 
@@ -348,20 +362,6 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
           mask1=None, mask2=None, dqbits=None,
           rpt_clean=0, atol=0.01, clobber=False, verbose=True):
     """Remove horizontal stripes from ACS WFC post-SM4 data.
-
-    .. note::
-
-        Does not work on RAW image.
-
-        Uses the flatfield specified by the image header keyword PFLTFILE.
-        If keyword value is 'N/A', as is the case with biases and darks,
-        then unity flatfield is used.
-
-        Uses post-flash image specified by the image header keyword FLSHFILE.
-        If keyword value is 'N/A', then dummy post-flash with zeroes is used.
-
-        Uses the dark image specified by the image header keyword DARKFILE.
-        If keyword value is 'N/A', then dummy dark with zeroes is used.
 
     Parameters
     ----------

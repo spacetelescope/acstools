@@ -2,7 +2,11 @@
 The acscte module contains a function `acscte` that calls the ACSCTE executable.
 Use this function to facilitate batch runs of ACSCTE, or for the TEAL interface.
 
-.. warning:: Only use with WFC full-frame images.
+Only WFC full-frame and some 2K subarrays are currently supported. See
+`ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_
+for more details.
+
+.. note:: Calibration flags are controlled by primary header.
 
 Examples
 --------
@@ -48,10 +52,6 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     Expect input to be ``*_blv_tmp.fits``.
     Output is automatically named ``*_blc_tmp.fits``.
-
-    .. note:: Calibration flags are controlled by primary header.
-
-    .. warning:: Only use with WFC full-frame images.
 
     Parameters
     ----------
