@@ -26,4 +26,15 @@ from stsci.tools import teal
 teal.print_tasknames(__name__, os.path.dirname(__file__))
 
 # We can remove this in the future when people no longer care about PixCteCorr
-print("PixCteCorr is no longer supported. Please use acscte.")
+import warnings
+def custom_formatwarning(msg, *a):
+    # ignore everything except the message
+    return str(msg) + '\n'
+old_wformat = warnings.formatwarning
+warnings.formatwarning = custom_formatwarning
+with warnings.catch_warnings():
+    warnings.simplefilter('always')
+    warnings.warn('PixCteCorr is no longer supported. Please use acscte.',
+                  DeprecationWarning)
+warnings.formatwarning = old_wformat
+del old_wformat
