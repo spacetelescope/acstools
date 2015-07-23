@@ -3,7 +3,7 @@ calacs.e (HSTCAL)
 *****************
 
 A detailed description of this new and improved CALACS is available in
-`ACS Data Handbook v7.0 or later <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/acs_cover.html>`_.
+`ACS Data Handbook v7.0 or later <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_.
 If you have questions not answered in the documentation, please contact
 STScI Help Desk (``help[at]stsci.edu``).
 
@@ -253,8 +253,8 @@ Using ASN as input with ACSREJ:
 CALACS uses HSTIO that utilizes ``PIXVALUE`` keyword to represent a data
 extension with constant value. However, this is not a standard FITS behavior
 and is not recognized by PyFITS. Therefore, one should use
-`stsci.tools.stpyfits`, which is distributed as part of ``stsci_python``,
-instead of `pyfits` or `astropy.io.fits` when working with CALACS products.
+``stsci.tools.stpyfits``, which is distributed as part of ``stsci_python``,
+instead of ``pyfits`` or `astropy.io.fits` when working with CALACS products.
 To use ``stpyfits`` in Python::
 
     from stsci.tools import stpyfits as pyfits

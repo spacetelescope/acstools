@@ -5,14 +5,12 @@ These tasks include:
 Utility and library functions used by these tasks are also included in this
 module.
 
-
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from .version import *
 
 from . import acs_destripe
 from . import acs_destripe_plus
-from . import PixCteCorr
 from . import runastrodriz
 from . import calacs
 from . import acsccd
@@ -26,3 +24,6 @@ from . import acssum
 import os
 from stsci.tools import teal
 teal.print_tasknames(__name__, os.path.dirname(__file__))
+
+# We can remove this in the future when people no longer care about PixCteCorr
+print("PixCteCorr is no longer supported. Please use acscte.")

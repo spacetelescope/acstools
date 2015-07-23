@@ -2,6 +2,8 @@
 The acsccd module contains a function `acsccd` that calls the ACSCCD executable.
 Use this function to facilitate batch runs of ACSCCD, or for the TEAL interface.
 
+.. note:: Calibration flags are controlled by primary header.
+
 .. warning:: Do not use with SBC MAMA images.
 
 Examples
@@ -58,10 +60,6 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
 
     Expect input to be ``*_raw.fits``.
     Output is automatically named ``*_blv_tmp.fits``.
-
-    .. note:: Calibration flags are controlled by primary header.
-
-    .. warning:: Do not use with SBC MAMA images.
 
     Parameters
     ----------

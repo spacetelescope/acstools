@@ -10,6 +10,10 @@ Modules for Advanced Camera for Surveys (ACS).
 
 http://www.stsci.edu/hst/acs/
 
+.. note::
+
+    Standalone CTE correction (``PixCteCorr``) is no longer supported.
+    Please use :ref:`acstools-doc-acscte`.
 
 Contents:
 
@@ -23,7 +27,6 @@ Contents:
    acsrej
    acs2d
    acssum
-   pixctecorr
    acs_destripe
    acs_destripe_plus
 

@@ -1,3 +1,5 @@
+.. _acstools-doc-acscte:
+
 ******
 ACSCTE
 ******

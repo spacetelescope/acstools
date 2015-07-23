@@ -17,21 +17,22 @@ numpyinc = numpy.get_include()
 
 pkg = 'acstools'
 
-ext = [ distutils.core.Extension(
-    pkg + '.PixCte_FixY',
-    ['src/PixCte_FixY.c', 'src/PixCteCorr_funcs.c', 'src/FixYCte.c'],
-    include_dirs = [pythoninc,numpyinc] ) ]
+# Not used anymore, but kept commented to serve as template for future.
+#ext = [ distutils.core.Extension(
+#    pkg + '.PixCte_FixY',
+#    ['src/PixCte_FixY.c', 'src/PixCteCorr_funcs.c', 'src/FixYCte.c'],
+#    include_dirs = [pythoninc,numpyinc] ) ]
 
 setupargs = {
-    'version': '1.8.0',
+    'version': '1.9.0',
     'description': 'Python Tools for ACS Data',
-    'author': 'Jay Anderson, Matt Davis, Warren Hack, Norman Grogin, Pey Lian Lim, Sara Ogaz, Leornado Ubeda, Mihai Cara'
+    'author': 'Matt Davis, Warren Hack, Norman Grogin, Pey Lian Lim, Sara Ogaz, Leornado Ubeda, Mihai Cara'
     'author_email': 'help@stsci.edu',
     'license': 'http://www.stsci.edu/resources/software_hardware/pyraf/LICENSE',
     'data_files': [(pkg + '/pars', ['lib/acstools/pars/*']),
                    (pkg, ['LICENSE.txt'])],
     'scripts': ['lib/acstools/acs_destripe', 'lib/acstools/acs_destripe_plus', 'lib/acstools/runastrodriz'],
     'platforms': ['Linux', 'Solaris', 'Mac OS X', 'Win'],
-    'ext_modules': ext,
+    #'ext_modules': ext,
     'package_dir': {'acstools': 'lib/acstools'}
 }
