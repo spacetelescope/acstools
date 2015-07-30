@@ -25,16 +25,22 @@ import os
 from stsci.tools import teal
 teal.print_tasknames(__name__, os.path.dirname(__file__))
 
-# We can remove this in the future when people no longer care about PixCteCorr
-import warnings
-def custom_formatwarning(msg, *a):
-    # ignore everything except the message
-    return str(msg) + '\n'
-old_wformat = warnings.formatwarning
-warnings.formatwarning = custom_formatwarning
-with warnings.catch_warnings():
-    warnings.simplefilter('always')
-    warnings.warn('PixCteCorr is no longer supported. Please use acscte.',
-                  DeprecationWarning)
-warnings.formatwarning = old_wformat
-del old_wformat
+
+# This is like teal.print_tasknames() above but for local warnings.
+def print_deprecation_warnings():
+    import sys
+
+    # See if we can bail out early.
+    # We can't use the sys.ps1 check if in PyRAF since it changes sys.
+    if 'pyraf' not in sys.modules:
+        # sys.ps1 is only defined in interactive mode.
+        if not hasattr(sys, 'ps1'):
+            return  # leave here, we're in someone's script.
+
+    # We can remove this in the future when people no longer care about
+    # PixCteCorr.
+    print('PixCteCorr is no longer supported. Please use acscte.')
+
+
+# Comment this out if there are no warnings anymore.
+print_deprecation_warnings()
