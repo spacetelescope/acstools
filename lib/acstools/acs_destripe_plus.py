@@ -84,7 +84,9 @@ from astropy.time import Time
 import numpy as np
 
 # STSCI
-from stsci.tools import parseinput, teal, bitmask
+from stsci.tools import parseinput
+from stsci.tools import teal
+from stsci.tools import bitmask
 
 # LOCAL
 from . import acs_destripe
