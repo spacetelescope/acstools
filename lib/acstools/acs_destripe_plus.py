@@ -84,7 +84,9 @@ from astropy.time import Time
 import numpy as np
 
 # STSCI
-from stsci.tools import parseinput, teal, bitmask
+from stsci.tools import parseinput
+from stsci.tools import teal
+from stsci.tools import bitmask
 
 # LOCAL
 from . import acs_destripe
@@ -364,7 +366,10 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
 
     # verify CALACS is comptible
     calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
-    calacs_ver = [int(x) for x in calacs_str.split('.')]
+    try:
+        calacs_ver = [int(x) for x in calacs_str.split('.')]
+    except:
+        raise ValueError("Bad version: %s" % calacs_str)
     if calacs_ver < [8, 3, 1]:
         raise ValueError('CALACS {0} is incomptible. '
                          'Must be 8.3.1 or later.'.format(calacs_str))
