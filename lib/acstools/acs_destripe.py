@@ -61,7 +61,9 @@ import numpy as np
 from astropy.io import fits
 
 # STSCI
-from stsci.tools import parseinput, teal, bitmask
+from stsci.tools import parseinput
+from stsci.tools import teal
+from stsci.tools import bitmask
 from stsci.imagestats import ImageStats
 
 
