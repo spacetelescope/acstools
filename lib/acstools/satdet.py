@@ -952,3 +952,256 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
         mask_dq(filename, ext + 2, mask)
 
     return flat, mask
+
+
+############################## from decttest.py ################################
+
+import satdet
+import glob
+from multiprocessing import Lock, Process, Queue, current_process, Pool
+import multiprocessing
+import shutil
+from astropy.io import ascii
+
+
+def test(searchpattern, verbose=False, exten=[1, 4], on_frontier=False):
+    '''run satdet.dectsat on a set of images, serial method'''
+
+    files = glob.glob(searchpattern)
+
+    if verbose:
+        print 'found files using ' + searchpattern
+        print files
+
+    trail_files = []
+
+    for fil in files:
+        for ext in exten:
+            results = satdet.detsat(fil, ext)
+
+            if len(results) > 0:
+                if on_frontier:
+                    satdet.make_mask
+                if verbose:
+                    print 'Trail found on image ' + fil + ' ' + str(ext)
+                trail_files.append((fil, ext))
+
+            else:
+                if verbose:
+                    print 'No trail found on image ' + fil + ' ' + str(ext)
+
+    return trail_files
+
+
+def worker(info):
+    '''
+    worker for the pool multi processing method.
+    '''
+    fil, chip, change = info
+    #print 'working on: ' + fil + ' ' + str(chip)
+    result = satdet.detsat(fil, chip)
+
+    if type(result) is not list:
+        return "ERROR: returned value for file {} is not a list".format(
+            fil)
+
+    if len(result) > 1:
+        #print 'Found trail on: ' + fil
+        return (fil, chip, True)
+        # return "trail FOUND: {} was found in process {}".format(
+        #    fil, current_process().name)
+    else:
+        #print 'No trail on: ' + fil
+        return (fil, chip, False)
+        # return "trail NOT FOUND: {} was not found in process {}".format(
+        #    fil, current_process().name)
+
+
+def main(searchpattern, verbose=False, chips=[1, 4], processes=4,
+         savename='decttest_out.txt', on_frontier=False):
+    '''
+    Uses pool to control multiprocessing. somewhat simpler than using the
+    queue method
+
+    very useful: [a for a in out if a[2] == True]
+    '''
+    files = glob.glob(searchpattern)
+
+    if verbose:
+        print 'found files using ' + searchpattern
+        print files
+        print '\n#files: ', len(files)
+
+    # Create tuples mapping the chips to each file found
+    runs = []
+
+    for fil in files:
+        for chip in chips:
+            runs.append((fil, chip, on_frontier))
+
+    if verbose:
+        print 'runs:'
+        print runs
+        print len(runs)
+    # Create pool and map the run tuples to the worker function
+    pool = Pool(processes=processes)
+    #results = pool.map(worker, runs)
+    results = pool.map_async(worker, runs)
+    pool.close()
+    pool.join()
+    # print results.empty()
+
+    if verbose:
+        print results.successful()
+        print type(results)
+
+    out_dict = {}
+    outlist = []
+
+    for result in results.get():
+        if verbose:
+            print result
+#        if type(result) != tuple:
+#            if 'fail' in out_dict:
+#                out_dict['fail'].append(result)
+#            else:
+#                out_dict['fail'] = [result]
+#            continue
+        outlist.append((result[0], result[1], result[2]))
+
+#        key = 'filename'
+#        if key in out_dict:
+#            out_dict['filename'].append(result[0])
+#            out_dict['chip'].append(result[1])
+#            out_dict['trail'].append(result[2])
+#        else:
+#            out_dict['filename'] = [result[0]]
+#            out_dict['chip'] = [result[1]]
+#            out_dict['trail'] = [result[2]]
+
+    trail = [a for a in outlist if a[2] == True]
+
+    write_outlist(outlist, savename)
+    write_outlist(trail, savename.split('.txt')[0] + '_true.txt')
+
+#    with open(filename) as output:
+#        for element in trail:
+#            output.write(str(element) + '\n')
+
+    return outlist
+
+
+def write_outlist(outlist, filename, clobber=True):
+    '''Write the outlist from the main function
+    '''
+    if clobber:
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+
+    with open(filename, 'w') as fil:
+        for o in outlist:
+            fil.write(o[0] + ' ' + str(o[1]) + ' ' + str(o[2]) + '\n')
+
+
+def copy_using_data(txtname, target):
+    '''copy the file in the outlist to a target directory.
+    '''
+    data = ascii.read(txtname)
+
+    for fil in data['col1']:
+        shutil.copy2(fil, target)
+
+
+'''
+
+
+The following is multi processing, not threading.
+
+
+'''
+
+
+def worker_process(work_queue, done_queue, verbose=False):
+    '''
+    Test for mamangement worker
+    '''
+    for fil, chip in iter(work_queue.get, 'STOP'):
+        try:
+            if verbose:
+                print fil, chip
+                type(result)
+            result = satdet.detsat(fil, chip)
+            if len(result) > 1:
+                found = True
+            else:
+                found = False
+            done_queue.put((str(current_process().name), fil, chip, found))
+
+        except Exception, e:
+            done_queue.put('problem with ' + fil + str(type(e)))
+            if verbose:
+                print type(e)
+
+    return True
+
+
+def main_process(searchpattern, verbose=True, chips=[1, 4], workers=4):
+    '''
+    Experimenting with different kinds of multiprocessing. This one does not
+    use pooling explicitly, but is auto managed and everything is passed
+    with a work and done queue.
+    '''
+
+    files = glob.glob(searchpattern)
+
+    if verbose:
+        print 'found files using ' + searchpattern
+        print files
+        print len(files)
+
+    # implement working and done queue
+    # the work queue is for things that need to be done and is shared by all
+    # workers. When a worker finishes, its output is put into done queue
+    work_queue = Queue()
+    done_queue = Queue()
+    processes = []
+
+    for fil in files:
+        for chip in chips:
+            work_queue.put((fil, chip))
+
+    for w in xrange(workers):
+        p = Process(target=worker_process, args=(work_queue, done_queue),
+                    kwargs={'verbose': verbose})
+
+        p.start()
+        processes.append(p)
+        work_queue.put('STOP')
+
+    for p in processes:
+        p.join()
+
+    done_queue.put('STOP')
+    out_dict = {}
+
+    # return a dictionary of lists
+    for status in iter(done_queue.get, 'STOP'):
+        if type(status) != tuple:
+            if 'fail' in out_dict:
+                out_dict['fail'].append(status)
+            else:
+                out_dict['fail'] = [status]
+            continue
+        key = 'filename'
+        if key in out_dict:
+            out_dict['filename'].append(status[1])
+            out_dict['chip'].append(status[2])
+            out_dict['trail'].append(status[3])
+        else:
+            out_dict['filename'] = [status[1]]
+            out_dict['chip'] = [status[2]]
+            out_dict['trail'] = [status[3]]
+
+    return out_dict
