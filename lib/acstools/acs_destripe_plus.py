@@ -113,8 +113,8 @@ LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
 
-def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.0,
-                  lower=None, upper=None, binwidth=0.3,
+def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15,
+                  sigrej=2.0, lower=None, upper=None, binwidth=0.3,
                   scimask1=None, scimask2=None,
                   dqbits=None, rpt_clean=0, atol=0.01,
                   cte_correct=True, clobber=False, verbose=True):
@@ -322,7 +322,8 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
     n_mask2 = len(mlist2)
 
     if n_input == 0:
-        raise ValueError("No input file(s) provided or the file(s) do not exist")
+        raise ValueError(
+            'No input file(s) provided or the file(s) do not exist')
 
     if n_mask1 == 0:
         mlist1 = [None] * n_input
@@ -364,9 +365,11 @@ def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15, sigrej=2.
         raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
                          "or not specified together.")
 
-    ##if calacs_ver < [8, 3, 1]:
-    ##    raise ValueError('CALACS {0} is incomptible. '
-    ##                     'Must be 8.3.1 or later.'.format(calacs_str))
+    calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
+    calacs_ver = [int(x) for x in calacs_str.decode().split('.')]
+    if calacs_ver < [8, 3, 1]:
+        raise ValueError('CALACS {0} is incomptible. '
+                         'Must be 8.3.1 or later.'.format(calacs_str))
 
     # check date for post-SM4 and if 2K subarray or full frame
     is_sub2K = False
@@ -606,7 +609,8 @@ def main():
     parser.add_argument(
         '--clobber', action='store_true', help='Clobber output')
     parser.add_argument(
-        '-q', '--quiet', action="store_true", help='Do not print informational messages')
+        '-q', '--quiet', action="store_true",
+        help='Do not print informational messages')
     parser.add_argument(
         '--version', action='version',
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
@@ -624,7 +628,8 @@ def main():
 
     destripe_plus(options.arg0, suffix=options.suffix,
                   maxiter=options.maxiter, sigrej=options.sigrej,
-                  lower=options.lower, upper=options.upper, binwidth=options.binwidth,
+                  lower=options.lower, upper=options.upper,
+                  binwidth=options.binwidth,
                   scimask1=mask1, scimask2=mask2, dqbits=options.dqbits,
                   rpt_clean=options.rpt_clean, atol=options.atol,
                   cte_correct=not options.nocte, clobber=options.clobber,
