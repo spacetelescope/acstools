@@ -35,6 +35,10 @@ License:
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 '''
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -101,15 +105,15 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
         plot - will make plots of edge image, hough space transformation and
             rescalesd image.
 
-        verbose - will print a lot to the terminal, mostly for debugging.
+        verbose - will print(a lot to the terminal, mostly for debugging.
     '''
 
     # minor error checking
     # for now, only allow ACS images, but in theory it should work for any
     # instrument.
     if ((ext != 1) == (ext != 4)):
-        print 'select valid extension'
-        print 'Only ACS science extensions allowed'
+        print('select valid extension')
+        print('Only ACS science extensions allowed')
         return
 
     # get the data
@@ -119,8 +123,8 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
     # rescale the image
     p1, p2 = np.percentile(image, percentile)
     if verbose:
-        print 'p1, p2'
-        print p1, p2
+        print( 'p1, p2')
+        print(p1, p2)
 
     # there should always be some counts in the image, anything lower should
     # be set to one. Makes things nicer for finding edges.
@@ -167,7 +171,7 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
     # returned from the PHT
     if len(result) > 1:
         if verbose:
-            print 'length of result: ' + str(len(result))
+            print('length of result: ' + str(len(result)))
         # create lists for X and Y positions of lines and build points
         x0 = []
         y0 = []
@@ -187,14 +191,14 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
         topy = ymax - buf
 
         if verbose:
-            print 'max(x0), max(x1), max(y0), max(y1)'
-            print max(x0), max(x1), max(y0), max(y1)
-            print 'topx, topy'
-            print topx, topy
-            print 'min(x0), min(x1), min(y0), min(y1)'
-            print min(x0), min(x1), min(y0), min(y1)
-            print 'buf'
-            print buf
+            print( 'max(x0), max(x1), max(y0), max(y1)')
+            print( max(x0), max(x1), max(y0), max(y1))
+            print( 'topx, topy')
+            print( topx, topy)
+            print( 'min(x0), min(x1), min(y0), min(y1)')
+            print( min(x0), min(x1), min(y0), min(y1))
+            print( 'buf')
+            print( buf )
 
         # set up trail angle "tracking" arrays
         trail_angle = []
@@ -222,9 +226,9 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
             else:
                 truth.append(False)
         if verbose:
-            print round_angle
-            print trail_angle
-            print ang
+            print(round_angle)
+            print(trail_angle)
+            print(ang)
 
         # filter out the outliers
         counter = 0
@@ -236,7 +240,7 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
             counter += 1
 
         if verbose:
-            print trail_angle
+            print(trail_angle)
         # remake the point lists with things taken out
         x0 = []
         y0 = []
@@ -259,60 +263,60 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
         if ((min(y0) < buf) or (min(y1) < buf)) and ((max(y0) > topy) or (max(y1) > topy)):
             satellite = True
             if verbose:
-                print 'Top to Bottom'
+                print('Top to Bottom')
 
         # right to left
         if ((min(x0) < buf) or (min(x1) < buf)) and ((max(x0) > topx) or (max(x1) > topx)):
             satellite = True
             if verbose:
-                print 'Right to Left'
+                print('Right to Left')
 
         # bottom to left
         if ((min(x0) < buf) or (min(x1) < buf)) and ((min(y0) < buf) or (min(y1) < buf)) and (-1 > np.mean(trail_angle) > -89):
             satellite = True
             if verbose:
-                print 'Bottom to Left'
+                print('Bottom to Left')
 
         # top to left
         if ((min(x0) < buf) or (min(x1) < buf)) and ((max(y0) > topy) or (max(y1) > topy)) and (89 > np.mean(trail_angle) > 1):
             satellite = True
             if verbose:
-                print 'Top to Left'
+                print('Top to Left')
 
         # top to right
         if ((max(x0) > topx) or (max(x1) > topx)) and ((max(y0) > topy) or (max(y1) > topy)) and (-1 > np.mean(trail_angle) > -89):
             satellite = True
             if verbose:
-                print 'Top to Right'
+                print('Top to Right')
 
         # bottom to right
         if ((max(x0) > topx) or (max(x1) > topx)) and ((min(y0) < buf) or (min(y1) < buf)) and (89 > np.mean(trail_angle) > 1):
             satellite = True
             if verbose:
-                print 'Bottom to Right'
+                print('Bottom to Right')
 
         # if there is an unreasonable amount of points, it picked up garbage
         if len(result) > 300:
-            print 'Way too many segments results to be correct'
-            print len(result)
-            print 'Rejecting detection on ' + filename + ' , ' + str(ext)
+            print('Way too many segments results to be correct')
+            print(len(result))
+            print('Rejecting detection on ' + filename + ' , ' + str(ext))
             satellite = False
 
     if satellite:
         if verbose:
-            print 'We have a trail'
-            print 'End point list: '
-            print x0
-            print x1
-            print y0
-            print y1
-            print 'Trail angle list (not returned): '
-            print trail_angle
-            print ''
+            print('We have a trail')
+            print('End point list: ')
+            print(x0)
+            print(x1)
+            print(y0)
+            print(y1)
+            print('Trail angle list (not returned): ')
+            print(trail_angle)
+            print('')
 
         if plot:  # plotting could really be improved, but not a big deal
             if verbose:
-                print 'making a lot of plots'
+                print('making a lot of plots')
             # plot everything on one plot first
 #            plt.clf()
 #            fig, ax = plt.subplots(1, 3, num=1)
@@ -367,8 +371,8 @@ def detsat(filename, ext, sigma=2, low_thresh=.1, h_thresh=.5,
 
     else:  # length of result was too small
         if verbose:
-            print 'No trail for you!'
-            print 'segments found: ', len(result)
+            print('No trail for you!')
+            print('segments found: ', len(result))
 
         if plot:
             plt.figure(num=1)
@@ -414,7 +418,7 @@ def mask_dq(filename, ext, mask):
         mask - mask array where 0 is background and 1 is satellite.
     '''
     if ((ext != 3) == (ext != 6)):
-        print 'select valid extension'
+        print('select valid extension')
         return
 
     with fits.open(filename, mode='update') as hdulist:
@@ -569,7 +573,7 @@ def std(inputData, Zero=False):
     good = np.where(u2 <= 1.0)
     good = good[0]
     if len(good) < 3:
-        print "WARNING:  Distribution is too strange to compute standard deviation"
+        print("WARNING:  Distribution is too strange to compute standard deviation")
         sigma = -1.0
         return sigma
 
@@ -701,7 +705,7 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
     newrad = (math.pi * 2) - rad
     deg = math.degrees(rad)
 
-    print 'Rotation: ' + str(deg)
+    print('Rotation: ' + str(deg))
 
     #  rescale and rotate the image
     image = image / image.max()
@@ -743,9 +747,9 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
     z = z[0]
     # Make sure there is something in the first pass before trying to move on
     if len(z) < 1:
-        print 'First look at finding a profile failed...'
-        print 'Nothing found at ' + str(sigma) + ' from background!'
-        print 'Try adjusting perameters and trying again'
+        print('First look at finding a profile failed...')
+        print('Nothing found at ' + str(sigma) + ' from background!')
+        print('Try adjusting perameters and trying again')
         if plot:
             plt.figure(num=3)
             plt.clf()
@@ -799,7 +803,7 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
             # hit.
             if subr.shape[1] == 0:
                 first = False
-                print 'subr is 0 in first'
+                print('subr is 0 in first')
                 #print counter
                 centery = sy
                 nextx = sx
@@ -813,8 +817,8 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
             z = np.where(flat[-1] > mean + (sigma * stddev))
             z = z[0]
             if len(z) < 1:
-                print 'z is less than 1, no good profile found.'
-                print 'start moving left from starting point'
+                print('z is less than 1, no good profile found.')
+                print('start moving left from starting point')
                 #print counter
                 centery = sy
                 nextx = sx
@@ -858,8 +862,8 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
                 first = False
                 centery = sy
                 nextx = sx
-                print 'hit rotate edge'
-                print counter
+                print('hit rotate edge')
+                print(counter)
 
             if (highy > image.shape[0]) or (highx > image.shape[1]):
 #                plt.figure(num=10)
@@ -868,14 +872,14 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
                 first = False
                 centery = sy
                 nextx = sx
-                print 'hit image edge'
-                print counter
+                print('hit image edge')
+                print(counter)
 
         else:  # Not first, this is the pass the other way.
             subr = rotate[centery - sublen:centery + sublen, nextx - subwidth/2:nextx + subwidth/2]
             if subr.shape[1] == 0:
                 done = True
-                print '\nsubr is 0'
+                print('\nsubr is 0')
                 continue
             flat.append(np.median(subr, axis=1))
 
@@ -886,8 +890,8 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
             z = np.where(flat[-1] > mean + (sigma * stddev))
             z = z[0]
             if len(z) < 1:
-                print 'z is less than 1'
-                print subr.shape
+                print('z is less than 1')
+                print(subr.shape)
                 done = True
                 continue
 
@@ -923,16 +927,16 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
 
             if (nextx - subwidth) < 0:
                 done = True
-                print 'hit rotate edge'
+                print('hit rotate edge')
 
             if (highy > image.shape[0]) or (highx > image.shape[1]):
                 done = True
-                print 'hit edge'
+                print('hit edge')
 
         counter += 1
         # make sure it does not try to go infinetly
         if counter > 500:
-            print 'Too many loops, exiting'
+            print('Too many loops, exiting')
             done = True
 
     if plot:
@@ -956,7 +960,6 @@ def make_mask(filename, ext, result, sublen=75, subwidth=200, order=3,
 
 ############################## from decttest.py ################################
 
-import satdet
 import glob
 from multiprocessing import Lock, Process, Queue, current_process, Pool
 import multiprocessing
@@ -970,25 +973,25 @@ def test(searchpattern, verbose=False, exten=[1, 4], on_frontier=False):
     files = glob.glob(searchpattern)
 
     if verbose:
-        print 'found files using ' + searchpattern
-        print files
+        print('found files using ' + searchpattern)
+        print(files)
 
     trail_files = []
 
     for fil in files:
         for ext in exten:
-            results = satdet.detsat(fil, ext)
+            results = detsat(fil, ext)
 
             if len(results) > 0:
                 if on_frontier:
-                    satdet.make_mask
+                    make_mask
                 if verbose:
-                    print 'Trail found on image ' + fil + ' ' + str(ext)
+                    print('Trail found on image ' + fil + ' ' + str(ext))
                 trail_files.append((fil, ext))
 
             else:
                 if verbose:
-                    print 'No trail found on image ' + fil + ' ' + str(ext)
+                    print('No trail found on image ' + fil + ' ' + str(ext))
 
     return trail_files
 
@@ -999,7 +1002,7 @@ def worker(info):
     '''
     fil, chip, change = info
     #print 'working on: ' + fil + ' ' + str(chip)
-    result = satdet.detsat(fil, chip)
+    result = detsat(fil, chip)
 
     if type(result) is not list:
         return "ERROR: returned value for file {} is not a list".format(
@@ -1028,9 +1031,9 @@ def main(searchpattern, verbose=False, chips=[1, 4], processes=4,
     files = glob.glob(searchpattern)
 
     if verbose:
-        print 'found files using ' + searchpattern
-        print files
-        print '\n#files: ', len(files)
+        print('found files using ' + searchpattern)
+        print(files)
+        print('\n#files: ', len(files))
 
     # Create tuples mapping the chips to each file found
     runs = []
@@ -1040,27 +1043,27 @@ def main(searchpattern, verbose=False, chips=[1, 4], processes=4,
             runs.append((fil, chip, on_frontier))
 
     if verbose:
-        print 'runs:'
-        print runs
-        print len(runs)
+        print('runs:')
+        print(runs)
+        print(len(runs))
     # Create pool and map the run tuples to the worker function
     pool = Pool(processes=processes)
     #results = pool.map(worker, runs)
     results = pool.map_async(worker, runs)
     pool.close()
     pool.join()
-    # print results.empty()
+    # print(results.empty()
 
     if verbose:
-        print results.successful()
-        print type(results)
+        print(results.successful())
+        print(type(results))
 
     out_dict = {}
     outlist = []
 
     for result in results.get():
         if verbose:
-            print result
+            print(result)
 #        if type(result) != tuple:
 #            if 'fail' in out_dict:
 #                out_dict['fail'].append(result)
@@ -1130,19 +1133,19 @@ def worker_process(work_queue, done_queue, verbose=False):
     for fil, chip in iter(work_queue.get, 'STOP'):
         try:
             if verbose:
-                print fil, chip
+                print(fil, chip)
                 type(result)
-            result = satdet.detsat(fil, chip)
+            result = detsat(fil, chip)
             if len(result) > 1:
                 found = True
             else:
                 found = False
             done_queue.put((str(current_process().name), fil, chip, found))
 
-        except Exception, e:
+        except Exception as e:
             done_queue.put('problem with ' + fil + str(type(e)))
             if verbose:
-                print type(e)
+                print(type(e))
 
     return True
 
@@ -1157,9 +1160,9 @@ def main_process(searchpattern, verbose=True, chips=[1, 4], workers=4):
     files = glob.glob(searchpattern)
 
     if verbose:
-        print 'found files using ' + searchpattern
-        print files
-        print len(files)
+        print('found files using ' + searchpattern)
+        print(files)
+        print(len(files))
 
     # implement working and done queue
     # the work queue is for things that need to be done and is shared by all
