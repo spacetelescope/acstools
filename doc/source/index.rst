@@ -29,7 +29,7 @@ Contents:
    acssum
    acs_destripe
    acs_destripe_plus
-
+   satdet
 
 Indices and tables
 ==================
