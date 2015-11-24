@@ -110,10 +110,6 @@ Run time: 19.6621930599 s
 
 Combine the masks from above and update the corresponding DQ array of the
 associated image and extension:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 >>> final_mask = mask1 | mask2
 >>> update_dq('jc8m10syq_flc.fits', 6, final_mask, verbose=True)
