@@ -162,6 +162,7 @@ except ImportError:
                   AstropyUserWarning)
 
 __version__ = '0.3'
+__vdate__ = '07-Dec-2015'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask', 'update_dq']
 
@@ -267,6 +268,12 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
         # take out 90 degree things
         mask = round_angle % 90 != 0
+
+        if not np.any(mask):
+            if verbose:
+                print('No round_angle found')
+            return np.empty(0)
+
         round_angle = round_angle[mask]
         trail_angle = trail_angle[mask]
         result = result[mask]
@@ -883,10 +890,11 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
         # Update DQ extension only if necessary
         if npix_updated > 0:
             pf[ext].data[new_mask] += dqval
+            pf['PRIMARY'].header.add_history('{0} satdet v{1}({2})'.format(
+                time.ctime(), __version__, __vdate__))
             pf['PRIMARY'].header.add_history(
-                '{0} satdet v{1} updated {2} pixels in EXT {3} with '
-                'DQ flag {4}'.format(
-                    time.ctime(), __version__, npix_updated, ext, dqval))
+                '  Updated {0} px in EXT {1} with DQ={2}'.format(
+                    npix_updated, ext, dqval))
 
     if verbose:
         fname = '{0}[{1}]'.format(filename, ext)
