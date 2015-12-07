@@ -14,6 +14,7 @@ Version
 -------
 
 .. autodata:: acstools.satdet.__version__
+.. autodata:: acstools.satdet.__vdate__
 
 
 Author
