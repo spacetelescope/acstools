@@ -85,34 +85,25 @@ array([[[1242, 1348],
 >>> errors
 {}
 
-For the same image and extension, create DQ masks for two particular satellite
-trails of interest based on the results from above (plots not shown):
+For a given image and extension, create a DQ mask for a satellite trail using
+the first segment (other segments should give similar masks) based on the
+results from above (plots not shown):
 
 >>> trail_coords = results[('jc8m10syq_flc.fits', 4)]
->>> trail_coords[0]
+>>> trail_segment = trail_coords[0]
+>>> trail_segment
 array([[1199, 1357],
        [2841, 1023]])
->>> mask1 = make_mask('jc8m10syq_flc.fits', 4, trail_coords[0],
-...                   plot=True, verbose=True)
+>>> mask = make_mask('jc8m10syq_flc.fits', 4, trail_segment,
+...                  plot=True, verbose=True)
 Rotation: -11.4976988695
 Hit image edge at counter=26
 Hit rotate edge at counter=38
 Run time: 19.476323843 s
->>> trail_coords[1]
-array([[  11, 1598],
-       [ 348, 1529]])
->>> mask2 = make_mask('jc8m10syq_flc.fits', 4, trail_coords[1],
-...                   plot=True, verbose=True)
-Rotation: -11.5712569083
-Hit image edge at counter=38
-Hit rotate edge at counter=39
-Run time: 19.6621930599 s
 
-Combine the masks from above and update the corresponding DQ array of the
-associated image and extension:
+Update the corresponding DQ array using the mask from above:
 
->>> final_mask = mask1 | mask2
->>> update_dq('jc8m10syq_flc.fits', 6, final_mask, verbose=True)
+>>> update_dq('jc8m10syq_flc.fits', 6, mask, verbose=True)
 DQ flag value is 16384
 Input... flagged NPIX=156362
 Existing flagged NPIX=0
@@ -130,6 +121,7 @@ jc8m10syq_flc.fits[6] updated
 #        diffraction spikes.
 #    Nov 03, 2015 - PLL - Adapted for acstools distribution. Fixed bugs,
 #        possibly improved performance, changed API.
+#    Dec 07, 2015 - PLL - Minor changes based on feedback from DMB.
 #
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
