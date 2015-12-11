@@ -85,34 +85,25 @@ array([[[1242, 1348],
 >>> errors
 {}
 
-For the same image and extension, create DQ masks for two particular satellite
-trails of interest based on the results from above (plots not shown):
+For a given image and extension, create a DQ mask for a satellite trail using
+the first segment (other segments should give similar masks) based on the
+results from above (plots not shown):
 
 >>> trail_coords = results[('jc8m10syq_flc.fits', 4)]
->>> trail_coords[0]
+>>> trail_segment = trail_coords[0]
+>>> trail_segment
 array([[1199, 1357],
        [2841, 1023]])
->>> mask1 = make_mask('jc8m10syq_flc.fits', 4, trail_coords[0],
-...                   plot=True, verbose=True)
+>>> mask = make_mask('jc8m10syq_flc.fits', 4, trail_segment,
+...                  plot=True, verbose=True)
 Rotation: -11.4976988695
 Hit image edge at counter=26
 Hit rotate edge at counter=38
 Run time: 19.476323843 s
->>> trail_coords[1]
-array([[  11, 1598],
-       [ 348, 1529]])
->>> mask2 = make_mask('jc8m10syq_flc.fits', 4, trail_coords[1],
-...                   plot=True, verbose=True)
-Rotation: -11.5712569083
-Hit image edge at counter=38
-Hit rotate edge at counter=39
-Run time: 19.6621930599 s
 
-Combine the masks from above and update the corresponding DQ array of the
-associated image and extension:
+Update the corresponding DQ array using the mask from above:
 
->>> final_mask = mask1 | mask2
->>> update_dq('jc8m10syq_flc.fits', 6, final_mask, verbose=True)
+>>> update_dq('jc8m10syq_flc.fits', 6, mask, verbose=True)
 DQ flag value is 16384
 Input... flagged NPIX=156362
 Existing flagged NPIX=0
@@ -130,6 +121,7 @@ jc8m10syq_flc.fits[6] updated
 #        diffraction spikes.
 #    Nov 03, 2015 - PLL - Adapted for acstools distribution. Fixed bugs,
 #        possibly improved performance, changed API.
+#    Dec 07, 2015 - PLL - Minor changes based on feedback from DMB.
 #
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
@@ -162,6 +154,7 @@ except ImportError:
                   AstropyUserWarning)
 
 __version__ = '0.3'
+__vdate__ = '07-Dec-2015'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask', 'update_dq']
 
@@ -267,6 +260,12 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
         # take out 90 degree things
         mask = round_angle % 90 != 0
+
+        if not np.any(mask):
+            if verbose:
+                print('No round_angle found')
+            return np.empty(0)
+
         round_angle = round_angle[mask]
         trail_angle = trail_angle[mask]
         result = result[mask]
@@ -883,10 +882,11 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
         # Update DQ extension only if necessary
         if npix_updated > 0:
             pf[ext].data[new_mask] += dqval
+            pf['PRIMARY'].header.add_history('{0} satdet v{1}({2})'.format(
+                time.ctime(), __version__, __vdate__))
             pf['PRIMARY'].header.add_history(
-                '{0} satdet v{1} updated {2} pixels in EXT {3} with '
-                'DQ flag {4}'.format(
-                    time.ctime(), __version__, npix_updated, ext, dqval))
+                '  Updated {0} px in EXT {1} with DQ={2}'.format(
+                    npix_updated, ext, dqval))
 
     if verbose:
         fname = '{0}[{1}]'.format(filename, ext)
