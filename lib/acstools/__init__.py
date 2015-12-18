@@ -11,7 +11,6 @@ from .version import *
 
 from . import acs_destripe
 from . import acs_destripe_plus
-from . import runastrodriz
 from . import calacs
 from . import acsccd
 from . import acscte
