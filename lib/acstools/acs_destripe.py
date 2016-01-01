@@ -682,7 +682,7 @@ def _mergeUserMaskAndDQ(dq, mask, dqbits):
         if mask is None:
             return None
         else:
-            return mask.copy()
+            return mask.copy().astype(dtype=np.uint8)
 
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
@@ -693,9 +693,9 @@ def _mergeUserMaskAndDQ(dq, mask, dqbits):
         return dqmask
 
     # merge user mask with DQ mask:
-    dqmask[mask != 0] = 1
+    dqmask[mask == 0] = 0
 
-    return mask
+    return dqmask
 
 
 def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
