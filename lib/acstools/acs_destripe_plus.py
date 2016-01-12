@@ -67,7 +67,7 @@ From command line::
 # 31MAR2015 (v0.4.0) Cara added repeated de-stripe iterations (to improve
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
-
+# 12JAN2016 (v0.4.1) Lim added new subarray modes that are allowed CTE corr.
 
 from __future__ import absolute_import, division, print_function
 
@@ -96,8 +96,8 @@ from . import acscte
 
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.0'
-__vdate__ = '31-Mar-2015'
+__version__ = '0.4.1'
+__vdate__ = '12-Jan-2016'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
 
 
@@ -106,14 +106,16 @@ SUBARRAY_LIST = [
     'WFC1-2K', 'WFC1-POL0UV', 'WFC1-POL0V', 'WFC1-POL60V',
     'WFC1-POL60UV', 'WFC1-POL120V', 'WFC1-POL120UV', 'WFC1-SMFL',
     'WFC1-IRAMPQ', 'WFC1-MRAMPQ', 'WFC2-2K', 'WFC2-ORAMPQ',
-    'WFC2-SMFL', 'WFC2-POL0UV', 'WFC2-POL0V', 'WFC2-MRAMPQ']
+    'WFC2-SMFL', 'WFC2-POL0UV', 'WFC2-POL0V', 'WFC2-MRAMPQ',
+    'WFC1A-512', 'WFC1A-1K', 'WFC1A-2K', 'WFC1B-512', 'WFC1B-1K', 'WFC1B-2K',
+    'WFC2C-512', 'WFC2C-1K', 'WFC2C-2K', 'WFC2D-512', 'WFC2D-1K', 'WFC2D-2K']
 
 logging.basicConfig()
 LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
 
-def destripe_plus(inputfile, suffix='strp', stat="pmode1", maxiter=15,
+def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                   sigrej=2.0, lower=None, upper=None, binwidth=0.3,
                   scimask1=None, scimask2=None,
                   dqbits=None, rpt_clean=0, atol=0.01,
@@ -524,6 +526,7 @@ def _read_DQ_arrays(flt_name):
     else:
         dq2 = None
     return (dq1, dq2)
+
 
 #-------------------------#
 # Interfaces used by TEAL #
