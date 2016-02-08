@@ -1,6 +1,6 @@
 """This module contains the tools needed for satellite detection
 within an ACS/WFC image as published in
-`ACS ISR 2015-TBD <http://www.stsci.edu/hst/acs/documents/isrs/>`_.
+`ACS ISR 2016-01 <http://www.stsci.edu/hst/acs/documents/isrs/isr1601.pdf>`_.
 
 .. note::
 
