@@ -13,8 +13,6 @@
 
 import sys, os
 
-from stsci.sphinxext.conf import *
-
 # Check Sphinx version
 import sphinx
 
@@ -30,9 +28,12 @@ import acstools
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions += ['sphinx.ext.autodoc', 'sphinx.ext.pngmath', 'numpydoc',
-               'sphinx.ext.intersphinx', 'sphinx.ext.coverage',
-               'sphinx.ext.autosummary', 'sphinx.ext.doctest']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.pngmath',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autosummary']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -48,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'acstools'
-copyright = u'2015, STScI'
+copyright = u'2016, STScI'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -77,10 +78,10 @@ release = acstools.__version__
 exclude_trees = []
 
 # The reST default role (used for this markup: `text`) to use for all documents.
-default_role = 'autolink'
+default_role = 'py:obj'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
-add_function_parentheses = False
+#add_function_parentheses = False
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -94,14 +95,14 @@ add_function_parentheses = False
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = []
+modindex_common_prefix = ['acstools.']
 
 
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
-#html_theme = 'default'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
