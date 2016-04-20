@@ -1,14 +1,16 @@
-.. acstools documentation master file, created by
-   sphinx-quickstart on Thu Sep 30 11:14:51 2010.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. _acstools_doc:
 
-Welcome to acstools's documentation!
-====================================
+ACSTOOLS
+========
 
-Modules for Advanced Camera for Surveys (ACS).
+Software tools for
+`Advanced Camera for Surveys (ACS) <http://www.stsci.edu/hst/acs/>`_.
 
-http://www.stsci.edu/hst/acs/
+.. note::
+
+    The information here reflect the *latest* software info and might not
+    be in-sync with the
+    `ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_.
 
 .. note::
 
@@ -30,6 +32,7 @@ Contents:
    acs_destripe
    acs_destripe_plus
    satdet
+
 
 Indices and tables
 ==================
