@@ -61,11 +61,13 @@ import numpy as np
 from astropy.io import fits
 
 # STSCI
-from stsci.tools import parseinput
-from stsci.tools import teal
-from stsci.tools import bitmask
-from stsci.imagestats import ImageStats
-
+try:
+    from stsci.tools import parseinput
+    from stsci.tools import teal
+    from stsci.tools import bitmask
+    from stsci.imagestats import ImageStats
+except ImportError:  # So RTD would build
+    pass
 
 __taskname__ = 'acs_destripe'
 __version__ = '0.8.0'

@@ -31,7 +31,10 @@ import os.path
 import subprocess
 
 # STSCI
-from stsci.tools import parseinput
+try:
+    from stsci.tools import parseinput
+except ImportError:  # So RTD would build
+    pass
 try:
     from stsci.tools import teal
 except:

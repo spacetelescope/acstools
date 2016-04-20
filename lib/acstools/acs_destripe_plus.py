@@ -84,9 +84,12 @@ from astropy.time import Time
 import numpy as np
 
 # STSCI
-from stsci.tools import parseinput
-from stsci.tools import teal
-from stsci.tools import bitmask
+try:
+    from stsci.tools import parseinput
+    from stsci.tools import teal
+    from stsci.tools import bitmask
+except ImportError:  # So RTD would build
+    pass
 
 # LOCAL
 from . import acs_destripe
