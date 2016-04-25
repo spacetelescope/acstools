@@ -153,8 +153,8 @@ except ImportError:
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
 
-__version__ = '0.3'
-__vdate__ = '07-Dec-2015'
+__version__ = '0.3.1'
+__vdate__ = '25-Apr-2016'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask', 'update_dq']
 
@@ -808,7 +808,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
             done = True
     # End while
 
-    rot = transform.rotate(mask, -deg, resize=True, order=2)
+    rot = transform.rotate(mask, -deg, resize=True, order=1)
     ix0 = (rot.shape[1] - image.shape[1]) / 2
     iy0 = (rot.shape[0] - image.shape[0]) / 2
     lowerx, upperx, lowery, uppery  = _get_valid_indices(
