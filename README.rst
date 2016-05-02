@@ -6,4 +6,4 @@ ACSTOOLS
 .. |docs| image:: https://readthedocs.org/projects/acstools/badge/?version=latest
     :alt: Documentation Status
     :scale: 100%
-    :target: https://acstools.readthedocs.org/en/latest/?badge=latest
+    :target: https://acstools.readthedocs.io/en/latest/?badge=latest
