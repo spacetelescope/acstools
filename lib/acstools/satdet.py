@@ -7,6 +7,8 @@ within an ACS/WFC image as published in
     Only tested for ACS/WFC FLT and FLC images, but it should
     theoretically work for any instrument.
 
+    Requires skimage version 0.11.x or later.
+
     :func:`skimage.transform.probabilistic_hough_line` gives
     slightly different results from run to run, but this should
     not matter since :func:`detsat` only provides crude
@@ -122,6 +124,7 @@ jc8m10syq_flc.fits[6] updated
 #    Nov 03, 2015 - PLL - Adapted for acstools distribution. Fixed bugs,
 #        possibly improved performance, changed API.
 #    Dec 07, 2015 - PLL - Minor changes based on feedback from DMB.
+#    May 24, 2016 - SMO - Minor import changes to skimage
 #
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
@@ -141,10 +144,10 @@ from astropy.io import fits
 from astropy.stats import biweight_midvariance, sigma_clipped_stats
 from astropy.utils.exceptions import AstropyUserWarning
 from scipy import stats
-from skimage import filter as filt
 from skimage import transform
 from skimage import morphology as morph
 from skimage import exposure
+from skimage.feature import canny
 
 try:
     import matplotlib.pyplot as plt
@@ -153,8 +156,8 @@ except ImportError:
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
 
-__version__ = '0.3.1'
-__vdate__ = '25-Apr-2016'
+__version__ = '0.3.2'
+__vdate__ = '24-May-2016'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask', 'update_dq']
 
@@ -194,9 +197,9 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     # get the edges
     immax = np.max(image)
-    edge = filt.canny(image, sigma=sigma,
-                      low_threshold=immax * low_thresh,
-                      high_threshold=immax * h_thresh)
+    edge = canny(image, sigma=sigma,
+                 low_threshold=immax * low_thresh,
+                 high_threshold=immax * h_thresh)
 
     # clean up the small objects, will make less noise
     morph.remove_small_objects(edge, min_size=small_edge, connectivity=8,
