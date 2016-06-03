@@ -24,7 +24,7 @@ pkg = 'acstools'
 #    include_dirs = [pythoninc,numpyinc] ) ]
 
 setupargs = {
-    'version': '2.0.0',
+    'version': '2.0.2',
     'description': 'Python Tools for ACS Data',
     'author': 'Matt Davis, Warren Hack, Norman Grogin, Pey Lian Lim, Sara Ogaz, Leornado Ubeda, Mihai Cara, David Borncamp',
     'author_email': 'help@stsci.edu',
