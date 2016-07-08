@@ -3,4 +3,4 @@ matplotlib
 astropy-helpers
 astropy
 scipy
-scikit-image
+scikit-image>=0.11
