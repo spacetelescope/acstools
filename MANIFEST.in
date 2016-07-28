@@ -3,6 +3,8 @@ include LICENSE.txt
 
 include setup.cfg
 
+include RELIC-INFO
+
 recursive-include doc *
 recursive-include scripts *
 

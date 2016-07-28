@@ -7,7 +7,11 @@ module.
 
 """
 from __future__ import absolute_import, print_function
-from .version import *
+
+try:
+    from .version import *
+except ImportError:
+    __version__ = 'unknown'
 
 from . import acs_destripe
 from . import acs_destripe_plus
