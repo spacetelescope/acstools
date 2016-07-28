@@ -83,13 +83,6 @@ from astropy.time import Time
 # THIRD-PARTY
 import numpy as np
 
-# STSCI
-try:
-    from stsci.tools import parseinput
-    from stsci.tools import bitmask
-except ImportError:  # So RTD would build
-    pass
-
 # LOCAL
 from . import acs_destripe
 from . import acs2d
@@ -267,6 +260,9 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     Raises
     ------
+    ImportError
+        ``stsci.tools`` not found.
+
     IOError
         Input file does not exist.
 
@@ -274,6 +270,10 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         Invalid header values or CALACS version.
 
     """
+    # Optional package dependencies
+    from stsci.tools import parseinput
+    from stsci.tools import bitmask
+
     # process input file(s) and if we have multiple input files - recursively
     # call acs_destripe_plus for each input image:
     flist = parseinput.parseinput(inputfile)[0]

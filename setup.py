@@ -47,12 +47,8 @@ setup(
     package_data={PACKAGENAME: ['pars/*']},
     entry_points=entry_points,
     install_requires = [
-        'astropy>=1.0',
-        'numpy',
-        'scikit-image>=0.11',
-        'scipy',
-        'stsci.imagestats',
-        'stsci.tools',
+        'astropy>=1.1',
+        'numpy'
     ],
     use_2to3=False,
     zip_safe=False

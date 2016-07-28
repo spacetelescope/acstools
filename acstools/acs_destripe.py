@@ -60,14 +60,6 @@ import sys
 import numpy as np
 from astropy.io import fits
 
-# STSCI
-try:
-    from stsci.tools import parseinput
-    from stsci.tools import bitmask
-    from stsci.imagestats import ImageStats
-except ImportError:  # So RTD would build
-    pass
-
 __taskname__ = 'acs_destripe'
 __version__ = '0.8.0'
 __vdate__ = '31-Mar-2015'
@@ -399,7 +391,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         * 'mode' - the mode of the distribution of the "good" pixels;
         * 'median' - the median of the distribution of the "good" pixels;
         * 'midpt' - estimate of the median of the distribution of the "good"
-          pixels based on an algorithm similar to IRAF's `imagestats` task
+          pixels based on an algorithm similar to IRAF's ``imagestats`` task
           (``CDF(midpt)=1/2``).
 
         .. note::
@@ -503,6 +495,8 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         Print informational messages. Default = True.
 
     """
+    from stsci.tools import parseinput  # Optional package dependency
+
     flist = parseinput.parseinput(input)[0]
 
     if isinstance(mask1, str):
@@ -679,6 +673,8 @@ def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
 
 
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
+    from stsci.tools import bitmask  # Optional package dependency
+
     dqbits = bitmask.interpret_bits_value(dqbits)
     if dqbits is None:
         if mask is None:
@@ -751,6 +747,12 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         Number of *additional* (performed *after* initial run) cleanings.
 
     """
+    # Optional package dependency
+    try:
+        from stsci.imagestats import ImageStats
+    except ImportError:
+        ImageStats = None
+
     if mask is not None and image.science.shape != mask.shape:
         raise ValueError('Mask shape does not match science data shape')
 
@@ -803,6 +805,9 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         def getcorr(): return (SMedian)
 
     elif stat == 'mode':
+        if ImageStats is None:
+            raise ImportError('stsci.imagestats is missing')
+
         def getcorr():
             imstat = ImageStats(image.science[i][BMask], 'mode',
                                 lower=lower, upper=upper, nclip=0)
@@ -810,6 +815,9 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             return (imstat.mode)
 
     elif stat == 'midpt':
+        if ImageStats is None:
+            raise ImportError('stsci.imagestats is missing')
+
         def getcorr():
             imstat = ImageStats(image.science[i][BMask], 'midpt',
                                 lower=lower, upper=upper, nclip=0)
