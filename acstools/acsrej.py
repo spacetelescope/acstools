@@ -26,16 +26,6 @@ In Pyraf::
 import os
 import subprocess
 
-# STSCI
-try:
-    from stsci.tools import parseinput
-except ImportError:  # So RTD would build
-    pass
-try:
-    from stsci.tools import teal
-except:
-    teal = None
-
 __taskname__ = "acsrej"
 __version__ = "1.0"
 __vdate__ = "18-Dec-2012"
@@ -123,6 +113,8 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
         This is used for BIAS images.
 
     """
+    from stsci.tools import parseinput  # Optional package dependency
+
     if exec_path:
         if not os.path.exists(exec_path):
             raise OSError('Executable not found: ' + exec_path)

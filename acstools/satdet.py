@@ -143,11 +143,23 @@ from astropy.io import fits
 #from astropy.stats import biweight_location
 from astropy.stats import biweight_midvariance, sigma_clipped_stats
 from astropy.utils.exceptions import AstropyUserWarning
-from scipy import stats
-from skimage import transform
-from skimage import morphology as morph
-from skimage import exposure
-from skimage.feature import canny
+
+# OPTIONAL
+try:
+    import skimage
+    from astropy.utils.introspection import minversion
+    from scipy import stats
+    from skimage import transform
+    from skimage import morphology as morph
+    from skimage import exposure
+    from skimage.feature import canny
+except ImportError:
+    HAS_OPDEP = False
+else:
+    if minversion(skimage, '0.11'):
+        HAS_OPDEP = True
+    else:
+        HAS_OPDEP = False
 
 try:
     import matplotlib.pyplot as plt
@@ -572,6 +584,9 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     Raises
     ------
+    ImportError
+        Missing scipy or skimage>=0.11 packages.
+
     IndexError
         Invalid subarray indices.
 
@@ -580,6 +595,9 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         trail profile not found.
 
     """
+    if not HAS_OPDEP:
+        raise ImportError('Missing scipy or skimage>=0.11 packages')
+
     if verbose:
         t_beg = time.time()
 
@@ -1011,7 +1029,15 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
         Dictionary mapping ``(filename, ext)`` to the error message explaining
         why processing failed.
 
+    Raises
+    ------
+    ImportError
+        Missing scipy or skimage>=0.11 packages.
+
     """
+    if not HAS_OPDEP:
+        raise ImportError('Missing scipy or skimage>=0.11 packages')
+
     if verbose:
         t_beg = time.time()
 

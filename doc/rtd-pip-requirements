@@ -1,6 +1,2 @@
 numpy>=1.11
-matplotlib
-astropy-helpers
 astropy
-scipy
-scikit-image>=0.11

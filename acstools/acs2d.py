@@ -26,16 +26,6 @@ In Pyraf::
 import os
 import subprocess
 
-# STSCI
-try:
-    from stsci.tools import parseinput
-except ImportError:  # So RTD would build
-    pass
-try:
-    from stsci.tools import teal
-except:
-    teal = None
-
 __taskname__ = "acs2d"
 __version__ = "2.0"
 __vdate__ = "10-Oct-2014"
@@ -87,6 +77,8 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
         Set to True for quiet output.
 
     """
+    from stsci.tools import parseinput  # Optional package dependency
+
     if exec_path:
         if not os.path.exists(exec_path):
             raise OSError('Executable not found: ' + exec_path)
