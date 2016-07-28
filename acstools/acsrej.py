@@ -31,10 +31,6 @@ try:
     from stsci.tools import parseinput
 except ImportError:  # So RTD would build
     pass
-try:
-    from stsci.tools import teal
-except:
-    teal = None
 
 __taskname__ = "acsrej"
 __version__ = "1.0"

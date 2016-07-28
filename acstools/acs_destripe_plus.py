@@ -86,7 +86,6 @@ import numpy as np
 # STSCI
 try:
     from stsci.tools import parseinput
-    from stsci.tools import teal
     from stsci.tools import bitmask
 except ImportError:  # So RTD would build
     pass

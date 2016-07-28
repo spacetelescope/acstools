@@ -63,7 +63,6 @@ from astropy.io import fits
 # STSCI
 try:
     from stsci.tools import parseinput
-    from stsci.tools import teal
     from stsci.tools import bitmask
     from stsci.imagestats import ImageStats
 except ImportError:  # So RTD would build
