@@ -73,6 +73,7 @@ __taskname__ = 'acs_destripe'
 __version__ = '0.8.0'
 __vdate__ = '31-Mar-2015'
 __author__ = 'Norman Grogin, STScI, March 2012.'
+__all__ = ['clean']
 
 #
 # HISTORY:

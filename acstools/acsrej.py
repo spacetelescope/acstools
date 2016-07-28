@@ -23,7 +23,7 @@ In Pyraf::
 
 """
 # STDLIB
-import os.path
+import os
 import subprocess
 
 # STSCI
@@ -36,10 +36,10 @@ try:
 except:
     teal = None
 
-
 __taskname__ = "acsrej"
 __version__ = "1.0"
 __vdate__ = "18-Dec-2012"
+__all__ = ['acsrej']
 
 
 def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,

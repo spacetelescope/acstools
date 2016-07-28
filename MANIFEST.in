@@ -1,0 +1,14 @@
+include README.rst
+include LICENSE.txt
+
+include defsetup.py
+include distribute_setup.py
+include setup.cfg
+
+recursive-include doc *
+recursive-include scripts *
+
+prune build
+prune doc/build
+
+global-exclude *.pyc *.o

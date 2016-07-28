@@ -29,7 +29,7 @@ In Pyraf::
 
 """
 # STDLIB
-import os.path
+import os
 import subprocess
 
 # STSCI
@@ -42,10 +42,10 @@ try:
 except:
     teal = None
 
-
 __taskname__ = "acscte"
 __version__ = "1.0"
 __vdate__ = "13-Aug-2013"
+__all__ = ['acscte']
 
 
 def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,

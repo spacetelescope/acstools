@@ -23,7 +23,7 @@ In Pyraf::
 
 """
 # STDLIB
-import os.path
+import os
 import subprocess
 
 # STSCI
@@ -36,10 +36,10 @@ try:
 except:
     teal = None
 
-
 __taskname__ = "acs2d"
 __version__ = "2.0"
 __vdate__ = "10-Oct-2014"
+__all__ = ['acs2d']
 
 
 def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
