@@ -22,9 +22,10 @@ In Pyraf::
     --> epar calacs
 
 """
-
-import os.path
+import os
 import subprocess
+
+__all__ = ['calacs']
 
 
 def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,

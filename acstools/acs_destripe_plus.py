@@ -97,12 +97,11 @@ from . import acs2d
 from . import acsccd
 from . import acscte
 
-
 __taskname__ = 'acs_destripe_plus'
 __version__ = '0.4.1'
 __vdate__ = '12-Jan-2016'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
-
+__all__ = ['destripe_plus']
 
 SM4_DATE = Time('2008-01-01')
 SUBARRAY_LIST = [
