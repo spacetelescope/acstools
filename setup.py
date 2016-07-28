@@ -1,14 +1,54 @@
 #!/usr/bin/env python
+from setuptools import setup
 
+# Get some values from the setup.cfg
 try:
-    from setuptools import setup
+    from ConfigParser import ConfigParser
 except ImportError:
-    from distribute_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup
+    from configparser import ConfigParser
+conf = ConfigParser()
+conf.read(['setup.cfg'])
+metadata = dict(conf.items('metadata'))
+
+PACKAGENAME = metadata.get('package_name', 'packagename')
+DESCRIPTION = metadata.get('description', 'package')
+AUTHOR = metadata.get('author', '')
+AUTHOR_EMAIL = metadata.get('author_email', '')
+LICENSE = metadata.get('license', 'unknown')
+URL = metadata.get('url', 'http://www.stsci.edu')
+CLASSIFIERS = metadata.get('classifier', [''])
+
+# VERSION should be PEP386 compatible (http://www.python.org/dev/peps/pep-0386)
+VERSION = metadata.get('version', '0.0.dev')
+
+# Define entry points for command-line scripts
+entry_points = {'console_scripts': []}
+entry_point_list = conf.items('entry_points')
+for entry_point in entry_point_list:
+    entry_points['console_scripts'].append('{0} = {1}'.format(entry_point[0],
+                                                              entry_point[1]))
 
 setup(
-    setup_requires=['d2to1>=0.2.9', 'stsci.distutils>=0.3.2'],
+    name=PACKAGENAME,
+    version=VERSION,
+    description=DESCRIPTION,
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    license=LICENSE,
+    url=URL,
+    classifiers=CLASSIFIERS,
+    packages=[PACKAGENAME],
+    package_dir={PACKAGENAME: PACKAGENAME},
+    package_data={PACKAGENAME: ['pars/*']}
+    entry_points=entry_points,
+    install_requires = [
+        'astropy>=1.0',
+        'numpy',
+        'scikit-image>=0.11',
+        'scipy',
+        'stsci.imagestats',
+        'stsci.tools',
+    ],
     d2to1=True,
     use_2to3=False,
     zip_safe=False
