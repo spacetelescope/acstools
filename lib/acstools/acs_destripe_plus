@@ -1,4 +1,0 @@
-#! python
-
-import acstools.acs_destripe_plus
-acstools.acs_destripe_plus.main()
