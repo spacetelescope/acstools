@@ -22,6 +22,7 @@ from . import acs2d
 from . import acsrej
 from . import acssum
 from . import satdet
+from . import utils_subarr
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.

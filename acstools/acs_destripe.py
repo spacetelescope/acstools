@@ -59,9 +59,12 @@ import os
 import numpy as np
 from astropy.io import fits
 
+# LOCAL
+from .utils_subarr import extract_ref
+
 __taskname__ = 'acs_destripe'
-__version__ = '0.8.0'
-__vdate__ = '31-Mar-2015'
+__version__ = '0.8.1'
+__vdate__ = '09-Sep-2016'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 __all__ = ['clean']
 
@@ -120,36 +123,6 @@ class StripeArray(object):
         self.ingest_flash()
         self.ingest_flatfield()
 
-    def _get_ref_section(self, refaxis1, refaxis2):
-        """Get reference file section to use."""
-
-        sizaxis1 = self.hdulist[1].header['SIZAXIS1']
-        sizaxis2 = self.hdulist[1].header['SIZAXIS2']
-        centera1 = self.hdulist[1].header['CENTERA1']
-        centera2 = self.hdulist[1].header['CENTERA2']
-
-        # configure the offset appropriate to left- or right-side of CCD
-        if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
-            xdelta = 13
-        else:
-            xdelta = 35
-
-        if sizaxis1 == refaxis1:
-            xlo = 0
-            xhi = sizaxis1
-        else:
-            xlo = centera1 - xdelta - sizaxis1 // 2 - 1
-            xhi = centera1 - xdelta + sizaxis1 // 2 - 1
-
-        if sizaxis2 == refaxis2:
-            ylo = 0
-            yhi = sizaxis2
-        else:
-            ylo = centera2 - sizaxis2 // 2 - 1
-            yhi = centera2 + sizaxis2 // 2 - 1
-
-        return xlo, xhi, ylo, yhi
-
     def ingest_flatfield(self):
         """Process flatfield."""
 
@@ -177,17 +150,11 @@ class StripeArray(object):
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
-                self.invflat = 1 / hduflat['sci', 2].data
+                self.invflat = 1 / extract_ref(self.hdulist[1],
+                                               hduflat['sci', 2])
             else:
-                self.invflat = 1 / hduflat['sci', 1].data
-
-            # now, which section?
-            flataxis1 = hduflat[1].header['NAXIS1']
-            flataxis2 = hduflat[1].header['NAXIS2']
-
-            xlo, xhi, ylo, yhi = self._get_ref_section(flataxis1, flataxis2)
-
-            self.invflat = self.invflat[ylo:yhi, xlo:xhi]
+                self.invflat = 1 / extract_ref(self.hdulist[1],
+                                               hduflat['sci', 1])
 
         # apply the flatfield if necessary
         if self.flatcorr != 'COMPLETE':
@@ -220,17 +187,9 @@ class StripeArray(object):
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
-                self.flash = hduflash['sci', 2].data
+                self.flash = extract_ref(self.hdulist[1], hduflash['sci', 2])
             else:
-                self.flash = hduflash['sci', 1].data
-
-            # now, which section?
-            flashaxis1 = hduflash[1].header['NAXIS1']
-            flashaxis2 = hduflash[1].header['NAXIS2']
-
-            xlo, xhi, ylo, yhi = self._get_ref_section(flashaxis1, flashaxis2)
-
-            self.flash = self.flash[ylo:yhi, xlo:xhi]
+                self.flash = extract_ref(self.hdulist[1], hduflash['sci', 1])
 
         # Apply the flash subtraction if necessary.
         # Not applied to ERR, to be consistent with ingest_dark()
@@ -262,17 +221,9 @@ class StripeArray(object):
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
-                self.dark = hdudark['sci', 2].data
+                self.dark = extract_ref(self.hdulist[1], hdudark['sci', 2])
             else:
-                self.dark = hdudark['sci', 1].data
-
-            # now, which section?
-            darkaxis1 = hdudark[1].header['NAXIS1']
-            darkaxis2 = hdudark[1].header['NAXIS2']
-
-            xlo, xhi, ylo, yhi = self._get_ref_section(darkaxis1, darkaxis2)
-
-            self.dark = self.dark[ylo:yhi, xlo:xhi]
+                self.dark = extract_ref(self.hdulist[1], hdudark['sci', 1])
 
         # Apply the dark subtraction if necessary.
         # Effect of DARK on ERR is insignificant for de-striping.
