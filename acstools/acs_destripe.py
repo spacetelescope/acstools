@@ -49,20 +49,22 @@ From command line::
                    input suffix [maxiter] [sigrej]
 
 """
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # STDLIB
 import logging
 import os
-import sys
 
 # THIRD-PARTY
 import numpy as np
 from astropy.io import fits
 
+# LOCAL
+from .utils_subarr import extract_ref
+
 __taskname__ = 'acs_destripe'
-__version__ = '0.8.0'
-__vdate__ = '31-Mar-2015'
+__version__ = '0.8.1'
+__vdate__ = '09-Sep-2016'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 __all__ = ['clean']
 
@@ -107,49 +109,19 @@ class StripeArray(object):
 
     def configure_arrays(self):
         """Get the SCI and ERR data."""
-        self.science = self.hdulist['sci',1].data
-        self.err = self.hdulist['err',1].data
-        self.dq = self.hdulist['dq',1].data
+        self.science = self.hdulist['sci', 1].data
+        self.err = self.hdulist['err', 1].data
+        self.dq = self.hdulist['dq', 1].data
         if (self.ampstring == 'ABCD'):
             self.science = np.concatenate(
-                (self.science, self.hdulist['sci',2].data[::-1,:]), axis=1)
+                (self.science, self.hdulist['sci', 2].data[::-1, :]), axis=1)
             self.err = np.concatenate(
-                (self.err, self.hdulist['err',2].data[::-1,:]), axis=1)
+                (self.err, self.hdulist['err', 2].data[::-1, :]), axis=1)
             self.dq = np.concatenate(
-                (self.dq, self.hdulist['dq',2].data[::-1,:]), axis=1)
+                (self.dq, self.hdulist['dq', 2].data[::-1, :]), axis=1)
         self.ingest_dark()
         self.ingest_flash()
         self.ingest_flatfield()
-
-    def _get_ref_section(self, refaxis1, refaxis2):
-        """Get reference file section to use."""
-
-        sizaxis1 = self.hdulist[1].header['SIZAXIS1']
-        sizaxis2 = self.hdulist[1].header['SIZAXIS2']
-        centera1 = self.hdulist[1].header['CENTERA1']
-        centera2 = self.hdulist[1].header['CENTERA2']
-
-        # configure the offset appropriate to left- or right-side of CCD
-        if (self.ampstring[0] == 'A' or self.ampstring[0] == 'C'):
-            xdelta = 13
-        else:
-            xdelta = 35
-
-        if sizaxis1 == refaxis1:
-            xlo = 0
-            xhi = sizaxis1
-        else:
-            xlo = centera1 - xdelta - sizaxis1 // 2 - 1
-            xhi = centera1 - xdelta + sizaxis1 // 2 - 1
-
-        if sizaxis2 == refaxis2:
-            ylo = 0
-            yhi = sizaxis2
-        else:
-            ylo = centera2 - sizaxis2 // 2 - 1
-            yhi = centera2 + sizaxis2 // 2 - 1
-
-        return xlo, xhi, ylo, yhi
 
     def ingest_flatfield(self):
         """Process flatfield."""
@@ -170,25 +142,19 @@ class StripeArray(object):
 
         if (self.ampstring == 'ABCD'):
             self.invflat = np.concatenate(
-                (1 / hduflat['sci',1].data,
-                 1 / hduflat['sci',2].data[::-1,:]), axis=1)
+                (1 / hduflat['sci', 1].data,
+                 1 / hduflat['sci', 2].data[::-1, :]), axis=1)
         else:
-            # complex algorithm to determine proper subarray of flatfield to use
+            # complex algorithm to determine proper subarr of flatfield to use
 
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
-                self.invflat = 1 / hduflat['sci',2].data
+                self.invflat = 1 / extract_ref(self.hdulist[1],
+                                               hduflat['sci', 2])
             else:
-                self.invflat = 1 / hduflat['sci',1].data
-
-            # now, which section?
-            flataxis1 = hduflat[1].header['NAXIS1']
-            flataxis2 = hduflat[1].header['NAXIS2']
-
-            xlo, xhi, ylo, yhi = self._get_ref_section(flataxis1, flataxis2)
-
-            self.invflat = self.invflat[ylo:yhi,xlo:xhi]
+                self.invflat = 1 / extract_ref(self.hdulist[1],
+                                               hduflat['sci', 1])
 
         # apply the flatfield if necessary
         if self.flatcorr != 'COMPLETE':
@@ -213,25 +179,17 @@ class StripeArray(object):
 
         if (self.ampstring == 'ABCD'):
             self.flash = np.concatenate(
-                (hduflash['sci',1].data,
-                 hduflash['sci',2].data[::-1,:]), axis=1)
+                (hduflash['sci', 1].data,
+                 hduflash['sci', 2].data[::-1, :]), axis=1)
         else:
             # complex algorithm to determine proper subarray of flash to use
 
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
-                self.flash = hduflash['sci',2].data
+                self.flash = extract_ref(self.hdulist[1], hduflash['sci', 2])
             else:
-                self.flash = hduflash['sci',1].data
-
-            # now, which section?
-            flashaxis1 = hduflash[1].header['NAXIS1']
-            flashaxis2 = hduflash[1].header['NAXIS2']
-
-            xlo, xhi, ylo, yhi = self._get_ref_section(flashaxis1, flashaxis2)
-
-            self.flash = self.flash[ylo:yhi,xlo:xhi]
+                self.flash = extract_ref(self.hdulist[1], hduflash['sci', 1])
 
         # Apply the flash subtraction if necessary.
         # Not applied to ERR, to be consistent with ingest_dark()
@@ -255,31 +213,22 @@ class StripeArray(object):
 
         if (self.ampstring == 'ABCD'):
             self.dark = np.concatenate(
-                (hdudark['sci',1].data,
-                 hdudark['sci',2].data[::-1,:]), axis=1)
+                (hdudark['sci', 1].data,
+                 hdudark['sci', 2].data[::-1, :]), axis=1)
         else:
             # complex algorithm to determine proper subarray of dark to use
 
             # which amp?
             if (self.ampstring == 'A' or self.ampstring == 'B' or
                     self.ampstring == 'AB'):
-                self.dark = hdudark['sci',2].data
+                self.dark = extract_ref(self.hdulist[1], hdudark['sci', 2])
             else:
-                self.dark = hdudark['sci',1].data
-
-            # now, which section?
-            darkaxis1 = hdudark[1].header['NAXIS1']
-            darkaxis2 = hdudark[1].header['NAXIS2']
-
-            xlo, xhi, ylo, yhi = self._get_ref_section(darkaxis1, darkaxis2)
-
-            self.dark = self.dark[ylo:yhi,xlo:xhi]
+                self.dark = extract_ref(self.hdulist[1], hdudark['sci', 1])
 
         # Apply the dark subtraction if necessary.
         # Effect of DARK on ERR is insignificant for de-striping.
         if self.darkcorr != 'COMPLETE':
             self.science = self.science - self.dark * self.darktime
-
 
     def resolve_reffilename(self, reffile):
         """Resolve the filename into an absolute pathname (if necessary)."""
@@ -294,7 +243,6 @@ class StripeArray(object):
             raise IOError('{0} could not be found!'.format(reffile))
 
         return(fits.open(reffile))
-
 
     def write_corrected(self, output, clobber=False):
         """Write out the destriped data."""
@@ -315,15 +263,15 @@ class StripeArray(object):
         # reverse the amp merge
         if (self.ampstring == 'ABCD'):
             tmp_1, tmp_2 = np.split(self.science, 2, axis=1)
-            self.hdulist['sci',1].data = tmp_1.copy()
-            self.hdulist['sci',2].data = tmp_2[::-1,:].copy()
+            self.hdulist['sci', 1].data = tmp_1.copy()
+            self.hdulist['sci', 2].data = tmp_2[::-1, :].copy()
 
             tmp_1, tmp_2 = np.split(self.err, 2, axis=1)
-            self.hdulist['err',1].data = tmp_1.copy()
-            self.hdulist['err',2].data = tmp_2[::-1,:].copy()
+            self.hdulist['err', 1].data = tmp_1.copy()
+            self.hdulist['err', 2].data = tmp_2[::-1, :].copy()
         else:
-            self.hdulist['sci',1].data = self.science.copy()
-            self.hdulist['err',1].data = self.err.copy()
+            self.hdulist['sci', 1].data = self.science.copy()
+            self.hdulist['err', 1].data = self.err.copy()
 
         # Write the output
         self.hdulist.writeto(output, clobber=clobber)
@@ -344,7 +292,7 @@ def _read_mask(mask1, mask2):
     else:
         dat1 = mask1
         dat2 = mask2
-        mask = np.concatenate((dat1, dat2[::-1,:]), axis=1)
+        mask = np.concatenate((dat1, dat2[::-1, :]), axis=1)
 
     # Mask must only have binary values
     if mask is not None:
@@ -502,7 +450,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
     if isinstance(mask1, str):
         mlist1 = parseinput.parseinput(mask1)[0]
     elif isinstance(mask1, np.ndarray):
-        mlist1 = [ mask1.copy() ]
+        mlist1 = [mask1.copy()]
     elif mask1 is None:
         mlist1 = []
     elif isinstance(mask1, list):
@@ -523,7 +471,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
     if isinstance(mask2, str):
         mlist2 = parseinput.parseinput(mask2)[0]
     elif isinstance(mask2, np.ndarray):
-        mlist2 = [ mask2.copy() ]
+        mlist2 = [mask2.copy()]
     elif mask2 is None:
         mlist2 = []
     elif isinstance(mask2, list):
@@ -546,7 +494,8 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
     n_mask2 = len(mlist2)
 
     if n_input == 0:
-        raise ValueError("No input file(s) provided or the file(s) do not exist")
+        raise ValueError("No input file(s) provided or "
+                         "the file(s) do not exist")
 
     if n_mask1 == 0:
         mlist1 = [None] * n_input
@@ -561,17 +510,18 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
     for image, maskfile1, maskfile2 in zip(flist, mlist1, mlist2):
         # Skip processing pre-SM4 images
         if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
-            LOG.warn(image + ' is pre-SM4. Skipping...'%image)
+            LOG.warn('{0} is pre-SM4. Skipping...'.format(image))
             continue
 
         # Data must be in ELECTRONS
         if (fits.getval(image, 'BUNIT', ext=1) != 'ELECTRONS'):
-            LOG.warn(image + ' is not in ELECTRONS. Skipping...')
+            LOG.warn('{0} is not in ELECTRONS. Skipping...'.format(image))
             continue
 
         # Skip processing CTECORR-ed images
         if (fits.getval(image, 'PCTECORR') == 'COMPLETE'):
-            LOG.warn(image + ' already has PCTECORR applied. Skipping...')
+            LOG.warn('{0} already has PCTECORR applied. '
+                     'Skipping...'.format(image))
             continue
 
         # generate output filename for each input based on specification
@@ -580,9 +530,9 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         LOG.info('Processing ' + image)
 
         # verify masks defined (or not) simultaneously:
-        if fits.getval(image, 'CCDAMP') == 'ABCD' and \
-           ((mask1 is not None and mask2 is None) or \
-            (mask1 is None and mask2 is not None)):
+        if (fits.getval(image, 'CCDAMP') == 'ABCD' and
+                ((mask1 is not None and mask2 is None) or
+                 (mask1 is None and mask2 is not None))):
             raise ValueError("Both 'mask1' and 'mask2' must be specified "
                              "or not specified together.")
 
@@ -650,24 +600,30 @@ def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
 
     if Success:
         if verbose:
-            LOG.info('perform_correction - =====  Overall statistics for de-stripe corrections:  =====')
+            LOG.info('perform_correction - =====  Overall statistics for '
+                     'de-stripe corrections:  =====')
 
         if (STDDEVCorr > 1.5*0.9):
             LOG.warn('perform_correction - STDDEV of applied de-stripe '
                      'corrections ({:.3g}) exceeds\nknown bias striping '
-                     'STDDEV of 0.9e (see ISR ACS 2011-05) more than 1.5 times.'
-                     .format(STDDEVCorr))
+                     'STDDEV of 0.9e (see ISR ACS 2011-05) more than '
+                     '1.5 times.'.format(STDDEVCorr))
 
         elif verbose:
             LOG.info('perform_correction - STDDEV of applied de-stripe '
                      'corrections {:.3g}.'.format(STDDEVCorr))
 
         if verbose:
-            LOG.info('perform_correction - Estimated background: {:.5g}.'.format(Bkgrnd))
-            LOG.info('perform_correction - Maximum applied correction: {:.3g}.'.format(MaxCorr))
-            LOG.info('perform_correction - Effective number of clipping iterations: {}.'.format(NMaxIter))
-            LOG.info('perform_correction - Effective number of additional (repeated) cleanings: {}.'.format(Nrpt))
-            LOG.info('perform_correction - Total number of corrected rows: {}.'.format(NUpdRows))
+            LOG.info('perform_correction - Estimated background: '
+                     '{:.5g}.'.format(Bkgrnd))
+            LOG.info('perform_correction - Maximum applied correction: '
+                     '{:.3g}.'.format(MaxCorr))
+            LOG.info('perform_correction - Effective number of clipping '
+                     'iterations: {}.'.format(NMaxIter))
+            LOG.info('perform_correction - Effective number of additional '
+                     '(repeated) cleanings: {}.'.format(Nrpt))
+            LOG.info('perform_correction - Total number of corrected rows: '
+                     '{}.'.format(NUpdRows))
 
     frame.write_corrected(output, clobber=clobber)
 
@@ -708,7 +664,8 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         Arrays are modifed in-place.
 
     stat : str
-        Statistics for background computations (see :py:func:`clean` for more details)
+        Statistics for background computations
+        (see :py:func:`clean` for more details)
 
     mask : `numpy.ndarray`
         Mask array. Pixels with zero values are masked out.
@@ -826,17 +783,19 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
 
     nmax_rpt = 1 if rpt_clean is None else max(1, rpt_clean+1)
 
-    for rpt in xrange(nmax_rpt):
+    for rpt in range(nmax_rpt):
         Nrpt += 1
 
         if verbose:
             if Nrpt <= 1:
                 if nmax_rpt > 1:
-                    LOG.info("clean_streak - Performing initial image bias de-stripe:")
+                    LOG.info("clean_streak - Performing initial image bias "
+                             "de-stripe:")
                 else:
                     LOG.info("clean_streak - Performing image bias de-stripe:")
             else:
-                LOG.info("clean_streak - Performing repeated image bias de-stripe #{}:".format(Nrpt-1))
+                LOG.info("clean_streak - Performing repeated image bias "
+                         "de-stripe #{}:".format(Nrpt - 1))
 
         # reset accumulators and arrays:
         corr[:] = 0.0
@@ -850,11 +809,12 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
 
         # loop over rows to fit the stripe amplitude
         mask_arr = None
-        for i in xrange(image.science.shape[0]):
+        for i in range(image.science.shape[0]):
             if mask is not None:
                 mask_arr = mask[i]
 
-            # row-by-row iterative sigma-clipped mean; sigma, iters are adjustable
+            # row-by-row iterative sigma-clipped mean;
+            # sigma, iters are adjustable
             SMean, SSig, SMedian, NPix, NIter, BMask = djs_iterstat(
                 image.science[i], MaxIter=maxiter, SigRej=sigrej,
                 Min=lower, Max=upper, Mask=mask_arr, lineno=i+1
@@ -897,15 +857,15 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         trim_corr = corr[npix > 0]
         cwmean = np.sum(trim_npix * trim_corr) / tnpix
         current_max_corr = np.amax(np.abs(trim_corr - cwmean))
-        wvar = np.sum(trim_npix * (trim_corr - cwmean)**2) / tnpix
-        uwvar = wvar / (1.0 - float(tnpix2)/float(tnpix)**2)
+        wvar = np.sum(trim_npix * (trim_corr - cwmean) ** 2) / tnpix
+        uwvar = wvar / (1.0 - float(tnpix2) / float(tnpix) ** 2)
         STDDEVCorr = np.sqrt(uwvar)
 
         # keep track of total corrections:
         cumcorr += corr
 
         # apply corrections row-by-row
-        for i in xrange(image.science.shape[0]):
+        for i in range(image.science.shape[0]):
             if npix[i] < 1:
                 continue
             updrows[i] = 1
@@ -917,7 +877,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             # stripe is constant along the row, before flatfielding;
             # afterwards it has the shape of the inverse flatfield
             truecorr = corr[i] * image.invflat[i]
-            #truecorr_sig2 = sigcorr2[i] * image.invflat[i]**2 # DEBUG
+            #truecorr_sig2 = sigcorr2[i] * image.invflat[i]**2  # DEBUG
 
             # correct the SCI extension
             image.science[i] -= truecorr
@@ -927,12 +887,14 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             T = (t1 - t2) * image.invflat[i]
 
             # correct the ERR extension
-            # NOTE: np.abs() in the err array recomputation is used for safety only
-            #       and, in principle, assuming no errors have been made in
-            #       the derivation of the formula, np.abs() should not be necessary.
+            # NOTE: np.abs() in the err array recomputation is used for safety
+            #       only and, in principle, assuming no errors have been made
+            #       in the derivation of the formula, np.abs() should not be
+            #       necessary.
             imerr2[i] -= T
             image.err[i] = np.sqrt(np.abs(imerr2[i]))
-            # NOTE: for debugging purposes, one may want to uncomment next line:
+            # NOTE: for debugging purposes, one may want to uncomment
+            #       next line:
             #assert( np.all(imerr2 >= 0.0))
 
         if atol is not None:
@@ -940,11 +902,11 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
                 break
 
             # detect oscilatory non-convergence:
-            nonconvi = np.nonzero(np.abs(corr)>atol)[0]
+            nonconvi = np.nonzero(np.abs(corr) > atol)[0]
             nonconvi_int = np.intersect1d(nonconvi, nonconvi0)
-            if nonconvi.shape[0] == nonconvi0.shape[0] and \
-               nonconvi.shape[0] == nonconvi_int.shape[0] and \
-               np.all(corr0[nonconvi]*corr[nonconvi] < 0.0) and Nrpt > 1:
+            if (nonconvi.shape[0] == nonconvi0.shape[0] and
+                    nonconvi.shape[0] == nonconvi_int.shape[0] and
+                    np.all(corr0[nonconvi]*corr[nonconvi] < 0.0) and Nrpt > 1):
                 LOG.warn("clean_streak - Repeat bias stripe cleaning\n"
                          "process appears to be oscillatory for {:d} image "
                          "rows.\nTry to adjust 'sigrej', 'maxiter', and/or "
@@ -960,36 +922,39 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             if Nrpt <= 1:
                 LOG.info("clean_streak - Image bias de-stripe: Done.")
             else:
-                LOG.info("clean_streak - Repeated (#{}) image bias de-stripe: Done.".format(Nrpt-1))
+                LOG.info("clean_streak - Repeated (#{}) image bias de-stripe: "
+                         "Done.".format(Nrpt - 1))
 
     if verbose and Nrpt > 1:
-        LOG.info('clean_streak - =====  Repeated de-stripe "residual"  estimates:  =====')
+        LOG.info('clean_streak - =====  Repeated de-stripe "residual" '
+                 'estimates:  =====')
         LOG.info('clean_streak - STDDEV of the last applied de-stripe '
                  'corrections {:.3g}'.format(STDDEVCorr))
-        LOG.info('clean_streak - Maximum of the last applied correction: {:.3g}.'
-                 .format(current_max_corr))
+        LOG.info('clean_streak - Maximum of the last applied correction: '
+                 '{:.3g}.'.format(current_max_corr))
 
     # add (in quadratures) an error term associated with the accuracy of
     # bias stripe correction:
-    truecorr_sig2 = ((sigcorr2 * (image.invflat**2).T).T).astype(image.err.dtype)
+    truecorr_sig2 = ((sigcorr2 * (image.invflat ** 2).T).T).astype(image.err.dtype)  # noqa
 
     # update the ERR extension
-    image.err[:,:] = np.sqrt(np.abs(imerr2 + truecorr_sig2))
+    image.err[:, :] = np.sqrt(np.abs(imerr2 + truecorr_sig2))
 
     if warn_maxiter:
-        LOG.warn('clean_streak - Maximum number of clipping iterations '
-                 'specified by the user ({}) has been reached.'.format(maxiter))
+        LOG.warn(
+            'clean_streak - Maximum number of clipping iterations '
+            'specified by the user ({}) has been reached.'.format(maxiter))
 
     # weighted mean, sample variance, and max value for
     # total (cummulative) corrections to the *RAW* image:
     trim_cnpix = cnpix[cnpix > 0]
     trim_cumcorr = cumcorr[cnpix > 0]
     tcnpix = np.sum(trim_cnpix)
-    tcnpix2 = np.sum(trim_cnpix**2)
+    tcnpix2 = np.sum(trim_cnpix ** 2)
     cwmean = np.sum(trim_cnpix * trim_cumcorr) / tcnpix
     trim_cumcorr -= cwmean
-    wvar = np.sum(trim_cnpix * trim_cumcorr**2) / tcnpix
-    uwvar = wvar / (1.0 - float(tcnpix2)/float(tcnpix)**2)
+    wvar = np.sum(trim_cnpix * trim_cumcorr ** 2) / tcnpix
+    uwvar = wvar / (1.0 - float(tcnpix2) / float(tcnpix) ** 2)
     STDDEVCorr = np.sqrt(uwvar)
     MaxCorr = np.amax(np.abs(trim_cumcorr))
 
@@ -1001,7 +966,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
 def _write_row_number(lineno, offset=1, pad=1):
     if lineno is None:
         return ''
-    return (pad*' ' + '(row #{:d})'.format(lineno+offset))
+    return (pad * ' ' + '(row #{:d})'.format(lineno + offset))
 
 
 def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
@@ -1039,19 +1004,21 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
         Logical image mask from the final iteration.
 
     """
-    NGood    = InputArr.size
+    NGood = InputArr.size
     ArrShape = InputArr.shape
     if NGood == 0:
-        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
+        imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warn('djs_iterstat - No data points given' + imrow)
         return 0, 0, 0, 0, 0, None
     if NGood == 1:
-        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - Only one data point; cannot compute stats' + imrow)
+        imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
+        LOG.warn('djs_iterstat - Only one data point; '
+                 'cannot compute stats{0}'.format(imrow))
         return 0, 0, 0, 0, 0, None
     if np.unique(InputArr).size == 1:
-        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - Only one value in data; cannot compute stats' + imrow)
+        imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
+        LOG.warn('djs_iterstat - Only one value in data; '
+                 'cannot compute stats{0}'.format(imrow))
         return 0, 0, 0, 0, 0, None
 
     # Determine Max and Min
@@ -1071,18 +1038,19 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
     Mask[InputArr < Min] = 0
 
     FMean = np.sum(1.0 * InputArr * Mask) / NGood
-    FSig  = np.sqrt(np.sum((1.0 * InputArr - FMean)**2 * Mask) / (NGood - 1))
+    FSig  = np.sqrt(np.sum((1.0 * InputArr - FMean) ** 2 * Mask) / (NGood - 1))
 
     NLast = -1
-    Iter  =  0
+    Iter  = 0
     NGood = np.sum(Mask)
     if NGood < 2:
-        imrow =  _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - No good data points; cannot compute stats' + imrow)
+        imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
+        LOG.warn('djs_iterstat - No good data points; '
+                 'cannot compute stats{0}'.format(imrow))
         return 0, 0, 0, 0, 0, None
 
     SaveMask = Mask.copy()
-    if Iter >= MaxIter: # to support MaxIter=0
+    if Iter >= MaxIter:  # to support MaxIter=0
         NLast = NGood
 
     while (Iter < MaxIter) and (NLast != NGood) and (NGood >= 2):
@@ -1096,9 +1064,9 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
 
         if npix >= 2:
             FMean = np.sum(1.0 * InputArr * Mask) / npix
-            FSig  = np.sqrt(np.sum(
-                (1.0 * InputArr - FMean)**2 * Mask) / (npix - 1))
-            SaveMask = Mask.copy() # last mask used for computation of mean
+            FSig = np.sqrt(np.sum(
+                (1.0 * InputArr - FMean) ** 2 * Mask) / (npix - 1))
+            SaveMask = Mask.copy()  # last mask used for computation of mean
             NGood = npix
             Iter += 1
         else:
@@ -1115,24 +1083,17 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
     return FMean, FSig, FMedian, NLast, Iter, logical_mask
 
 
-#-------------------------#
+# ----------------------- #
 # Interfaces used by TEAL #
-#-------------------------#
-
+# ----------------------- #
 
 def getHelpAsString(fulldoc=True):
-    """
-    Returns documentation on the `clean` function. Required by TEAL.
-
-    """
+    """Returns documentation on the `clean` function. Required by TEAL."""
     return clean.__doc__
 
 
 def run(configobj=None):
-    """
-    TEAL interface for the `clean` function.
-
-    """
+    """TEAL interface for the `clean` function."""
     clean(configobj['input'],
           suffix=configobj['suffix'],
           stat=configobj['stat'],
@@ -1151,10 +1112,9 @@ def run(configobj=None):
           verbose=configobj['verbose'])
 
 
-#-----------------------------#
+# --------------------------- #
 # Interfaces for command line #
-#-----------------------------#
-
+# --------------------------- #
 
 def main():
     """Command line driver."""
@@ -1200,7 +1160,8 @@ def main():
     parser.add_argument(
         '-c', '--clobber', action="store_true", help='Clobber output')
     parser.add_argument(
-        '-q', '--quiet', action="store_true", help='Do not print informational messages')
+        '-q', '--quiet', action='store_true',
+        help='Do not print informational messages')
     parser.add_argument(
         '--version', action="version",
         version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
@@ -1218,8 +1179,7 @@ def main():
 
     clean(args.arg0, args.arg1, stat=args.stat, maxiter=args.maxiter,
           sigrej=args.sigrej, lower=args.lower, upper=args.upper,
-          binwidth=args.binwidth,
-          mask1=mask1, mask2=mask2, dqbits=args.dqbits,
+          binwidth=args.binwidth, mask1=mask1, mask2=mask2, dqbits=args.dqbits,
           rpt_clean=args.rpt_clean, atol=args.atol,
           clobber=args.clobber, verbose=not args.quiet)
 
