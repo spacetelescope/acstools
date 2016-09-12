@@ -216,7 +216,8 @@ def get_lt(hdr):
     -------
     ltm, ltv : tuple of float
         ``(LTM1_1, LTM2_2)`` and ``(LTV1, LTV2)``.
-        Values are `None` if not found.
+        Values are ``(1, 1)`` and ``(0, 0)`` if not found,
+        to accomodate reference files with missing info.
 
     Raises
     ------
@@ -224,12 +225,12 @@ def get_lt(hdr):
         Invalid LTM* values.
 
     """
-    ltm = (hdr.get('LTM1_1'), hdr.get('LTM2_2'))
+    ltm = (hdr.get('LTM1_1', 1.0), hdr.get('LTM2_2', 1.0))
 
     if ltm[0] <= 0 or ltm[1] <= 0:
         raise ValueError('(LTM1_1, LTM2_2) = {0} is invalid'.format(ltm))
 
-    ltv = (hdr.get('LTV1'), hdr.get('LTV2'))
+    ltv = (hdr.get('LTV1', 0.0), hdr.get('LTV2', 0.0))
     return ltm, ltv
 
 
