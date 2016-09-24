@@ -32,7 +32,7 @@ Contents:
    acs_destripe
    acs_destripe_plus
    satdet
-   utils_subarr
+   utils_calib
 
 
 Indices and tables

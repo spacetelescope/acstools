@@ -1,13 +1,196 @@
-"""General utilities for ACS subarrays."""
+"""General utilities for ACS calibration adapted from HSTCAL."""
 from __future__ import absolute_import, division, print_function
 
 # STDLIB
+import os
 import warnings
 
 # THIRD-PARTY
+import numpy as np
+from astropy.io import fits
 from astropy.utils.exceptions import AstropyUserWarning
 
-__all__ = ['extract_ref', 'find_line', 'get_corner', 'get_lt', 'from_lt']
+__all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
+           'from_irafpath', 'extract_ref', 'find_line', 'get_corner', 'get_lt',
+           'from_lt']
+
+
+def extract_dark(prihdr, scihdu):
+    """Extract superdark data from ``DARKFILE`` or ``DRKCFILE``.
+
+    Parameters
+    ----------
+    prihdr : obj
+        FITS primary header HDU.
+
+    scihdu : obj
+        Extension HDU of the science image.
+        This is only used to extract subarray data.
+
+    Returns
+    -------
+    dark : ndarray or `None`
+        Superdark, if any. Subtract this to apply ``DARKCORR``.
+
+    """
+    if prihdr.get('PCTECORR', 'OMIT') == 'COMPLETE':
+        darkfile = prihdr.get('DRKCFILE', 'N/A')
+    else:
+        darkfile = prihdr.get('DARKFILE', 'N/A')
+
+    if darkfile == 'N/A':
+        return None
+
+    darkfile = from_irafpath(darkfile)
+    ampstring = prihdr['CCDAMP']
+
+    # Calculate DARKTIME
+    exptime = prihdr.get('EXPTIME', 0.0)
+    flashdur = prihdr.get('FLASHDUR', 0.0)
+    darktime = exptime + flashdur
+    if exptime > 0:  # Not BIAS
+        darktime += 3.0
+
+    with fits.open(darkfile) as hdudark:
+        if ampstring == 'ABCD':
+            dark = np.concatenate(
+                (hdudark['sci', 1].data,
+                 hdudark['sci', 2].data[::-1, :]), axis=1)
+        elif ampstring in ('A', 'B', 'AB'):
+            dark = extract_ref(scihdu, hdudark['sci', 2])
+        else:
+            dark = extract_ref(scihdu, hdudark['sci', 1])
+
+    dark = dark * darktime
+
+    return dark
+
+
+def extract_flash(prihdr, scihdu):
+    """Extract postflash data from ``FLSHFILE``.
+
+    Parameters
+    ----------
+    prihdr : obj
+        FITS primary header HDU.
+
+    scihdu : obj
+        Extension HDU of the science image.
+        This is only used to extract subarray data.
+
+    Returns
+    -------
+    flash : ndarray or `None`
+        Postflash, if any. Subtract this to apply ``FLSHCORR``.
+
+    """
+    flshfile = prihdr.get('FLSHFILE', 'N/A')
+    flashsta = prihdr.get('FLASHSTA', 'N/A')
+    flashdur = prihdr.get('FLASHDUR', 0.0)
+
+    if flshfile == 'N/A' or flashdur <= 0:
+        return None
+
+    if flashsta != 'SUCCESSFUL':
+        warnings.warn('Flash status is {0}'.format(flashsta),
+                      AstropyUserWarning)
+
+    flshfile = from_irafpath(flshfile)
+    ampstring = prihdr['CCDAMP']
+
+    with fits.open(flshfile) as hduflash:
+        if ampstring == 'ABCD':
+            flash = np.concatenate(
+                (hduflash['sci', 1].data,
+                 hduflash['sci', 2].data[::-1, :]), axis=1)
+        elif ampstring in ('A', 'B', 'AB'):
+            flash = extract_ref(scihdu, hduflash['sci', 2])
+        else:
+            flash = extract_ref(scihdu, hduflash['sci', 1])
+
+    flash = flash * flashdur
+
+    return flash
+
+
+def extract_flatfield(prihdr, scihdu):
+    """Extract flatfield data from ``PFLTFILE``.
+
+    Parameters
+    ----------
+    prihdr : obj
+        FITS primary header HDU.
+
+    scihdu : obj
+        Extension HDU of the science image.
+        This is only used to extract subarray data.
+
+    Returns
+    -------
+    invflat : ndarray or `None`
+        Inverse flatfield, if any. Multiply this to apply ``FLATCORR``.
+
+    """
+    for ff in ['DFLTFILE', 'LFLTFILE']:
+        vv = prihdr.get(ff, 'N/A')
+        if vv != 'N/A':
+            warnings.warn('{0}={1} is not accounted for'.format(ff, vv),
+                          AstropyUserWarning)
+
+    flatfile = prihdr.get('PFLTFILE', 'N/A')
+
+    if flatfile == 'N/A':
+        return None
+
+    flatfile = from_irafpath(flatfile)
+    ampstring = prihdr['CCDAMP']
+
+    with fits.open(flatfile) as hduflat:
+        if ampstring == 'ABCD':
+            invflat = np.concatenate(
+                (1 / hduflat['sci', 1].data,
+                 1 / hduflat['sci', 2].data[::-1, :]), axis=1)
+        elif ampstring in ('A', 'B', 'AB'):
+            invflat = 1 / extract_ref(scihdu, hduflat['sci', 2])
+        else:
+            invflat = 1 / extract_ref(scihdu, hduflat['sci', 1])
+
+    return invflat
+
+
+def from_irafpath(irafpath):
+    """Resolve IRAF path like ``jref$`` into actual file path.
+
+    Parameters
+    ----------
+    irafpath : str
+        Path containing IRAF syntax.
+
+    Returns
+    -------
+    realpath : str
+        Actual file path. If input does not follow ``path$filename``
+        format, then this is the same as input.
+
+    Raises
+    ------
+    ValueError
+        The required environment variable is undefined.
+
+    """
+    s = irafpath.split('$')
+
+    if len(s) != 2:
+        return irafpath
+    if len(s[0]) == 0:
+        return irafpath
+
+    try:
+        refdir = os.environ[s[0]]
+    except KeyError:
+        raise ValueError('{0} environment variable undefined'.format(s[0]))
+
+    return os.path.join(refdir, s[1])
 
 
 def extract_ref(scihdu, refhdu):
