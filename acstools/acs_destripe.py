@@ -60,7 +60,7 @@ import numpy as np
 from astropy.io import fits
 
 # LOCAL
-from .utils_subarr import extract_ref
+from .utils_calib import extract_ref
 
 __taskname__ = 'acs_destripe'
 __version__ = '0.8.1'
