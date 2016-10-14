@@ -360,6 +360,10 @@ def find_line(scihdu, refhdu):
         x0 = xzero
         y0 = yzero
 
+    # Ensure integer index
+    x0 = int(x0)
+    y0 = int(y0)
+
     return same_size, rx, ry, x0, y0
 
 
