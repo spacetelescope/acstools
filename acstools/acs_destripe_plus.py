@@ -416,7 +416,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     acsccd.acsccd(inputfile)
 
     # modify user mask with DQ masks if requested
-    dqbits = bitmask.interpret_bits_value(dqbits)
+    dqbits = bitmask.interpret_bit_flags(dqbits)
     if dqbits is not None:
         # save 'tra' file in memory to trick the log file
         # not to save first acs2d log as this is done only

@@ -551,7 +551,7 @@ def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
     from stsci.tools import bitmask  # Optional package dependency
 
-    dqbits = bitmask.interpret_bits_value(dqbits)
+    dqbits = bitmask.interpret_bit_flags(dqbits)
     if dqbits is None:
         if mask is None:
             return None
@@ -561,8 +561,13 @@ def _mergeUserMaskAndDQ(dq, mask, dqbits):
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
 
-    dqmask = bitmask.bitmask2mask(bitmask=dq, ignore_bits=dqbits,
-                                  good_mask_value=1, dtype=np.uint8)
+    dqmask = bitmask.bitfield_to_boolean_mask(
+        bitfield=dq,
+        ignore_bits=dqbits,
+        good_mask_value=1,
+        dtype=np.uint8
+    )
+
     if mask is None:
         return dqmask
 
