@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 # STDLIB
 import os
 import warnings
+from math import exp, sinh
 
 # THIRD-PARTY
 import numpy as np
@@ -98,15 +99,37 @@ def extract_flash(prihdr, scihdu):
     flshfile = from_irafpath(flshfile)
     ampstring = prihdr['CCDAMP']
 
+    # Apply correction factor based on AMP and FLASHDUR
+    corrfac = {
+        'A': 1 - (-0.27143973 * sinh(0.89499787 * flashdur - 1) /
+                  exp(1.64930466 * flashdur - 1)),
+        'B': 1 - (-0.38018589 * sinh(1.63426073 * flashdur - 1) /
+                  exp(2.19362160 * flashdur - 1)),
+        'C': 1 + (0.04802005 / (flashdur ** 2.12968265 + 0.01922919)),
+        'D': 1 - (-0.32215275 * sinh(1.19033580 * flashdur - 1) /
+                  exp(1.59900158 * flashdur - 1))}
+
     with fits.open(flshfile) as hduflash:
         if ampstring == 'ABCD':
-            flash = np.concatenate(
-                (hduflash['sci', 1].data,
-                 hduflash['sci', 2].data[::-1, :]), axis=1)
+            flsh_cd = hduflash['sci', 1].data
+            flsh_ab = hduflash['sci', 2].data[::-1, :]
+
+            dimx = flsh_cd.shape[1]  # 4096
+            ampx = dimx // 2  # 2048
+            flsh_cd[:, :ampx] *= corrfac['C']
+            flsh_cd[:, ampx:dimx] *= corrfac['D']
+            flsh_ab[:, :ampx] *= corrfac['A']
+            flsh_ab[:, ampx:dimx] *= corrfac['B']
+
+            flash = np.concatenate((flsh_cd, flsh_ab), axis=1)
+
+        # TODO: Do we need corrfac logic for AB or CD?
         elif ampstring in ('A', 'B', 'AB'):
-            flash = extract_ref(scihdu, hduflash['sci', 2])
+            flash = (extract_ref(scihdu, hduflash['sci', 2]) *
+                     corrfac[ampstring])
         else:
-            flash = extract_ref(scihdu, hduflash['sci', 1])
+            flash = (extract_ref(scihdu, hduflash['sci', 1]) *
+                     corrfac[ampstring])
 
     flash = flash * flashdur
 

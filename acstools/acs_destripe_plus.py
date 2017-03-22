@@ -90,8 +90,8 @@ from . import acsccd
 from . import acscte
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.1'
-__vdate__ = '12-Jan-2016'
+__version__ = '0.4.2'
+__vdate__ = '13-Oct-2016'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
 __all__ = ['destripe_plus']
 

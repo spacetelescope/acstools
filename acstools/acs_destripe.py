@@ -62,8 +62,8 @@ from astropy.io import fits
 from .utils_calib import extract_dark, extract_flash, extract_flatfield
 
 __taskname__ = 'acs_destripe'
-__version__ = '0.8.2'
-__vdate__ = '22-Sep-2016'
+__version__ = '0.8.3'
+__vdate__ = '13-Oct-2016'
 __author__ = 'Norman Grogin, STScI, March 2012.'
 __all__ = ['clean']
 
