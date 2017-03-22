@@ -272,7 +272,12 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     """
     # Optional package dependencies
     from stsci.tools import parseinput
-    from stsci.tools import bitmask
+    try:
+        from stsci.tools.bitmask import interpret_bit_flags
+    except ImportError:
+        from stsci.tools.bitmask import (
+            interpret_bits_value as interpret_bit_flags
+        )
 
     # process input file(s) and if we have multiple input files - recursively
     # call acs_destripe_plus for each input image:
@@ -416,7 +421,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     acsccd.acsccd(inputfile)
 
     # modify user mask with DQ masks if requested
-    dqbits = bitmask.interpret_bits_value(dqbits)
+    dqbits = interpret_bit_flags(dqbits)
     if dqbits is not None:
         # save 'tra' file in memory to trick the log file
         # not to save first acs2d log as this is done only
