@@ -569,8 +569,8 @@ def _mergeUserMaskAndDQ(dq, mask, dqbits):
     if dq is None:
         raise ValueError("DQ array is None while 'dqbits' is not None.")
 
-    dqmask = bitfield_to_boolean_mask(dq, ignore_bits=dqbits,
-                                      good_mask_value=1, dtype=np.uint8)
+    dqmask = bitfield_to_boolean_mask(dq, dqbits, good_mask_value=1,
+                                      dtype=np.uint8)
 
     if mask is None:
         return dqmask
