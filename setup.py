@@ -42,14 +42,15 @@ setup(
     license=LICENSE,
     url=URL,
     classifiers=CLASSIFIERS,
-    packages=[PACKAGENAME],
-    package_dir={PACKAGENAME: PACKAGENAME},
+    packages=[PACKAGENAME, PACKAGENAME + '.tests'],
     package_data={PACKAGENAME: ['pars/*']},
     entry_points=entry_points,
     install_requires = [
         'astropy>=1.1',
         'numpy'
     ],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     use_2to3=False,
     zip_safe=False
 )
