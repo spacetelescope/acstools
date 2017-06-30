@@ -57,12 +57,29 @@ CALACS supports several command line options:
   * Turn off parallel processing for PCTECORR. Try this option if you encounter
     problems running CALACS with PCTECORR=PERFORM.
 
+* --nthreads <N>
+
+  * Specify the number of threads used for PCTECORR.
+    The default is 'greedy' and will use that specified by the system environment variable OMP_NUM_THREADS.
+    If N > ``OMP_NUM_THREADS``, ``OMP_NUM_THREADS`` will be used instead. The option -1 takes precedence.
+
+* --ctegen <1|2>
+
+  * Specify which generation CTE correction to use, the default is 2. Gen 1 (officially deprecated) refers to
+    the correction algorithm used in calacs version pre 9.2.0 in relation to the following ISRs
+    ACS ISR 2010-03 and 2012-03. Gen 2 refers to the new CTE correction algorithm implemented in calacs
+    version 9.2.0 (HSTCAL 1.3.0) in relation to the ISR (to be updated).
+
+* --pctetab <filename>
+
+  * Override the PCTETAB reference file specified in the image header.
 
 Parallel Processing with OpenMP
 -------------------------------
 
 By default, CALACS will attempt to perform PCTECORR using all available CPUs on
 your machine. You can set the maximum number of CPUs available for CALACS by
+either using the command line option --nthreads <N> or by
 setting the ``OMP_NUM_THREADS`` environmental variable.
 
 In tcsh::
@@ -121,8 +138,8 @@ For post-SM4 full-frame WFC exposures, it also includes:
 Pixel-Based CTE Correction (PCTECORR)
 =====================================
 
-For all full-frame WFC exposures, pixel-based CTE correction (ACS ISR 2010-03
-and 2012-03) is applied in ACSCTE that occurs after the ACSCCD series;
+For all full-frame WFC exposures, pixel-based CTE correction (ACS ISR to be updated)
+is applied in ACSCTE that occurs after the ACSCCD series;
 i.e., after BLEVCORR.
 
 Because the CTE correction is applied before DARKCORR and FLSHCORR, it is
@@ -162,9 +179,20 @@ Optional Keywords
 -----------------
 
 You may adjust some CTE correction algorithm parameters by changing the
-following keywords in RAW image header. The default values are picked for
-optimum results in a typical WFC full-frame exposure. Changing these values is
+following keywords in the RAW image header. The default values are picked for
+optimal results in a typical WFC full-frame exposure. Changing these values is
 not recommended unless you know what you are doing.
+
+* FIXROCR
+
+  * Account for and correct readout cosmic ray over-subtraction.
+
+    * 0 - Off: do not correct
+    * 1 - On: correct
+
+* PCTENPAR
+
+  * Number of parallel transfer iterations.
 
 * PCTENSMD
 
@@ -174,30 +202,17 @@ not recommended unless you know what you are doing.
     * 1 - Perform noise smoothing
     * 2 - No noise smoothing
 
-  * Overwrites NSEMODEL in PCTETAB.
+* PCTERNOI
 
-* PCTERNCL
+  * Read noise amplitude in ELECTRONS.
 
-  * Read noise level of image in ELECTRONS. This is not used if you specified
-    no mitigation in read noise mitigation mode.
-  * Overwrites RN_CLIP in PCTETAB.
+* PCTETLEN
 
-* PCTETRSH
+  * Maximum length of CTE trail.
 
-  * Over-subtraction correction threshold. Pixel below this value in ELECTRONS
-    after CTE correction is considered over-corrected and will re-corrected with
-    smaller correction.
-  * Overwrites SUBTHRSH in PCTETAB.
+* PCTENFOR
 
-* PCTESMIT
-
-  * Number of iterations of readout simulation per column.
-  * Overwrites SIM_NIT in PCTETAB.
-
-* PCTESHFT
-
-  * Number of shifts each readout simulation is broken up into.
-  * Overwrites SHFT_NIT in PCTETAB.
+  * Number of iterations used for forward CTE model.
 
 
 Dark Current Subtraction (DARKCORR)
