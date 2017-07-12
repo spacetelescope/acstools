@@ -26,7 +26,8 @@ Find trail segments for a single image and extension without multiprocessing,
 and display plots (not shown) and verbose information:
 
 >>> results, errors = detsat(
-...     'jc8m10syq_flc.fits', chips=[4], n_processes=1, plot=True, verbose=True)
+...     'jc8m10syq_flc.fits', chips=[4], n_processes=1,
+...     plot=True, verbose=True)
 1 file(s) found...
 Processing jc8m10syq_flc.fits[4]...
 Rescale intensity percentiles: 110.161376953, 173.693756409
@@ -135,19 +136,28 @@ import glob
 import multiprocessing
 import time
 import warnings
+from functools import partial
 from multiprocessing import Process, Queue
 
 # THIRD PARTY
+import astropy
 import numpy as np
 from astropy.io import fits
-#from astropy.stats import biweight_location
-from astropy.stats import biweight_midvariance, sigma_clipped_stats
+# from astropy.stats import biweight_location
+from astropy.stats import sigma_clipped_stats
 from astropy.utils.exceptions import AstropyUserWarning
+from astropy.utils.introspection import minversion
+
+# See https://github.com/astropy/astropy/issues/6364
+if minversion(astropy, '2.0'):
+    from astropy.stats import biweight_scale
+    biweight_midvariance = partial(biweight_scale, modify_sample_size=False)
+else:
+    from astropy.stats import biweight_midvariance
 
 # OPTIONAL
 try:
     import skimage
-    from astropy.utils.introspection import minversion
     from scipy import stats
     from skimage import transform
     from skimage import morphology as morph
@@ -168,13 +178,13 @@ except ImportError:
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
 
-__version__ = '0.3.2'
-__vdate__ = '24-May-2016'
+__version__ = '0.3.3'
+__vdate__ = '11-Jul-2017'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask', 'update_dq']
 
 
-############################## from satdet.py ##################################
+# ########################### from satdet.py ################################ #
 
 def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
                 small_edge=60, line_len=200, line_gap=75,
@@ -192,7 +202,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     # get the data
     image = fits.getdata(filename, ext)
-    #image = im.astype('float64')
+    # image = im.astype('float64')
 
     # rescale the image
     p1, p2 = np.percentile(image, percentile)
@@ -309,8 +319,9 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         # if there is an unreasonable amount of points, it picked up garbage
         elif n_result > 300:
             warnings.warn(
-                'Way too many segments results to be correct ({0}). Rejecting '
-                'detection on {1}.'.format(n_result, fname), AstropyUserWarning)
+                'Way too many segments results to be correct ({0}). '
+                'Rejecting detection on {1}.'.format(n_result, fname),
+                AstropyUserWarning)
             return np.empty(0)
 
         # remake the point lists with things taken out
@@ -335,7 +346,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         # traversed the image
         # top to bottom
         if (((min_y0 < buf) or (min_y1 < buf)) and
-              ((max_y0 > topy) or (max_y1 > topy))):
+                ((max_y0 > topy) or (max_y1 > topy))):
             satellite = True
             if verbose:
                 print('Trail Direction: Top to Bottom')
@@ -663,7 +674,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     flat = [medarr]
 
     # get the outliers
-    #mean = biweight_location(medarr)
+    # mean = biweight_location(medarr)
     mean = sigma_clipped_stats(medarr)[0]
     stddev = biweight_midvariance(medarr)
 
@@ -703,7 +714,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     # start to create a mask
     mask = np.zeros(rotate.shape)
-    lowerx, upperx, lowery, uppery  = _get_valid_indices(
+    lowerx, upperx, lowery, uppery = _get_valid_indices(
         mask.shape, np.floor(sx - subwidth), np.ceil(sx + subwidth),
         np.floor(sy - sublen + lower), np.ceil(sy - sublen + upper))
     mask[lowery:uppery, lowerx:upperx] = 1
@@ -739,9 +750,10 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         medarr = np.median(subr, axis=1)
         flat.append(medarr)
 
-        #mean = biweight_location(medarr)
+        # mean = biweight_location(medarr)
         mean = sigma_clipped_stats(medarr, sigma=sigma)[0]
-        stddev = biweight_midvariance(medarr)  # Might give RuntimeWarning
+        # Might give RuntimeWarning
+        stddev = biweight_midvariance(medarr)
         z = np.where(medarr > (mean + (sigma * stddev)))[0]
 
         if len(z) < 1:
@@ -768,7 +780,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         # are accounted for
         lower = np.floor(lower - pad)
         upper = np.ceil(upper + pad)
-        lowerx, upperx, lowery, uppery  = _get_valid_indices(
+        lowerx, upperx, lowery, uppery = _get_valid_indices(
             mask.shape,
             np.floor(nextx - subwidth),
             np.ceil(nextx + subwidth),
@@ -776,16 +788,16 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
             np.ceil(centery - sublen + upper))
         mask[lowery:uppery, lowerx:upperx] = 1
 
-        lower_p = (lowerx, lowery)
+        # lower_p = (lowerx, lowery)
         upper_p = (upperx, uppery)
-        lower_t = _rotate_point(
-            lower_p, newrad, image.shape, rotate.shape, reverse=True)
+        # lower_t = _rotate_point(
+        #     lower_p, newrad, image.shape, rotate.shape, reverse=True)
         upper_t = _rotate_point(
             upper_p, newrad, image.shape, rotate.shape, reverse=True)
 
-        lowy = np.floor(lower_t[1])
+        # lowy = np.floor(lower_t[1])
         highy = np.ceil(upper_t[1])
-        lowx = np.floor(lower_t[0])
+        # lowx = np.floor(lower_t[0])
         highx = np.ceil(upper_t[0])
 
         # Reset the next subr to be at the center of the profile
@@ -832,13 +844,14 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     rot = transform.rotate(mask, -deg, resize=True, order=1)
     ix0 = (rot.shape[1] - image.shape[1]) / 2
     iy0 = (rot.shape[0] - image.shape[0]) / 2
-    lowerx, upperx, lowery, uppery  = _get_valid_indices(
+    lowerx, upperx, lowery, uppery = _get_valid_indices(
         rot.shape, ix0, image.shape[1] + ix0, iy0, image.shape[0] + iy0)
     mask = rot[lowery:uppery, lowerx:upperx]
 
     if mask.shape != image.shape:
-        warnings.warn('Output mask shape is {0} but input image shape is '
-                      '{1}'.format(mask.shape, image.shape), AstropyUserWarning)
+        warnings.warn(
+            'Output mask shape is {0} but input image shape is '
+            '{1}'.format(mask.shape, image.shape), AstropyUserWarning)
 
     # Change to boolean mask
     mask = mask.astype(np.bool)
@@ -923,7 +936,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
             print('No updates necessary for {0}'.format(fname))
 
 
-############################## from decttest.py ################################
+# ############################ from decttest.py ############################# #
 # Multiprocessing for multiple input files.
 # This is for detection only, not for mask.
 
@@ -935,8 +948,8 @@ def _satdet_worker(work_queue, done_queue, sigma=2.0, low_thresh=0.1,
         try:
             result = _detsat_one(
                 fil, chip, sigma=sigma,
-                low_thresh=low_thresh, h_thresh=h_thresh, small_edge=small_edge,
-                line_len=line_len, line_gap=line_gap,
+                low_thresh=low_thresh, h_thresh=h_thresh,
+                small_edge=small_edge, line_len=line_len, line_gap=line_gap,
                 percentile=percentile, buf=buf, plot=False, verbose=False)
         except Exception as e:
             retcode = False
@@ -968,7 +981,8 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
         :py:func:`glob.glob`.
 
     chips : list
-        List of extensions for science data, as accepted by ``astropy.io.fits``.
+        List of extensions for science data, as accepted by
+        ``astropy.io.fits``.
         The default values of ``[1, 4]`` are tailored for ACS/WFC.
 
     n_processes : int
