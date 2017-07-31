@@ -514,7 +514,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     # delete intermediate files
     os.remove(blvtmp_name)
-    if cte_correct:
+    if cte_correct and os.path.isfile(blctmp_name):
         os.remove(blctmp_name)
 
     info_str = 'Done.\nFLT: {0}\n'.format(flt_name)
