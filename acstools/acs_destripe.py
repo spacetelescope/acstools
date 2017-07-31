@@ -55,8 +55,10 @@ from __future__ import absolute_import, division, print_function
 import logging
 
 # THIRD-PARTY
+import astropy
 import numpy as np
 from astropy.io import fits
+from astropy.utils.introspection import minversion
 
 # LOCAL
 from .utils_calib import extract_dark, extract_flash, extract_flatfield
@@ -189,7 +191,10 @@ class StripeArray(object):
             self.hdulist['err', 1].data = self.err.copy()
 
         # Write the output
-        self.hdulist.writeto(output, clobber=clobber)
+        if minversion(astropy, '1.3'):
+            self.hdulist.writeto(output, overwrite=clobber)
+        else:
+            self.hdulist.writeto(output, clobber=clobber)
 
     def close(self):
         """Close open file(s)."""
