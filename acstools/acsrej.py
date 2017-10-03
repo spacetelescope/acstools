@@ -35,7 +35,7 @@ __all__ = ['acsrej']
 def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
           shadcorr=False, crrejtab='', crmask=False, scalense=None, initgues='',
           skysub='', crsigmas='', crradius=None, crthresh=None, badinpdq=None,
-          newbias=False):
+          newbias=False, exe_args=None):
     """
     Run the acsrej.e executable as from the shell.
 
@@ -112,6 +112,11 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
         ERR is just read noise, not Poisson noise.
         This is used for BIAS images.
 
+    exe_args : list, optional
+        Arbitrary arguments passed to underlying executable call.
+        Note: Implementation uses subprocess.call and whitespace is not
+        permitted. E.g. use exe_args=['--nThreads', '1']
+
     """
     from stsci.tools import parseinput  # Optional package dependency
 
@@ -174,6 +179,9 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
     if newbias:
         call_list.append('-newbias')
 
+    if exe_args:
+        call_list.extend(exe_args)
+
     subprocess.call(call_list)
 
 
@@ -205,4 +213,6 @@ def run(configobj=None):
            crradius=configobj['crradius'],
            crthresh=configobj['crthresh'],
            badinpdq=configobj['badinpdq'],
-           newbias=configobj['newbias'])
+           newbias=configobj['newbias'],
+           exe_args=configobj['exe_args']
+           )

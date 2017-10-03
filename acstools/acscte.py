@@ -39,7 +39,7 @@ __all__ = ['acscte']
 
 
 def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
-           single_core=False):
+           single_core=False, exe_args=None):
     """
     Run the acscte.e executable as from the shell.
 
@@ -75,6 +75,11 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
         CPUs on your computer. Set this to True to force the use of just
         one CPU.
 
+    exe_args : list, optional
+        Arbitrary arguments passed to underlying executable call.
+        Note: Implementation uses subprocess.call and whitespace is not
+        permitted. E.g. use exe_args=['--nThreads', '1']
+
     """
     from stsci.tools import parseinput  # Optional package dependency
 
@@ -102,6 +107,9 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     if single_core:
         call_list.append('-1')
 
+    if exe_args:
+        call_list.extend(exe_args)
+
     subprocess.call(call_list)
 
 
@@ -123,5 +131,6 @@ def run(configobj=None):
            time_stamps=configobj['time_stamps'],
            verbose=configobj['verbose'],
            quiet=configobj['quiet'],
-           single_core=configobj['single_core']
+           single_core=configobj['single_core'],
+           exe_args=configobj['exe_args']
            )
