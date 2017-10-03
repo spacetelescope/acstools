@@ -47,7 +47,7 @@ __all__ = ['acsccd']
 #     If all False, will set all but ATODCORR to PERFORM.
 #     If any is True, will set that to PERFORM and the rest to OMIT.
 #
-def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
+def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
     """
     Run the acsccd.e executable as from the shell.
 
@@ -78,6 +78,11 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
     quiet : bool, optional
         Set to True for quiet output.
 
+    exe_args : list, optional
+        Arbitrary arguments passed to underlying executable call.
+        Note: Implementation uses subprocess.call and whitespace is not
+        permitted. E.g. use exe_args=['--nThreads', '1']
+
     """
     from stsci.tools import parseinput  # Optional package dependency
 
@@ -101,6 +106,9 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
 
     if quiet:
         call_list.append('-q')
+
+    if exe_args:
+        call_list.extend(exe_args)
 
     #if dqicorr:
     #    call_list.append('-dqi')
@@ -134,7 +142,8 @@ def run(configobj=None):
            exec_path=configobj['exec_path'],
            time_stamps=configobj['time_stamps'],
            verbose=configobj['verbose'],
-           quiet=configobj['quiet'] #,
+           quiet=configobj['quiet'],
+           exe_args=configobj['exe_args']  #,
            #dqicorr=configobj['dqicorr'],
            #atodcorr=configobj['atodcorr'],
            #blevcorr=configobj['blevcorr'],

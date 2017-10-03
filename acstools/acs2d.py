@@ -32,7 +32,7 @@ __vdate__ = "10-Oct-2014"
 __all__ = ['acs2d']
 
 
-def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
+def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
     """
     Run the acs2d.e executable as from the shell.
 
@@ -76,6 +76,11 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
     quiet : bool, optional
         Set to True for quiet output.
 
+    exe_args : list, optional
+        Arbitrary arguments passed to underlying executable call.
+        Note: Implementation uses subprocess.call and whitespace is not
+        permitted. E.g. use exe_args=['--nThreads', '1']
+
     """
     from stsci.tools import parseinput  # Optional package dependency
 
@@ -100,6 +105,9 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False):
     if quiet:
         call_list.append('-q')
 
+    if exe_args:
+        call_list.extend(exe_args)
+
     subprocess.call(call_list)
 
 
@@ -120,4 +128,6 @@ def run(configobj=None):
           exec_path=configobj['exec_path'],
           time_stamps=configobj['time_stamps'],
           verbose=configobj['verbose'],
-          quiet=configobj['quiet'])
+          quiet=configobj['quiet'],
+          exe_args=configobj['exe_args']
+          )

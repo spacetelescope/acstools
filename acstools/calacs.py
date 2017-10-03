@@ -29,7 +29,7 @@ __all__ = ['calacs']
 
 
 def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
-           verbose=False, debug=False, quiet=False, single_core=False):
+           verbose=False, debug=False, quiet=False, single_core=False, exe_args=None):
     """
     Run the calacs.e executable as from the shell.
 
@@ -63,6 +63,11 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
         CPUs on your computer. Set this to True to force the use of just
         one CPU.
 
+    exe_args : list, optional
+        Arbitrary arguments passed to underlying executable call.
+        Note: Implementation uses subprocess.call and whitespace is not
+        permitted. E.g. use exe_args=['--nThreads', '1']
+
     """
     if exec_path:
         if not os.path.exists(exec_path):
@@ -95,6 +100,9 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
 
     call_list.append(input_file)
 
+    if exe_args:
+        call_list.extend(exe_args)
+
     subprocess.call(call_list)
 
 
@@ -118,4 +126,6 @@ def run(configobj=None):
            verbose=configobj['verbose'],
            debug=configobj['debug'],
            quiet=configobj['quiet'],
-           single_core=configobj['single_core'])
+           single_core=configobj['single_core'],
+           exe_args=configobj['exe_args']
+           )
