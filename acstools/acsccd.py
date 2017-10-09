@@ -25,6 +25,8 @@ In Pyraf::
     --> import acstools
     --> epar acsccd
 
+For help usage use ``exe_args=['--help']``
+
 """
 # STDLIB
 import os
