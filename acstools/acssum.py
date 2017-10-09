@@ -21,6 +21,8 @@ In Pyraf::
     --> import acstools
     --> epar acssum
 
+For help usage use ``exe_args=['--help']``
+
 """
 # STDLIB
 import os

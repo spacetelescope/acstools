@@ -21,6 +21,8 @@ In Pyraf::
     --> import acstools
     --> epar calacs
 
+For help usage use ``exe_args=['--help']``
+
 """
 import os
 import subprocess
