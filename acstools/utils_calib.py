@@ -8,11 +8,12 @@ import warnings
 # THIRD-PARTY
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 from astropy.utils.exceptions import AstropyUserWarning
 
 __all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
            'from_irafpath', 'extract_ref', 'find_line', 'get_corner', 'get_lt',
-           'from_lt']
+           'from_lt', 'is_weird_subarray']
 
 
 def extract_dark(prihdr, scihdu):
@@ -464,3 +465,81 @@ def _nint(x):
     else:
         y = x - 0.5
     return int(y)
+
+
+def is_weird_subarray(filename):
+    """
+    See if the given WFC RAW file is a custom subarray CALACS cannot process.
+    Only custom subarray with overscan might be weird.
+    If that is not the case, then perhaps OSCNTAB reference file should
+    be updated instead.
+
+    Parameters
+    ----------
+    filename : str
+        The RAW file to test.
+
+    Returns
+    -------
+    is_weird : bool
+        `True` means pipeline should not process this, but should instead
+        but manually processed and then hand-deliver to pipeline.
+
+    Examples
+    --------
+    >>> import glob
+    >>> from acstools.utils_calib import is_weird_subarray
+    >>> filenames = glob.glob('*raw.fits')
+    >>> for f in filenames:
+    ...     print(f, is_weird_subarray(f))
+    j8dm03fxq_raw.fits True
+    j8eua7qqq_raw.fits False
+
+    """
+    is_weird = False
+
+    # Dimension of fullframe dark on each chip.
+    max_y = 2048
+    max_x = max_y * 2
+
+    with fits.open(filename) as pf:
+        prihdr = pf[0].header
+
+        # We won't use OSCNTAB, so don't worry about it.
+        if (prihdr['DETECTOR'] not in ('WFC', 'HRC') or
+                prihdr['BLEVCORR'] != 'PERFORM'):
+            return is_weird
+
+        scihdr = pf[1].header
+        nx = scihdr['NAXIS1']
+        ny = scihdr['NAXIS2']
+        darkfile = prihdr['DARKFILE'].replace('jref$', os.environ['jref'])
+
+        with fits.open(darkfile) as pfdrk:
+            same_size, rx, ry, x0, y0 = find_line(pf[1], pfdrk[1])
+
+        x1 = x0 + nx
+        y1 = y0 + ny
+
+        # Assume rx and ry are always 1.
+        if ((not same_size) and
+                (x0 < 0 or y0 < 0 or x1 >= max_x or y1 >= max_y)):
+            oscntab = prihdr['OSCNTAB'].replace('jref$', os.environ['jref'])
+            tab = Table.read(oscntab)
+
+            ccdamp = prihdr['CCDAMP']
+            ccdchip = scihdr['CCDCHIP']
+
+            # CCDAMP column might have trailing whitespace.
+            rows = tab[((tab['CCDAMP'] == ccdamp) |
+                        (tab['CCDAMP'] == '{:<4s}'.format(ccdamp))) &
+                       (tab['CCDCHIP'] == ccdchip) &
+                       (tab['NX'] == nx) &
+                       (tab['NY'] == ny)]
+
+            # If subarray has overscan (tested above) and does not have
+            # entry in OSCNTAB, it is trouble!
+            if len(rows) == 0:
+                is_weird = True
+
+    return is_weird
