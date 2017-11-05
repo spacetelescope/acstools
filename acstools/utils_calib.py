@@ -523,7 +523,7 @@ def is_weird_subarray(filename):
 
         # Assume rx and ry are always 1.
         if ((not same_size) and
-                (x0 < 0 or y0 < 0 or x1 >= max_x or y1 >= max_y)):
+                (x0 < 0 or y0 < 0 or x1 > max_x or y1 > max_y)):
             oscntab = prihdr['OSCNTAB'].replace('jref$', os.environ['jref'])
             tab = Table.read(oscntab)
 
