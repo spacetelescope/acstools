@@ -506,9 +506,10 @@ def is_weird_subarray(filename):
         prihdr = pf[0].header
 
         # We won't use OSCNTAB, so don't worry about it.
-        if (prihdr['DETECTOR'] not in ('WFC', 'HRC') or
-                prihdr['BLEVCORR'] != 'PERFORM' or
-                prihdr['DARKCORR'] != 'PERFORM'):
+        if (prihdr['DETECTOR'].strip().upper() not in ('WFC', 'HRC') or
+                prihdr['CTEIMAGE'].strip().upper() == "EPER" or
+                prihdr['BLEVCORR'].strip().upper() != 'PERFORM' or
+                prihdr['DARKCORR'].strip().upper() != 'PERFORM'):
             return is_weird
 
         scihdr = pf[1].header
@@ -531,12 +532,14 @@ def is_weird_subarray(filename):
             oscntab = prihdr['OSCNTAB'].replace('jref$', os.environ['jref'])
             tab = Table.read(oscntab)
 
-            ccdamp = prihdr['CCDAMP']
+            ccdamp = prihdr['CCDAMP'].strip().upper()
             ccdchip = scihdr['CCDCHIP']
 
             # CCDAMP column might have trailing whitespace.
-            rows = tab[((tab['CCDAMP'] == ccdamp) |
-                        (tab['CCDAMP'] == '{:<4s}'.format(ccdamp))) &
+            # https://github.com/astropy/astropy/issues/2608
+            ccdamp_col = np.char.rstrip(tab['CCDAMP'])
+
+            rows = tab[(ccdamp_col == ccdamp) &
                        (tab['CCDCHIP'] == ccdchip) &
                        (tab['NX'] == nx) &
                        (tab['NY'] == ny)]
