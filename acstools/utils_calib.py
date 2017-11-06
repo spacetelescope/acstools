@@ -507,7 +507,8 @@ def is_weird_subarray(filename):
 
         # We won't use OSCNTAB, so don't worry about it.
         if (prihdr['DETECTOR'] not in ('WFC', 'HRC') or
-                prihdr['BLEVCORR'] != 'PERFORM'):
+                prihdr['BLEVCORR'] != 'PERFORM' or
+                prihdr['DARKCORR'] != 'PERFORM'):
             return is_weird
 
         scihdr = pf[1].header
