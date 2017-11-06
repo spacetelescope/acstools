@@ -522,7 +522,10 @@ def is_weird_subarray(filename):
         x1 = x0 + nx
         y1 = y0 + ny
 
-        # Assume rx and ry are always 1.
+        # TODO: Document why binned data is not a concern.
+        if rx != 1 or ry != 1:
+            raise NotImplementedError('Binned data check is not supported')
+
         if ((not same_size) and
                 (x0 < 0 or y0 < 0 or x1 > max_x or y1 > max_y)):
             oscntab = prihdr['OSCNTAB'].replace('jref$', os.environ['jref'])
