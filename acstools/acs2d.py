@@ -24,17 +24,22 @@ In Pyraf::
 For help usage use ``exe_args=['--help']``
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 # STDLIB
 import os
 import subprocess
+import tempfile
 
 __taskname__ = "acs2d"
-__version__ = "2.0"
-__vdate__ = "10-Oct-2014"
+__version__ = "2.1"
+__vdate__ = "07-Nov-2017"
 __all__ = ['acs2d']
 
 
-def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
+def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
+          exe_args=None):
     """
     Run the acs2d.e executable as from the shell.
 
@@ -95,7 +100,7 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, ex
 
     # Parse input to get list of filenames to process.
     # acs2d.e only takes 'file1,file2,...'
-    infiles, dummy_out = parseinput.parseinput(input)
+    infiles = parseinput.parseinput(input)[0]
     call_list.append(','.join(infiles))
 
     if time_stamps:
@@ -110,7 +115,19 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, ex
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    # Piping out to subprocess.PIPE or sys.stdout don't seem to work here.
+    with tempfile.TemporaryFile() as fp:
+        retcode = subprocess.call(call_list, stdout=fp, stderr=fp)
+        fp.flush()
+        fp.seek(0)
+        print(fp.read().decode('utf-8'))
+
+    if verbose:
+        if retcode == -11:
+            retstr = '(segfault)'
+        else:
+            retstr = ''
+        print('subprocess return code:', retcode, retstr)
 
 
 def getHelpAsString():

@@ -24,14 +24,20 @@ In Pyraf::
 For help usage use ``exe_args=['--help']``
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+# STDLIB
 import os
 import subprocess
+import tempfile
 
 __all__ = ['calacs']
 
 
 def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
-           verbose=False, debug=False, quiet=False, single_core=False, exe_args=None):
+           verbose=False, debug=False, quiet=False, single_core=False,
+           exe_args=None):
     """
     Run the calacs.e executable as from the shell.
 
@@ -105,7 +111,19 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    # Piping out to subprocess.PIPE or sys.stdout don't seem to work here.
+    with tempfile.TemporaryFile() as fp:
+        retcode = subprocess.call(call_list, stdout=fp, stderr=fp)
+        fp.flush()
+        fp.seek(0)
+        print(fp.read().decode('utf-8'))
+
+    if verbose:
+        if retcode == -11:
+            retstr = '(segfault)'
+        else:
+            retstr = ''
+        print('subprocess return code:', retcode, retstr)
 
 
 def getHelpAsString():

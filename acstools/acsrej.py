@@ -24,20 +24,24 @@ In Pyraf::
 For help usage use ``exe_args=['--help']``
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 # STDLIB
 import os
 import subprocess
+import tempfile
 
 __taskname__ = "acsrej"
-__version__ = "1.0"
-__vdate__ = "18-Dec-2012"
+__version__ = "1.1"
+__vdate__ = "07-Nov-2017"
 __all__ = ['acsrej']
 
 
 def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
-          shadcorr=False, crrejtab='', crmask=False, scalense=None, initgues='',
-          skysub='', crsigmas='', crradius=None, crthresh=None, badinpdq=None,
-          newbias=False, exe_args=None):
+           shadcorr=False, crrejtab='', crmask=False, scalense=None,
+           initgues='', skysub='', crsigmas='', crradius=None, crthresh=None,
+           badinpdq=None, newbias=False, exe_args=None):
     """
     Run the acsrej.e executable as from the shell.
 
@@ -184,7 +188,19 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    # Piping out to subprocess.PIPE or sys.stdout don't seem to work here.
+    with tempfile.TemporaryFile() as fp:
+        retcode = subprocess.call(call_list, stdout=fp, stderr=fp)
+        fp.flush()
+        fp.seek(0)
+        print(fp.read().decode('utf-8'))
+
+    if verbose:
+        if retcode == -11:
+            retstr = '(segfault)'
+        else:
+            retstr = ''
+        print('subprocess return code:', retcode, retstr)
 
 
 def getHelpAsString():

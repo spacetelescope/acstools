@@ -30,13 +30,17 @@ In Pyraf::
 For help usage use ``exe_args=['--help']``
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 # STDLIB
 import os
 import subprocess
+import tempfile
 
 __taskname__ = "acscte"
-__version__ = "1.0"
-__vdate__ = "13-Aug-2013"
+__version__ = "1.1"
+__vdate__ = "07-Nov-2017"
 __all__ = ['acscte']
 
 
@@ -112,7 +116,19 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    # Piping out to subprocess.PIPE or sys.stdout don't seem to work here.
+    with tempfile.TemporaryFile() as fp:
+        retcode = subprocess.call(call_list, stdout=fp, stderr=fp)
+        fp.flush()
+        fp.seek(0)
+        print(fp.read().decode('utf-8'))
+
+    if verbose:
+        if retcode == -11:
+            retstr = '(segfault)'
+        else:
+            retstr = ''
+        print('subprocess return code:', retcode, retstr)
 
 
 def getHelpAsString():
