@@ -464,3 +464,128 @@ def _nint(x):
     else:
         y = x - 0.5
     return int(y)
+
+
+def get_hdr_vals(root):
+
+    """Retrieve header keyword values from RAW and SPT
+    FITS files to pass on to check_oscntab() and
+    check_overscan().
+
+    Parameters
+    ----------
+    root: str
+        Rootname of the observation. Can be relative path
+        to the file excluding the type of FITS file and
+        extension, e.g., /my/path/jxxxxxxxq'
+
+    Returns
+    -------
+    ccdamp : str
+        Amplifiers used to read out the CCDs
+
+    xstart : int
+        Starting column of the readout in detector
+        coordinates
+
+    ystart : int
+        Starting row of the readout in detector
+        coordinates
+
+    xsize : int
+        Number of columns in the readout
+
+    ysize : int
+        Number of rows in the readout
+
+    """
+
+    with fits.open(root + '_spt.fits') as hdu:
+        spthdr = hdu[0].header
+    with fits.open(root + '_raw.fits') as hdu:
+        prihdr = hdu[0].header
+    xstart = spthdr['SS_A1CRN']
+    ystart = spthdr['SS_A2CRN']
+    xsize = spthdr['SS_A1SZE']
+    ysize = spthdr['SS_A2SZE']
+    ccdamp = prihdr['CCDAMP']
+
+    return ccdamp, xstart, ystart, xsize, ysize
+
+
+def check_oscntab(oscntab, ccdamp, xsize, ysize, leading, trailing):
+    """Check if the supplied parameters are in the
+    OSCNTAB reference file.
+
+    .. note:: This function does not check the virtual bias rows.
+
+    Parameters
+    ----------
+    oscntab : str
+        Path to the OSCNTAB reference file being checked against
+
+    ccdamp : str
+        Amplifiers used to read out the CCDs
+
+    xsize : int
+        Number of columns in the readout
+
+    ysize : int
+        Number of rows in the readout
+
+    leading : int
+        Number of columns in the bias section ("TRIMX1" to be trimmed off
+        by BLEVCORR) on the A/C amplifiers side of the CCDs
+
+    trailing : int
+        Number of columns in the bias section ("TRIMX2" to be trimmed off
+        by BLEVCORR) on the B/D amplifiers side of the CCDs
+
+    Returns
+    -------
+    supported : bool
+        Result of test if input parameters are in OSCNTAB
+
+    """
+
+    with fits.open(oscntab) as oschdu:
+        table = Table(oschdu[1].data)
+    for row in table:
+        if row['CCDAMP'].lower().rstrip() in ccdamp.lower().rstrip():
+            if (row['NX'] == xsize) & (row['NY'] == ysize) & (row['TRIMX1'] == leading) & (row['TRIMX2'] == trailing):
+                return True
+    return False
+
+
+def check_overscan(xstart, xsize):
+    """Check image for bias columns.
+
+    Parameters
+    ----------
+    xstart : int
+        Starting column of the readout in detector coordinates
+
+    xsize : int
+        Number of columns in the readout
+
+    Returns
+    -------
+    hasoverscan : bool
+        Indication if there are bias columns in the image
+
+    leading : int
+        Number of bias columns on the A/C amplifiers
+        side of the CCDs ("TRIMX1" in OSCNTAB)
+
+    trailing : int
+        Number of bias columns on the B/D amplifiers
+        side of the CCDs ("TRIMX2" in OSCNTAB)
+        
+    """
+
+    if (xstart < 24) | ((xstart + xsize) > 4096):
+        leading = xstart - 24 if xstart < 24 else 0
+        trailing = 4096 - (xstart + xsize - 24) if (xstart + xsize) > 4096 else 0
+        return True, np.abs(leading), np.abs(trailing)
+    else:
+        return False, 0, 0
