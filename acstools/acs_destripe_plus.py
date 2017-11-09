@@ -45,7 +45,8 @@ From command line::
                         [--binwidth BINWIDTH] [--sci1_mask SCI1_MASK]
                         [--sci2_mask SCI2_MASK] [--dqbits [DQBITS]]
                         [--rpt_clean RPT_CLEAN] [--atol [ATOL]] [--nocte]
-                        [--clobber] [-q] [--version]
+                        [--keep_intermediate_files] [--clobber] [-q]
+                        [--version]
                         input
 
 """
@@ -68,6 +69,7 @@ From command line::
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
 # 12JAN2016 (v0.4.1) Lim added new subarray modes that are allowed CTE corr.
+# 08NOV2017 (v0.4.2) Lim added capability to produce CRJ/CRC outputs.
 
 from __future__ import absolute_import, division, print_function
 
@@ -94,12 +96,13 @@ from . import acs_destripe
 from . import acs2d
 from . import acsccd
 from . import acscte
+from . import acsrej
 
 __taskname__ = 'acs_destripe_plus'
 __version__ = '0.4.2'
 __vdate__ = '31-May-2018'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
-__all__ = ['destripe_plus']
+__all__ = ['destripe_plus', 'crrej_plus']
 
 SM4_DATE = Time('2008-01-01')
 SUBARRAY_LIST = [
@@ -119,7 +122,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                   sigrej=2.0, lower=None, upper=None, binwidth=0.3,
                   scimask1=None, scimask2=None,
                   dqbits=None, rpt_clean=0, atol=0.01,
-                  cte_correct=True, clobber=False, verbose=True):
+                  cte_correct=True, keep_intermediate_files=False,
+                  clobber=False, verbose=True):
     """Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -196,10 +200,6 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         background statistics. This parameter is aplicable *only* to *stat*
         parameter values of `'mode'` or `'midpt'`.
 
-    clobber : bool
-        Specify whether or not to 'clobber' (delete then replace)
-        previously generated products with the same names.
-
     scimask1 : str or list of str
         Mask images for *calibrated* ``SCI,1``, one for each input file.
         Pixels with zero values will be masked out, in addition to clipping.
@@ -260,6 +260,14 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     cte_correct : bool
         Perform CTE correction.
+
+    keep_intermediate_files : bool
+        Keep de-striped BLV_TMP and BLC_TMP files around for CRREJ,
+        if needed. Default = False.
+
+    clobber : bool
+        Specify whether or not to 'clobber' (delete then replace)
+        previously generated products with the same names.
 
     verbose : bool
         Print informational messages. Default = True.
@@ -413,8 +421,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         if aperture in SUBARRAY_LIST:
             is_subarray = True
         else:
-            LOG.warning('Using non-supported subarray, '
-                        'turning CTE correction off')
+            LOG.warning('Using non-supported subarray ({}), '
+                        'turning CTE correction off'.format(aperture))
             cte_correct = False
 
     # delete files from previous CALACS runs
@@ -495,14 +503,80 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         acs2d.acs2d(blctmp_name)
 
     # delete intermediate files
-    os.remove(blvtmp_name)
-    if cte_correct and os.path.isfile(blctmp_name):
-        os.remove(blctmp_name)
+    if not keep_intermediate_files:
+        os.remove(blvtmp_name)
+        if cte_correct and os.path.isfile(blctmp_name):
+            os.remove(blctmp_name)
 
     info_str = 'Done.\nFLT: {0}\n'.format(flt_name)
     if cte_correct:
         info_str += 'FLC: {0}\n'.format(flc_name)
     LOG.info(info_str)
+
+
+def crrej_plus(filelist, outroot, verbose=True):
+    """
+    Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
+    The purpose of this is primarily for combining destriped
+    products from :func:`destripe_plus`.
+
+    .. note::
+
+        If you want to run this step, it is important to set
+        ``keep_intermediate_files=True`` in :func:`destripe_plus`.
+
+        This function has no TEAL nor command line interface.
+
+    Parameters
+    ----------
+    filelist : list of str
+        List of BLV_TMP or BLC_TMP files to be combined and processed.
+        Do not mix BLV and BLC in the same list, but rather run this
+        once for BLV and once for BLC separately.
+
+    outroot : str
+        Rootname for combined product, which will be named
+        ``<rootname>_crj.fits`` (for BLV inputs) or
+        ``<rootname>_crc.fits`` (for BLC inputs).
+
+    verbose : bool
+        Print informational messages. Default = True.
+
+    Raises
+    ------
+    ValueError
+        Ambiguous input list.
+
+    Examples
+    --------
+    >>> import glob
+    >>> from acstools import acs_destripe_plus
+    >>> acs_destripe_plus.destripe_plus(..., keep_intermediate_files=True)
+    >>> rootname = 'j12345678'
+    >>> blv_files = glob.glob('*_blv_tmp.fits')
+    >>> acs_destripe_plus.crrej_plus(blv_files, rootname)
+    >>> blc_files = glob.glob('*_blc_tmp.fits')
+    >>> acs_destripe_plus.crrej_plus(blc_files, rootname)
+
+    """
+    is_blv = np.all(['blv_tmp.fits' in f for f in filelist])
+    is_blc = np.all(['blc_tmp.fits' in f for f in filelist])
+
+    if is_blv is is_blc:
+        raise ValueError('Inputs must be all BLV_TMP or all BLC_TMP files')
+
+    if is_blv:
+        sfx = 'crj'
+    else:  # is_blc
+        sfx = 'crc'
+
+    tmpname = '{0}_{1}_tmp.fits'.format(outroot, sfx)
+    acsrej.acsrej(filelist, tmpname, verbose=verbose)
+    acs2d.acs2d(tmpname, verbose=verbose)  # crx_tmp -> crx
+
+    # Delete intermediate file
+    if os.path.isfile(tmpname):
+        os.remove(tmpname)
 
 
 def _read_DQ_arrays(flt_name):
@@ -532,9 +606,9 @@ def _get_mask(scimask, n):
     return mask
 
 
-#-------------------------#
+# ----------------------- #
 # Interfaces used by TEAL #
-#-------------------------#
+# ----------------------- #
 
 def getHelpAsString(fulldoc=True):
     """Returns documentation on :func:`destripe_plus`. Required by TEAL."""
@@ -558,13 +632,14 @@ def run(configobj=None):
         rpt_clean=configobj['rpt_clean'],
         atol=configobj['atol'],
         cte_correct=configobj['cte_correct'],
+        keep_intermediate_files=configobj['keep_intermediate_files'],
         clobber=configobj['clobber'],
         verbose=configobj['verbose'])
 
 
-#-----------------------------#
+# --------------------------- #
 # Interfaces for command line #
-#-----------------------------#
+# --------------------------- #
 
 def main():
     """Command line driver."""
@@ -614,6 +689,9 @@ def main():
     parser.add_argument(
         '--nocte', action='store_true', help='Turn off CTE correction.')
     parser.add_argument(
+        '--keep_intermediate_files', action='store_true',
+        help='Keep intermediate BLV_TMP and BLC_TMP files')
+    parser.add_argument(
         '--clobber', action='store_true', help='Clobber output')
     parser.add_argument(
         '-q', '--quiet', action="store_true",
@@ -639,8 +717,9 @@ def main():
                   binwidth=options.binwidth,
                   scimask1=mask1, scimask2=mask2, dqbits=options.dqbits,
                   rpt_clean=options.rpt_clean, atol=options.atol,
-                  cte_correct=not options.nocte, clobber=options.clobber,
-                  verbose=not options.quiet)
+                  cte_correct=not options.nocte,
+                  keep_intermediate_files=options.keep_intermediate_files,
+                  clobber=options.clobber, verbose=not options.quiet)
 
 
 if __name__ == '__main__':

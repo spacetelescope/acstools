@@ -13,5 +13,6 @@ dqbits = string_kw(default="", comment="Integer mask bit values considered good 
 rpt_clean = integer_kw(default=0, comment= "Number of de-stripe cleanings to *repeat*")
 atol = float_or_none_kw(default=0.01, comment= "Absolute tolerance to stop *repeated* bias stripe cleanings")
 cte_correct = boolean_kw(default=True, comment="Perform CTE correction")
+keep_intermediate_files = boolean_kw(default=False, comment="Keep intermediate BLV_TMP and BLC_TMP files")
 clobber = boolean_kw(default=False, comment="Delete and replace previous products?")
 verbose = boolean_kw(default=True, comment= "Verbose")
