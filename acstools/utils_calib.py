@@ -8,11 +8,13 @@ import warnings
 # THIRD-PARTY
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 from astropy.utils.exceptions import AstropyUserWarning
 
 __all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
            'from_irafpath', 'extract_ref', 'find_line', 'get_corner', 'get_lt',
-           'from_lt']
+           'from_lt', 'hdr_vals_for_overscan', 'check_oscntab',
+           'check_overscan']
 
 
 def extract_dark(prihdr, scihdu):
@@ -466,40 +468,38 @@ def _nint(x):
     return int(y)
 
 
-def get_hdr_vals(root):
-
+def hdr_vals_for_overscan(root):
     """Retrieve header keyword values from RAW and SPT
-    FITS files to pass on to check_oscntab() and
-    check_overscan().
+    FITS files to pass on to :func:`check_oscntab` and
+    :func:`check_overscan`.
 
     Parameters
     ----------
-    root: str
+    root : str
         Rootname of the observation. Can be relative path
         to the file excluding the type of FITS file and
-        extension, e.g., /my/path/jxxxxxxxq'
+        extension, e.g., '/my/path/jxxxxxxxq'.
 
     Returns
     -------
     ccdamp : str
-        Amplifiers used to read out the CCDs
+        Amplifiers used to read out the CCDs.
 
     xstart : int
         Starting column of the readout in detector
-        coordinates
+        coordinates.
 
     ystart : int
         Starting row of the readout in detector
-        coordinates
+        coordinates.
 
     xsize : int
-        Number of columns in the readout
+        Number of columns in the readout.
 
     ysize : int
-        Number of rows in the readout
+        Number of rows in the readout.
 
     """
-
     with fits.open(root + '_spt.fits') as hdu:
         spthdr = hdu[0].header
     with fits.open(root + '_raw.fits') as hdu:
@@ -515,77 +515,97 @@ def get_hdr_vals(root):
 
 def check_oscntab(oscntab, ccdamp, xsize, ysize, leading, trailing):
     """Check if the supplied parameters are in the
-    OSCNTAB reference file.
+    ``OSCNTAB`` reference file.
+
+    .. note:: Even if an entry does not exist in ``OSCNTAB``,
+              as long as the subarray does not have any overscan,
+              it should not be a problem for CALACS.
 
     .. note:: This function does not check the virtual bias rows.
 
     Parameters
     ----------
     oscntab : str
-        Path to the OSCNTAB reference file being checked against
+        Path to the ``OSCNTAB`` reference file being checked against.
 
     ccdamp : str
-        Amplifiers used to read out the CCDs
+        Amplifier(s) used to read out the CCDs.
 
     xsize : int
-        Number of columns in the readout
+        Number of columns in the readout.
 
     ysize : int
-        Number of rows in the readout
+        Number of rows in the readout.
 
     leading : int
         Number of columns in the bias section ("TRIMX1" to be trimmed off
-        by BLEVCORR) on the A/C amplifiers side of the CCDs
+        by ``BLEVCORR``) on the A/C amplifiers side of the CCDs.
 
     trailing : int
         Number of columns in the bias section ("TRIMX2" to be trimmed off
-        by BLEVCORR) on the B/D amplifiers side of the CCDs
+        by ``BLEVCORR``) on the B/D amplifiers side of the CCDs.
 
     Returns
     -------
     supported : bool
-        Result of test if input parameters are in OSCNTAB
+        Result of test if input parameters are in ``OSCNTAB``.
 
     """
-
-    with fits.open(oscntab) as oschdu:
-        table = Table(oschdu[1].data)
-    for row in table:
-        if row['CCDAMP'].lower().rstrip() in ccdamp.lower().rstrip():
-            if (row['NX'] == xsize) & (row['NY'] == ysize) & (row['TRIMX1'] == leading) & (row['TRIMX2'] == trailing):
-                return True
+    tab = Table.read(oscntab)
+    ccdamp = ccdamp.lower().rstrip()
+    for row in tab:
+        if (row['CCDAMP'].lower().rstrip() in ccdamp and
+                row['NX'] == xsize and row['NY'] == ysize and
+                row['TRIMX1'] == leading and row['TRIMX2'] == trailing):
+            return True
     return False
 
 
-def check_overscan(xstart, xsize):
+def check_overscan(xstart, xsize, total_prescan_pixels=24,
+                   total_science_pixels=4096):
     """Check image for bias columns.
 
     Parameters
     ----------
     xstart : int
-        Starting column of the readout in detector coordinates
+        Starting column of the readout in detector coordinates.
 
     xsize : int
-        Number of columns in the readout
+        Number of columns in the readout.
+
+    total_prescan_pixels : int
+        Total prescan pixels for a single amplifier on a detector.
+        Default is 24 for WFC.
+
+    total_science_pixels : int
+        Total science pixels across a detector.
+        Default is 4096 for WFC (across two amplifiers).
 
     Returns
     -------
     hasoverscan : bool
-        Indication if there are bias columns in the image
+        Indication if there are bias columns in the image.
 
     leading : int
         Number of bias columns on the A/C amplifiers
-        side of the CCDs ("TRIMX1" in OSCNTAB)
+        side of the CCDs ("TRIMX1" in ``OSCNTAB``).
 
     trailing : int
         Number of bias columns on the B/D amplifiers
-        side of the CCDs ("TRIMX2" in OSCNTAB)
-        
-    """
+        side of the CCDs ("TRIMX2" in ``OSCNTAB``).
 
-    if (xstart < 24) | ((xstart + xsize) > 4096):
-        leading = xstart - 24 if xstart < 24 else 0
-        trailing = 4096 - (xstart + xsize - 24) if (xstart + xsize) > 4096 else 0
-        return True, np.abs(leading), np.abs(trailing)
-    else:
-        return False, 0, 0
+    """
+    hasoverscan = False
+    leading = 0
+    trailing = 0
+
+    if xstart < total_prescan_pixels:
+        hasoverscan = True
+        leading = abs(xstart - total_prescan_pixels)
+
+    if (xstart + xsize) > total_science_pixels:
+        hasoverscan = True
+        trailing = abs(total_science_pixels -
+                       (xstart + xsize - total_prescan_pixels))
+
+    return hasoverscan, leading, trailing
