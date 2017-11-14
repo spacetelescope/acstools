@@ -28,13 +28,17 @@ In Pyraf::
 For help usage use ``exe_args=['--help']``
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 # STDLIB
 import os
 import subprocess
+import tempfile
 
 __taskname__ = "acsccd"
-__version__ = "2.0"
-__vdate__ = "13-Aug-2013"
+__version__ = "2.1"
+__vdate__ = "07-Nov-2017"
 __all__ = ['acsccd']
 
 
@@ -49,7 +53,8 @@ __all__ = ['acsccd']
 #     If all False, will set all but ATODCORR to PERFORM.
 #     If any is True, will set that to PERFORM and the rest to OMIT.
 #
-def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
+def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
+           exe_args=None):
     """
     Run the acsccd.e executable as from the shell.
 
@@ -97,7 +102,8 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, e
 
     # Parse input to get list of filenames to process.
     # acsccd.e only takes 'file1,file2,...'
-    infiles, dummy_out = parseinput.parseinput(input)
+    infiles = parseinput.parseinput(input)[0]
+    infiles = input
     call_list.append(','.join(infiles))
 
     if time_stamps:
@@ -124,7 +130,19 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, e
     #if biascorr:
     #    call_list.append('-bias')
 
-    subprocess.call(call_list)
+    # Piping out to subprocess.PIPE or sys.stdout don't seem to work here.
+    with tempfile.TemporaryFile() as fp:
+        retcode = subprocess.call(call_list, stdout=fp, stderr=fp)
+        fp.flush()
+        fp.seek(0)
+        print(fp.read().decode('utf-8'))
+
+    if verbose:
+        if retcode == -11:
+            retstr = '(segfault)'
+        else:
+            retstr = ''
+        print('subprocess return code:', retcode, retstr)
 
 
 def getHelpAsString():
