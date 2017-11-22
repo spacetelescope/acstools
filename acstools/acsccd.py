@@ -124,7 +124,7 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, e
     #if biascorr:
     #    call_list.append('-bias')
 
-    subprocess.call(call_list)
+    subprocess.check_call(call_list)
 
 
 def getHelpAsString():

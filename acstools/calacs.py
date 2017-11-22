@@ -105,7 +105,7 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    subprocess.check_call(call_list)
 
 
 def getHelpAsString():
