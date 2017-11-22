@@ -23,6 +23,7 @@ from . import acsrej
 from . import acssum
 from . import satdet
 from . import utils_calib
+from . import helpers
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.

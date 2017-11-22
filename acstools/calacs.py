@@ -25,7 +25,7 @@ For help usage use ``exe_args=['--help']``
 
 """
 import os
-import subprocess
+from .helpers import _callAndRaiseOnSignal
 
 __all__ = ['calacs']
 
@@ -105,7 +105,7 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    _callAndRaiseOnSignal(call_list)
 
 
 def getHelpAsString():

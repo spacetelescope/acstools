@@ -26,7 +26,7 @@ For help usage use ``exe_args=['--help']``
 """
 # STDLIB
 import os
-import subprocess
+from .helpers import _callAndRaiseOnSignal
 
 __taskname__ = "acs2d"
 __version__ = "2.0"
@@ -110,7 +110,7 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, ex
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    _callAndRaiseOnSignal(call_list)
 
 
 def getHelpAsString():
