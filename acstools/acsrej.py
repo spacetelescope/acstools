@@ -26,7 +26,7 @@ For help usage use ``exe_args=['--help']``
 """
 # STDLIB
 import os
-import subprocess
+from .helpers import _callAndRaiseOnSignal
 
 __taskname__ = "acsrej"
 __version__ = "1.0"
@@ -184,7 +184,7 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    _callAndRaiseOnSignal(call_list)
 
 
 def getHelpAsString():

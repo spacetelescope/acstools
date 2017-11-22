@@ -30,7 +30,7 @@ For help usage use ``exe_args=['--help']``
 """
 # STDLIB
 import os
-import subprocess
+from .helpers import _callAndRaiseOnSignal
 
 __taskname__ = "acsccd"
 __version__ = "2.0"
@@ -124,7 +124,7 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, e
     #if biascorr:
     #    call_list.append('-bias')
 
-    subprocess.call(call_list)
+    _callAndRaiseOnSignal(call_list)
 
 
 def getHelpAsString():
