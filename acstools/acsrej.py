@@ -184,7 +184,7 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.call(call_list)
+    subprocess.check_call(call_list)
 
 
 def getHelpAsString():
