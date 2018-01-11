@@ -1,6 +1,7 @@
 """
-The acsrej module contains a function `acsrej` that calls the ACSREJ executable.
-Use this function to facilitate batch runs of ACSREJ, or for the TEAL interface.
+This module contains a function :func:`acsrej` that calls the ``acsrej.e``
+executable. Use this function to facilitate batch runs of ACSREJ, or for the
+TEAL interface.
 
 Examples
 --------
@@ -29,15 +30,15 @@ import os
 import subprocess
 
 __taskname__ = "acsrej"
-__version__ = "1.0"
-__vdate__ = "18-Dec-2012"
+__version__ = "2.0"
+__vdate__ = "11-Jan-2018"
 __all__ = ['acsrej']
 
 
 def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
-          shadcorr=False, crrejtab='', crmask=False, scalense=None, initgues='',
-          skysub='', crsigmas='', crradius=None, crthresh=None, badinpdq=None,
-          newbias=False, exe_args=None):
+           shadcorr=False, crrejtab='', crmask=False, scalense=None,
+           initgues='', skysub='', crsigmas='', crradius=None, crthresh=None,
+           badinpdq=None, newbias=False, exe_args=None):
     """
     Run the acsrej.e executable as from the shell.
 
@@ -216,5 +217,4 @@ def run(configobj=None):
            crthresh=configobj['crthresh'],
            badinpdq=configobj['badinpdq'],
            newbias=configobj['newbias'],
-           exe_args=configobj['exe_args']
-           )
+           exe_args=configobj['exe_args'])
