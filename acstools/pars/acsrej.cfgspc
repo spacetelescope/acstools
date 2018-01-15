@@ -14,4 +14,4 @@ crsigmas = string_kw(default="", comment="CR rejection thresholds (sig1,sig2,...
 crradius = float_or_none_kw(default=None, comment="Radius (in pixels) to propagate the cosmic ray")
 crthresh = float_or_none_kw(default=None, comment="CR rejection propagation threshold")
 badinpdq = integer_or_none_kw(default=None, comment="DQ flag for CR rejection")
-newbias = boolean_kw(default=False, comment="Only use readnoise in ERR")
+readnoise_only = boolean_kw(default=False, comment="Only use readnoise in ERR")

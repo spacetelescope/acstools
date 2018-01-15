@@ -1,6 +1,7 @@
 """
-The acsrej module contains a function `acsrej` that calls the ACSREJ executable.
-Use this function to facilitate batch runs of ACSREJ, or for the TEAL interface.
+This module contains a function :func:`acsrej` that calls the ``acsrej.e``
+executable. Use this function to facilitate batch runs of ACSREJ, or for the
+TEAL interface.
 
 Examples
 --------
@@ -27,17 +28,22 @@ For help usage use ``exe_args=['--help']``
 # STDLIB
 import os
 import subprocess
+import warnings
 
 __taskname__ = "acsrej"
-__version__ = "1.0"
-__vdate__ = "18-Dec-2012"
+__version__ = "2.0"
+__vdate__ = "11-Jan-2018"
 __all__ = ['acsrej']
 
 
+class ACSREJDeprecationWarning(Warning):
+    pass
+
+
 def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
-          shadcorr=False, crrejtab='', crmask=False, scalense=None, initgues='',
-          skysub='', crsigmas='', crradius=None, crthresh=None, badinpdq=None,
-          newbias=False, exe_args=None):
+           shadcorr=False, crrejtab='', crmask=False, scalense=None,
+           initgues='', skysub='', crsigmas='', crradius=None, crthresh=None,
+           badinpdq=None, newbias=False, readnoise_only=False, exe_args=None):
     """
     Run the acsrej.e executable as from the shell.
 
@@ -111,6 +117,9 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
         If None, will use BADINPDQ from CRREJTAB.
 
     newbias : bool, optional
+        This option has been deprecated. Use ``readnoise_only``.
+
+    readnoise_only : bool, optional
         ERR is just read noise, not Poisson noise.
         This is used for BIAS images.
 
@@ -178,8 +187,15 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
     if badinpdq is not None:
         call_list += ['-pdq', str(badinpdq)]
 
+    # Backward-compatibility for readnoise_only.
+    # TODO: Remove this option entirely in a future release.
     if newbias:
-        call_list.append('-newbias')
+        warnings.warn('newbias is deprecated, use readnoise_only',
+                      ACSREJDeprecationWarning)
+        readnoise_only = newbias
+
+    if readnoise_only:
+        call_list.append('-readnoise_only')
 
     if exe_args:
         call_list.extend(exe_args)
@@ -215,6 +231,4 @@ def run(configobj=None):
            crradius=configobj['crradius'],
            crthresh=configobj['crthresh'],
            badinpdq=configobj['badinpdq'],
-           newbias=configobj['newbias'],
-           exe_args=configobj['exe_args']
-           )
+           readnoise_only=configobj['readnoise_only'])
