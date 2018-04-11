@@ -110,7 +110,10 @@ class PixelArea(object):
             hdu[1].data[:] = 1.
             hdu[3].data[:] = 0
 
-            driz_name = self.flt_image.replace('_flt.fits', '_pam_tmp.fits')
+            if '_flt.fits' in self.flt_image:
+                driz_name = self.flt_image.replace('_flt.fits', '_pam_tmp.fits')
+            elif '_flc.fits' in self.flt_image:
+                driz_name = self.flt_image.replace('_flc.fits', '_pam_tmp.fits')
 
             detector = hdr['DETECTOR']
 
