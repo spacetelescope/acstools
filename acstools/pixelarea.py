@@ -1,6 +1,8 @@
 from astropy.io import fits
 from drizzlepac import astrodrizzle
 from drizzlepac import ablot
+import numpy as np
+
 import os
 import glob
 
@@ -101,14 +103,25 @@ class PixelArea(object):
         PAM file(s).
         """
 
-        # Set up the input files for AstroDrizzle.
+        # Set up the input files for AstroDrizzle. Add some padding to the copy of the FLT
+        # image to mitigate edge effects from the blot interpolation.
 
         with fits.open(self.flt_image) as hdu:
             hdr = hdu[0].header
             hdr['EXPTIME'] = 1.
 
-            hdu[1].data[:] = 1.
-            hdu[3].data[:] = 0
+            scihdr = hdu[1].header
+
+            hdu[1].data = np.ones((scihdr['NAXIS2'] + 8, scihdr['NAXIS1'] + 8))
+            hdu[2].data = np.ones((scihdr['NAXIS2'] + 8, scihdr['NAXIS1'] + 8))
+            hdu[3].data = np.zeros((scihdr['NAXIS2'] + 8, scihdr['NAXIS1'] + 8)).astype('uint16')
+
+            hdu[1].header['CRPIX1'] = hdu[1].header['CRPIX1'] + 4
+            hdu[1].header['CRPIX2'] = hdu[1].header['CRPIX2'] + 4
+            hdu[2].header['CRPIX1'] = hdu[2].header['CRPIX1'] + 4
+            hdu[2].header['CRPIX2'] = hdu[2].header['CRPIX2'] + 4
+            hdu[3].header['CRPIX1'] = hdu[3].header['CRPIX1'] + 4
+            hdu[3].header['CRPIX2'] = hdu[3].header['CRPIX2'] + 4
 
             if '_flt.fits' in self.flt_image:
                 driz_name = self.flt_image.replace('_flt.fits', '_pam_tmp.fits')
@@ -119,8 +132,18 @@ class PixelArea(object):
 
             if (detector == 'WFC') and (not hdr['SUBARRAY']):
 
-                hdu[4].data[:] = 1.
-                hdu[6].data[:] = 0
+                scihdr = hdu[4].header
+
+                hdu[4].data = np.ones((scihdr['NAXIS2'] + 8, scihdr['NAXIS1'] + 8))
+                hdu[5].data = np.ones((scihdr['NAXIS2'] + 8, scihdr['NAXIS1'] + 8))
+                hdu[6].data = np.zeros((scihdr['NAXIS2'] + 8, scihdr['NAXIS1'] + 8)).astype('uint16')
+
+                hdu[4].header['CRPIX1'] = hdu[4].header['CRPIX1'] + 4
+                hdu[4].header['CRPIX2'] = hdu[4].header['CRPIX2'] + 4
+                hdu[5].header['CRPIX1'] = hdu[5].header['CRPIX1'] + 4
+                hdu[5].header['CRPIX2'] = hdu[5].header['CRPIX2'] + 4
+                hdu[6].header['CRPIX1'] = hdu[6].header['CRPIX1'] + 4
+                hdu[6].header['CRPIX2'] = hdu[6].header['CRPIX2'] + 4
 
                 sci_ext = [1, 2]
                 chip = [2, 1]
