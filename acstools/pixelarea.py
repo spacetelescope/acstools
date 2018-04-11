@@ -59,8 +59,8 @@ class PixelArea(object):
     For the FLT image j6me13qhq_flt.fits, we can generate PAM files using:
 
 
-        from acstools import make_pam
-        pam = make_pam.PixelArea('j6me13qhq_flt.fits')
+        from acstools import pixelarea
+        pam = pixelarea.PixelArea('j6me13qhq_flt.fits')
         pam.make_pam()
 
     As this is a full-frame ACS/WFC image, it will produce two files:
