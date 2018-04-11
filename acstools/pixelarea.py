@@ -36,7 +36,7 @@ class PixelArea(object):
 
     use_flt_name (bool; optional; default=True):
         Use the the FLT/FLC input file root name as the root name for the PAM(s)?
-        If True, the output PAM(s) will use the IPSOOOT of the input file as
+        If True, the output PAM(s) will use the IPSOOT of the input file as
         the pam_root.
 
 
