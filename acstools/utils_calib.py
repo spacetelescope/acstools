@@ -7,9 +7,15 @@ import warnings
 
 # THIRD-PARTY
 import numpy as np
-from astropy.io import fits
 from astropy.table import Table
 from astropy.utils.exceptions import AstropyUserWarning
+
+try:
+    # This supports PIXVALUE
+    from stsci.tools import stpyfits as fits
+except ImportError:
+    # Falls back to Astropy
+    from astropy.io import fits
 
 __all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
            'from_irafpath', 'extract_ref', 'find_line', 'get_corner', 'get_lt',

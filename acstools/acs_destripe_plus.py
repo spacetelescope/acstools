@@ -77,11 +77,17 @@ import os
 import subprocess
 
 # ASTROPY
-from astropy.io import fits
 from astropy.time import Time
 
 # THIRD-PARTY
 import numpy as np
+
+try:
+    # This supports PIXVALUE
+    from stsci.tools import stpyfits as fits
+except ImportError:
+    # Falls back to Astropy
+    from astropy.io import fits
 
 # LOCAL
 from . import acs_destripe
@@ -500,14 +506,14 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
 
 def _read_DQ_arrays(flt_name):
-    h = fits.open(flt_name)
-    ampstring = h[0].header['CCDAMP']
-    dq1 = h['dq', 1].data
-    if (ampstring == 'ABCD'):
-        dq2 = h['dq', 2].data
-    else:
-        dq2 = None
-    return (dq1, dq2)
+    with fits.open(flt_name) as h:
+        ampstring = h[0].header['CCDAMP']
+        dq1 = h['dq', 1].data
+        if (ampstring == 'ABCD'):
+            dq2 = h['dq', 2].data
+        else:
+            dq2 = None
+    return dq1, dq2
 
 
 def _get_mask(scimask, n):
