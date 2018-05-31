@@ -5,7 +5,7 @@ Fully calibrate post-SM4 ACS/WFC exposures using the standalone
 steps in CALACS.
 
 This script runs CALACS (8.3.1 or higher only) and ``acs_destripe``
-on ACS/WFC images. Input files must be RAW full-frame or subarray
+on ACS/WFC images. Input files must be RAW full-frame or supported subarray
 ACS/WFC exposures taken after SM4. Resultant outputs are science-ready
 FLT and FLC (if applicable) files.
 
@@ -90,8 +90,8 @@ from . import acsccd
 from . import acscte
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.1'
-__vdate__ = '12-Jan-2016'
+__version__ = '0.4.2'
+__vdate__ = '31-May-2018'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
 __all__ = ['destripe_plus']
 
@@ -286,7 +286,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     if isinstance(scimask1, str):
         mlist1 = parseinput.parseinput(scimask1)[0]
     elif isinstance(scimask1, np.ndarray):
-        mlist1 = [ scimask1.copy() ]
+        mlist1 = [scimask1.copy()]
     elif scimask1 is None:
         mlist1 = []
     elif isinstance(scimask1, list):
@@ -307,7 +307,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     if isinstance(scimask2, str):
         mlist2 = parseinput.parseinput(scimask2)[0]
     elif isinstance(scimask2, np.ndarray):
-        mlist2 = [ scimask2.copy() ]
+        mlist2 = [scimask2.copy()]
     elif scimask2 is None:
         mlist2 = []
     elif isinstance(scimask2, list):
@@ -367,9 +367,9 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     header = fits.getheader(inputfile)
 
     # verify masks defined (or not) simultaneously:
-    if header['CCDAMP'] == 'ABCD' and \
-       ((scimask1 is not None and scimask2 is None) or \
-        (scimask1 is None and scimask2 is not None)):
+    if (header['CCDAMP'] == 'ABCD' and
+            ((scimask1 is not None and scimask2 is None) or
+             (scimask1 is None and scimask2 is not None))):
         raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
                          "or not specified together.")
 
@@ -379,8 +379,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         raise ValueError('CALACS {0} is incomptible. '
                          'Must be 8.3.1 or later.'.format(calacs_str))
 
-    # check date for post-SM4 and if 2K subarray or full frame
-    is_sub2K = False
+    # check date for post-SM4 and if supported subarray or full frame
+    is_subarray = False
     ctecorr = header['PCTECORR']
     aperture = header['APERTURE']
     detector = header['DETECTOR']
@@ -405,9 +405,10 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     if header['SUBARRAY'] and cte_correct:
         if aperture in SUBARRAY_LIST:
-            is_sub2K = True
+            is_subarray = True
         else:
-            LOG.warning('Using non-2K subarray, turning CTE correction off')
+            LOG.warning('Using non-supported subarray, '
+                        'turning CTE correction off')
             cte_correct = False
 
     # delete files from previous CALACS runs
@@ -417,7 +418,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
             if os.path.exists(tmpfilename):
                 os.remove(tmpfilename)
 
-    # run ACSCCD on RAW subarray
+    # run ACSCCD on RAW
     acsccd.acsccd(inputfile)
 
     # modify user mask with DQ masks if requested
@@ -430,9 +431,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         #       just the DQ masks as if data were calibrated but without
         #       having to recalibrate them with acs2d.
         if os.path.isfile(tra_name):
-            fh = open(tra_name)
-            tra_lines = fh.readlines()
-            fh.close()
+            with open(tra_name) as fh:
+                tra_lines = fh.readlines()
         else:
             tra_lines = None
 
@@ -441,50 +441,26 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
         # extract DQ arrays from the FLT image:
         dq1, dq2 = _read_DQ_arrays(flt_name)
-        if isinstance(scimask1, str):
-            if scimask1.strip() is '':
-                mask1 = None
-                scimask1 = None
-            else:
-                mask1 = fits.getdata(scimask1)
-        elif isinstance(scimask1, np.ndarray):
-            mask1 = scimask1.copy()
-        elif scimask1 is None:
-            mask1 = None
-        else:
-            raise TypeError("'scimask1' must be either a str file name, "
-                            "a numpy.ndarray, or None.")
 
+        mask1 = _get_mask(scimask1, 1)
         scimask1 = acs_destripe._mergeUserMaskAndDQ(dq1, mask1, dqbits)
 
-        if isinstance(scimask2, str):
-            if scimask2.strip() is '':
-                mask2 = None
-                scimask2 = None
-            else:
-                mask2 = fits.getdata(scimask2)
-        elif isinstance(scimask2, np.ndarray):
-            mask2 = scimask2.copy()
-        elif scimask2 is None:
-            mask2 = None
-        else:
-            raise TypeError("'scimask2' must be either a str file name, "
-                            "a numpy.ndarray, or None.")
-
+        mask2 = _get_mask(scimask2, 2)
         if dq2 is not None:
             scimask2 = acs_destripe._mergeUserMaskAndDQ(dq2, mask2, dqbits)
+        elif mask2 is None:
+            scimask2 = None
 
         # reconstruct trailer file:
         if tra_lines is not None:
-            fh = open(tra_name, mode='w')
-            fh.writelines(tra_lines)
-            fh.close()
+            with open(tra_name, mode='w') as fh:
+                fh.writelines(tra_lines)
 
         # delete temporary FLT image:
         if os.path.isfile(flt_name):
             os.remove(flt_name)
 
-    # execute destriping of the subarray (post-SM4 data only)
+    # execute destriping (post-SM4 data only)
     acs_destripe.clean(
         blvtmp_name, suffix, stat=stat, maxiter=maxiter, sigrej=sigrej,
         lower=lower, upper=upper, binwidth=binwidth,
@@ -494,7 +470,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     os.rename(inputfile.replace('raw', blvtmpsfx), blvtmp_name)
 
     # update subarray header
-    if is_sub2K and cte_correct:
+    if is_subarray and cte_correct:
         fits.setval(blvtmp_name, 'PCTECORR', value='PERFORM')
         ctecorr = 'PERFORM'
 
@@ -526,12 +502,28 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 def _read_DQ_arrays(flt_name):
     h = fits.open(flt_name)
     ampstring = h[0].header['CCDAMP']
-    dq1 = h['dq',1].data
+    dq1 = h['dq', 1].data
     if (ampstring == 'ABCD'):
-        dq2 = h['dq',2].data
+        dq2 = h['dq', 2].data
     else:
         dq2 = None
     return (dq1, dq2)
+
+
+def _get_mask(scimask, n):
+    if isinstance(scimask, str):
+        if scimask.strip() is '':
+            mask = None
+        else:
+            mask = fits.getdata(scimask)
+    elif isinstance(scimask, np.ndarray):
+        mask = scimask.copy()
+    elif scimask is None:
+        mask = None
+    else:
+        raise TypeError("'scimask{}' must be either a str file name, "
+                        "a numpy.ndarray, or None.".format(n))
+    return mask
 
 
 #-------------------------#
@@ -577,7 +569,7 @@ def main():
         prog=__taskname__,
         description=(
             'Run CALACS and standalone acs_destripe script on given post-SM4 '
-            'ACS/WFC RAW full-frame or subarray image.'))
+            'ACS/WFC RAW full-frame or supported subarray image.'))
     parser.add_argument(
         'arg0', metavar='input', type=str, help='Input file')
     parser.add_argument(
@@ -645,5 +637,5 @@ def main():
                   verbose=not options.quiet)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
