@@ -18,6 +18,7 @@ from . import acs_destripe_plus
 from . import calacs
 from . import acsccd
 from . import acscte
+from . import acscteforwardmodel
 from . import acs2d
 from . import acsrej
 from . import acssum
