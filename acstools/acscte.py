@@ -1,6 +1,7 @@
 """
-The acscte module contains a function `acscte` that calls the ACSCTE executable.
-Use this function to facilitate batch runs of ACSCTE, or for the TEAL interface.
+The acscte module contains the functions `acscte` and `acscte_forward_model` that call the ACSCTE
+and ACSCTEFORWARDMODEL executables respectively.
+Use the `acscte` function to facilitate batch runs or for the TEAL interface.
 
 Only WFC full-frame and some 2K subarrays are currently supported. See
 `ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_
@@ -38,6 +39,54 @@ __taskname__ = "acscte"
 __version__ = "1.0"
 __vdate__ = "13-Aug-2013"
 __all__ = ['acscte']
+
+def acscte_forward_model(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
+           single_core=False, exe_args=None):
+    """
+    Run the acscteforwardmodel.e executable as from the shell.
+
+    Expect input to be ``*_blv_tmp.fits``.
+    Output is automatically named ``*_blc_tmp.fits``.
+
+    Parameters
+    ----------
+    input : str or list of str
+        Input filenames in one of these formats:
+
+            * a single filename ('j1234567q_blv_tmp.fits')
+            * a Python list of filenames
+            * a partial filename with wildcards ('\*blv_tmp.fits')
+            * filename of an ASN table ('j12345670_asn.fits')
+            * an at-file (``@input``)
+
+    exec_path : str, optional
+        The complete path to ACSCTEFORWARDMODEL executable.
+        If not given, run ACSCTEFORWARDMODEL given by 'acscteforwardmodel.e'.
+
+    time_stamps : bool, optional
+        Set to True to turn on the printing of time stamps.
+
+    verbose : bool, optional
+        Set to True for verbose output.
+
+    quiet : bool, optional
+        Set to True for quiet output.
+
+    single_core : bool, optional
+        CTE simulation in ACSCTEFORWARDMODEL will by default try to use all available
+        CPUs on your computer. Set this to True to force the use of just
+        one CPU.
+
+    exe_args : list, optional
+        Arbitrary arguments passed to underlying executable call.
+        Note: Implementation uses subprocess.call and whitespace is not
+        permitted. E.g. use exe_args=['--nThreads', '1']
+
+    """
+
+    return _acscte_base(input, exec_path=exec_path, time_stamps=time_stamps,
+                        verbose=verbose, quiet=quiet, single_core=single_core,
+                        exe_args=exe_args, exe='acscteforwardmodel.e')
 
 
 def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
@@ -83,6 +132,15 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
         permitted. E.g. use exe_args=['--nThreads', '1']
 
     """
+
+    return _acscte_base(input, exec_path=exec_path, time_stamps=time_stamps,
+                        verbose=verbose, quiet=quiet, single_core=single_core,
+                        exe_args=exe_args, exe='acscte.e')
+
+
+def _acscte_base(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
+           single_core=False, exe_args=None, exe='acscte.e'):
+
     from stsci.tools import parseinput  # Optional package dependency
 
     if exec_path:
@@ -90,7 +148,7 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
             raise OSError('Executable not found: ' + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acscte.e']
+        call_list = [exe]
 
     # Parse input to get list of filenames to process.
     # acscte.e only takes 'file1,file2,...'
