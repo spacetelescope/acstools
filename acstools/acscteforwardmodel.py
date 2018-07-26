@@ -144,36 +144,36 @@ def make_tmp_files(infiles):
     """
 
     from astropy.io import fits
-    
+
     tmp_files = []
-    
+
     for file in infiles:
-    
+
         hdu = fits.open(file)
         hdr = hdu[0].header
-        
+
         outfile = '{}_tmp.fits'.format(file.split('.fits')[0])
-        
+
         if hdr['NEXTEND'] > 6:
-        
+
             if hdr['SUBARRAY']:
-            
+
                 new_hdu = hdu[:4]
                 hdr['NEXTEND'] = 3
-                
+
             else:
-            
+
                 new_hdu = hdu[:7]
                 hdr['NEXTEND'] = 6
-                
+
             new_hdu.writeto(outfile)
-        
+
             tmp_files.append(outfile)
-        
+
         else:
-        
+
             tmp_files.append(file)
-            
+
     return tmp_files
     
 
@@ -191,33 +191,35 @@ def restore_files(infiles):
 
     from astropy.io import fits
     from shutil import copyfile
-    
+
     for file in infiles:
-    
+
         copy = '{}_ctefmod.fits'.format(file.split('.fits')[0])
-    
+
         copyfile(file, copy)
-    
+
         tmp_file = '{}_tmp_ctefmod.fits'.format(file.split('.fits')[0])
-    
+
         hdu = fits.open(copy, mode='update')
         tmp_hdu = fits.open(tmp_file)
-        
+
         hdr = hdu[0].header
-        
+
         if hdr['SUBARRAY']:
-        
+
             hdu[1].header = tmp_hdu[1].header
             hdu[1].data = tmp_hdu[1].data
-            
+
         else:
-        
+
             hdu[1].header = tmp_hdu[1].header
             hdu[1].data = tmp_hdu[1].data
             hdu[4].header = tmp_hdu[4].header
             hdu[4].data = tmp_hdu[4].data
-        
+
         hdu.close()
+
+        os.remove('{}_tmp*'.format(file.split('.fits')[0])
 
 
 def getHelpAsString():
