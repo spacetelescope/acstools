@@ -97,11 +97,7 @@ def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
     # Parse input to get list of filenames to process.
     # acscte.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-
-    # Make temporary files for input into forward model
-    tmp_files = make_tmp_files(infiles)
-
-    call_list.append(','.join(tmp_files))
+    call_list.append(','.join(infiles))
 
     if time_stamps:
         call_list.append('-t')
@@ -119,116 +115,6 @@ def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-    # Restore extra FLC extensions to forward model
-    restore_files(infiles)
-
-
-def make_tmp_files(infiles):
-    """
-    If more than 6 extensions, take SCI, ERR, and DQ extensions and make a
-    temporary fits image to run the forward model on.
-
-    Parameters
-    ----------
-    infiles : list of strings
-        List of input files parsed by parseinput
-
-    Returns
-    -------
-    tmp_files : list of strings
-        List of temporary files containing 6 or fewer extensions
-
-    """
-
-    from astropy.io import fits
-
-    tmp_files = []
-
-    for file in infiles:
-
-        hdu = fits.open(file)
-        hdr = hdu[0].header
-
-        outfile = '{}_tmp.fits'.format(file.split('.fits')[0])
-
-        # Update NEXTEND keyword and select extensions for temporary file
-        if hdr['NEXTEND'] > 6:
-
-            if hdr['SUBARRAY']:
-
-                new_hdu = hdu[:4]
-                hdr['NEXTEND'] = 3
-
-            else:
-
-                new_hdu = hdu[:7]
-                hdr['NEXTEND'] = 6
-
-            # Write temporary file
-            new_hdu.writeto(outfile)
-
-            tmp_files.append(outfile)
-
-        # If file has typical number of FLCs, output original input
-        else:
-
-            tmp_files.append(file)
-
-    return tmp_files
-
-
-def restore_files(infiles):
-    """
-    Copy SCI, ERR, and DQ extensions from forward-modeled temporary file to
-    a copy of the original FLC.
-
-    Parameters
-    ----------
-    infiles : list of strings
-        List of input files parsed by parseinput
-
-    """
-
-    from astropy.io import fits
-    from shutil import copyfile
-    import glob
-
-    for file in infiles:
-
-        base = file.split('.fits')[0]
-        tmp_file = '{}_tmp_ctefmod.fits'.format(base)
-        
-        if os.path.exists(tmp_file):
-        
-            # Make a copy of input file in which to dump forward modeled
-            # extensions
-            copy = '{}_ctefmod.fits'.format(base)
-
-            copyfile(file, copy)
-            
-            hdu = fits.open(copy, mode='update')
-            tmp_hdu = fits.open(tmp_file)
-
-            hdr = hdu[0].header
-
-            if hdr['SUBARRAY']:
-
-                hdu[1].header = tmp_hdu[1].header
-                hdu[1].data = tmp_hdu[1].data
-
-            else:
-
-                hdu[1].header = tmp_hdu[1].header
-                hdu[1].data = tmp_hdu[1].data
-                hdu[4].header = tmp_hdu[4].header
-                hdu[4].data = tmp_hdu[4].data
-
-            hdu.close()
-
-            # Remove temporary files
-            for tmp in glob.glob('{}_tmp*'.format(base)):
-                os.remove(tmp)
 
 
 def getHelpAsString():
