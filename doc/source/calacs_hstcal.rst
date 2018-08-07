@@ -5,7 +5,7 @@ calacs.e (HSTCAL)
 A detailed description of this new and improved CALACS is available in
 `ACS Data Handbook v7.0 or later <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_.
 If you have questions not answered in the documentation, please contact
-STScI Help Desk (``help[at]stsci.edu``).
+`STScI Help Desk <https://hsthelp.stsci.edu>`_.
 
 
 Running CALACS
