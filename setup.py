@@ -1,9 +1,27 @@
 #!/usr/bin/env python
+import os
+import pkgutil
 import sys
 from setuptools import setup
+from subprocess import check_call, CalledProcessError
 
-# RELIC submodule
-sys.path.insert(1, 'relic')
+
+if not pkgutil.find_loader('relic'):
+    relic_local = os.path.exists('relic')
+    relic_submodule = (relic_local and
+                       os.path.exists('.gitmodules') and
+                       not os.listdir('relic'))
+    try:
+        if relic_submodule:
+            check_call(['git', 'submodule', 'update', '--init', '--recursive'])
+        elif not relic_local:
+            check_call(['git', 'clone', 'https://github.com/spacetelescope/relic.git'])
+
+        sys.path.insert(1, 'relic')
+    except CalledProcessError as e:
+        print(e)
+        exit(1)
+
 import relic.release
 
 # Get some values from the setup.cfg
