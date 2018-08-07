@@ -1,17 +1,14 @@
 include README.rst
 include LICENSE.txt
-
 include setup.cfg
+recursive-include doc *
 
 include RELIC-INFO
-include relic/LICENSE.txt
-include relic/README.md
-recursive-include relic/relic *.py
-recursive-include relic/relic.egg-info *
-prune relic/build
-prune relic/relic/tests
+exclude acstools/version.py
 
-recursive-include doc *
+recursive-include relic/ *
+prune relic/.git
+prune relic/tests
 
 prune build
 prune doc/build
