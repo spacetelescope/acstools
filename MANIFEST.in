@@ -4,6 +4,12 @@ include LICENSE.txt
 include setup.cfg
 
 include RELIC-INFO
+include relic/LICENSE.txt
+include relic/README.md
+recursive-include relic/relic *.py
+recursive-include relic/relic.egg-info *
+prune relic/build
+prune relic/relic/tests
 
 recursive-include doc *
 
