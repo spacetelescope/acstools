@@ -39,7 +39,7 @@ AUTHOR = metadata.get('author', '')
 AUTHOR_EMAIL = metadata.get('author_email', '')
 LICENSE = metadata.get('license', 'unknown')
 URL = metadata.get('url', 'http://www.stsci.edu')
-CLASSIFIERS = metadata.get('classifier', [''])
+CLASSIFIERS = [c for c in metadata.get('classifier', ['']).splitlines() if c]
 
 # Version from git tag
 version = relic.release.get_info()
@@ -64,7 +64,7 @@ setup(
     package_dir={PACKAGENAME: PACKAGENAME},
     package_data={PACKAGENAME: ['pars/*']},
     entry_points=entry_points,
-    install_requires = [
+    install_requires=[
         'astropy>=1.1',
         'numpy'
     ],
