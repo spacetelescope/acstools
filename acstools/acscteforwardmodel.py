@@ -1,6 +1,6 @@
 """
-The acscte module contains a function `acscte` that calls the ACSCTE forward
-model executable.
+The acscteforwardmodel module contains a function `acscteforwardmodel`
+that calls the ACSCTE forward model executable.
 Use this function to facilitate batch runs of the forward model, or for the
 TEAL interface.
 
@@ -42,8 +42,8 @@ __vdate__ = "19-Jul-2018"
 __all__ = ['acscteforwardmodel']
 
 
-def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False, 
-               quiet=False, single_core=False, exe_args=None):
+def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
+                       quiet=False, single_core=False, exe_args=None):
     """
     Run the acscteforwardmodel.e executable as from the shell.
 
@@ -119,7 +119,8 @@ def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
 
 def getHelpAsString():
     """
-    Returns documentation on the `acscteforwardmodel` function. Required by TEAL.
+    Returns documentation on the `acscteforwardmodel` function.
+    Required by TEAL.
 
     """
     return acscteforwardmodel.__doc__
@@ -135,6 +136,5 @@ def run(configobj=None):
                        time_stamps=configobj['time_stamps'],
                        verbose=configobj['verbose'],
                        quiet=configobj['quiet'],
-                       single_core=configobj['single_core'],
-                       exe_args=configobj['exe_args']
+                       single_core=configobj['single_core']
                        )

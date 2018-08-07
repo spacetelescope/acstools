@@ -133,6 +133,5 @@ def run(configobj=None):
            time_stamps=configobj['time_stamps'],
            verbose=configobj['verbose'],
            quiet=configobj['quiet'],
-           single_core=configobj['single_core'],
-           exe_args=configobj['exe_args']
+           single_core=configobj['single_core']
            )
