@@ -44,6 +44,7 @@ distribute-*.tar.gz
 .tox
 .*.sw[op]
 *~
+._*
 
 # Mac OSX
 .DS_Store
