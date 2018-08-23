@@ -123,6 +123,5 @@ def run(configobj=None):
            exec_path=configobj['exec_path'],
            time_stamps=configobj['time_stamps'],
            verbose=configobj['verbose'],
-           quiet=configobj['quiet'],
-           exe_args=configobj['exe_args']
+           quiet=configobj['quiet']
            )

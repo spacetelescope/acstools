@@ -128,6 +128,5 @@ def run(configobj=None):
            verbose=configobj['verbose'],
            debug=configobj['debug'],
            quiet=configobj['quiet'],
-           single_core=configobj['single_core'],
-           exe_args=configobj['exe_args']
+           single_core=configobj['single_core']
            )
