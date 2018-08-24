@@ -57,8 +57,14 @@ import logging
 # THIRD-PARTY
 import astropy
 import numpy as np
-from astropy.io import fits
 from astropy.utils.introspection import minversion
+
+try:
+    # This supports PIXVALUE
+    from stsci.tools import stpyfits as fits
+except ImportError:
+    # Falls back to Astropy
+    from astropy.io import fits
 
 # LOCAL
 from .utils_calib import extract_dark, extract_flash, extract_flatfield
