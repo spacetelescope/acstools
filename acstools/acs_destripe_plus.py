@@ -514,7 +514,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     LOG.info(info_str)
 
 
-def crrej_plus(filelist, outroot, verbose=True):
+def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
     """
     Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
     The purpose of this is primarily for combining destriped
@@ -539,6 +539,10 @@ def crrej_plus(filelist, outroot, verbose=True):
         ``<rootname>_crj.fits`` (for BLV inputs) or
         ``<rootname>_crc.fits`` (for BLC inputs).
 
+    keep_intermediate_files : bool
+        Keep de-striped CRJ_TMP or CRC_TMP around after CRREJ,
+        if needed. Default = False.
+
     verbose : bool
         Print informational messages. Default = True.
 
@@ -554,9 +558,11 @@ def crrej_plus(filelist, outroot, verbose=True):
     >>> acs_destripe_plus.destripe_plus(..., keep_intermediate_files=True)
     >>> rootname = 'j12345678'
     >>> blv_files = glob.glob('*_blv_tmp.fits')
-    >>> acs_destripe_plus.crrej_plus(blv_files, rootname)
+    >>> acs_destripe_plus.crrej_plus(
+    ...     blv_files, rootname, keep_intermediate_files=True)
     >>> blc_files = glob.glob('*_blc_tmp.fits')
-    >>> acs_destripe_plus.crrej_plus(blc_files, rootname)
+    >>> acs_destripe_plus.crrej_plus(
+    ...     blc_files, rootname, keep_intermediate_files=True)
 
     """
     is_blv = np.all(['blv_tmp.fits' in f for f in filelist])
@@ -575,7 +581,7 @@ def crrej_plus(filelist, outroot, verbose=True):
     acs2d.acs2d(tmpname, verbose=verbose)  # crx_tmp -> crx
 
     # Delete intermediate file
-    if os.path.isfile(tmpname):
+    if not keep_intermediate_files and os.path.isfile(tmpname):
         os.remove(tmpname)
 
 
