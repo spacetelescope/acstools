@@ -69,7 +69,7 @@ From command line::
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
 # 12JAN2016 (v0.4.1) Lim added new subarray modes that are allowed CTE corr.
-# 08NOV2017 (v0.4.2) Lim added capability to produce CRJ/CRC outputs.
+# 27AUG2018 (v0.4.3) Lim added capability to produce CRJ/CRC outputs.
 
 from __future__ import absolute_import, division, print_function
 
@@ -99,8 +99,8 @@ from . import acscte
 from . import acsrej
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.2'
-__vdate__ = '31-May-2018'
+__version__ = '0.4.3'
+__vdate__ = '27-Aug-2018'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
 __all__ = ['destripe_plus', 'crrej_plus']
 
