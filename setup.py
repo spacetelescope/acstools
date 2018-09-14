@@ -68,6 +68,7 @@ setup(
         'astropy>=1.1',
         'numpy'
     ],
+    tests_require=['pytest'],
     use_2to3=False,
     zip_safe=False
 )

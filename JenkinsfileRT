@@ -1,0 +1,23 @@
+// Obtain files from source control system.
+// [skip ci] and [ci skip] have no effect here.
+if (utils.scm_checkout(['skip_disable':true])) return
+
+// Run nightly tests, which include the slow ones.
+bc = new BuildConfig()
+bc.nodetype = "RHEL-6"
+bc.name = "release"
+bc.env_vars = ['TEST_BIGDATA=https://bytesalad.stsci.edu/artifactory',
+               'jref=/grp/hst/cdbs/jref/']
+bc.conda_channels = ['http://ssb.stsci.edu/astroconda']
+bc.conda_packages = ['python=3.6',
+                     'numpy',
+                     'stsci.tools']
+bc.build_cmds = ["pip install ci-watson",
+                 "python setup.py install"]
+bc.test_cmds = ["pytest --basetemp=tests_output --junitxml results.xml --bigdata --slow -v"]
+bc.failedUnstableThresh = 1
+bc.failedFailureThresh = 6
+
+// Iterate over configurations that define the (distibuted) build matrix.
+// Spawn a host of the given nodetype for each combination and run in parallel.
+utils.run([bc])
