@@ -36,7 +36,7 @@ __all__ = ['acssum']
 
 def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
            quiet=False, exe_args=None):
-    """
+    r"""
     Run the acssum.e executable as from the shell.
 
     Parameters

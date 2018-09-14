@@ -44,7 +44,7 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
            shadcorr=False, crrejtab='', crmask=False, scalense=None,
            initgues='', skysub='', crsigmas='', crradius=None, crthresh=None,
            badinpdq=None, newbias=False, readnoise_only=False, exe_args=None):
-    """
+    r"""
     Run the acsrej.e executable as from the shell.
 
     Parameters

@@ -235,7 +235,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
           lower=None, upper=None, binwidth=0.3,
           mask1=None, mask2=None, dqbits=None,
           rpt_clean=0, atol=0.01, clobber=False, verbose=True):
-    """Remove horizontal stripes from ACS WFC post-SM4 data.
+    r"""Remove horizontal stripes from ACS WFC post-SM4 data.
 
     Parameters
     ----------

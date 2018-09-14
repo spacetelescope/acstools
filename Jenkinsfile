@@ -13,7 +13,9 @@ bc1.name = "release"
 bc1.env_vars = ['TEST_BIGDATA=https://bytesalad.stsci.edu/artifactory']
 bc1.conda_channels = ['http://ssb.stsci.edu/astroconda']
 bc1.conda_packages = ['python=3.6',
+                      'requests',
                       'numpy',
+                      'matplotlib',
                       'stsci.tools']
 bc1.build_cmds = ["pip install ci-watson",
                   "python setup.py install"]
@@ -35,6 +37,15 @@ bc3.name = "pep8"
 bc3.conda_packages = ['python=3.6', 'flake8']
 bc3.test_cmds = ["flake8 acstools --count"]
 
+// Run doc build
+bc4 = utils.copy(bc0)
+bc4.name = "doc"
+bc4.conda_channels = ['http://ssb.stsci.edu/astroconda', 'astropy']
+bc4.conda_packages = ['python=3.6', 'numpydoc', 'matplotlib','sphinx-automodapi']
+bc4.build_cmds = ["pip install sphinx_rtd_theme",
+                  "python setup.py install"]
+bc4.test_cmds = ["cd doc; make html"]
+
 // Iterate over configurations that define the (distibuted) build matrix.
 // Spawn a host of the given nodetype for each combination and run in parallel.
-utils.run([bc0, bc1, bc2, bc3])
+utils.run([bc0, bc1, bc2, bc3, bc4])

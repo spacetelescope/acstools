@@ -44,7 +44,7 @@ __all__ = ['acscteforwardmodel']
 
 def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
                        quiet=False, single_core=False, exe_args=None):
-    """
+    r"""
     Run the acscteforwardmodel.e executable as from the shell.
 
     Expect input to be ``*_blc_tmp.fits`` or ``*_flc.fits``.

@@ -42,7 +42,7 @@ __all__ = ['acscte']
 
 def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
            single_core=False, exe_args=None):
-    """
+    r"""
     Run the acscte.e executable as from the shell.
 
     Expect input to be ``*_blv_tmp.fits``.
