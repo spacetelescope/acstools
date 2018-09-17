@@ -49,17 +49,20 @@ def calref_from_image(input_image):
 
     hdr = fits.getheader(input_image, ext=0)
 
-    # Mandatory CRDS reference file
-    ref_files = ref_from_image(input_image, ['CCDTAB'])
+    # Mandatory CRDS reference file.
+    # Destriping tries to ingest some *FILE regardless of *CORR.
+    ref_files = ref_from_image(input_image, ['CCDTAB', 'DARKFILE', 'PFLTFILE'])
 
     for step in corr_lookup:
         # Not all images have the CORR step and it is not always on.
-        if (step not in hdr) or (hdr[step].strip().upper() != 'PERFORM'):
+        # Destriping also does reverse-calib.
+        if ((step not in hdr) or
+                (hdr[step].strip().upper() not in ('PERFORM', 'COMPLETE'))):
             continue
 
         ref_files += ref_from_image(input_image, corr_lookup[step])
 
-    return ref_files
+    return list(set(ref_files))  # Remove duplicates
 
 
 # Base class for actual tests.

@@ -16,6 +16,8 @@ bc1.conda_packages = ['python=3.6',
                       'requests',
                       'numpy',
                       'matplotlib',
+                      'scipy',
+                      'scikit-image',
                       'stsci.tools']
 bc1.build_cmds = ["pip install ci-watson",
                   "python setup.py install"]
