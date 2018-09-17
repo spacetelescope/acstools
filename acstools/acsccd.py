@@ -50,7 +50,7 @@ __all__ = ['acsccd']
 #     If any is True, will set that to PERFORM and the rest to OMIT.
 #
 def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
-    """
+    r"""
     Run the acsccd.e executable as from the shell.
 
     Expect input to be ``*_raw.fits``.

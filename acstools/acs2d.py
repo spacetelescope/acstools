@@ -35,7 +35,7 @@ __all__ = ['acs2d']
 
 
 def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
-    """
+    r"""
     Run the acs2d.e executable as from the shell.
 
     Output is automatically named based on input suffix:

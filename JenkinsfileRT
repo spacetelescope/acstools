@@ -1,0 +1,40 @@
+// Obtain files from source control system.
+// [skip ci] and [ci skip] have no effect here.
+if (utils.scm_checkout(['skip_disable':true])) return
+
+// Run nightly tests, which include the slow ones.
+bc = new BuildConfig()
+bc.nodetype = "RHEL-6"
+bc.name = "release"
+bc.env_vars = ['TEST_BIGDATA=https://bytesalad.stsci.edu/artifactory',
+               'jref=/grp/hst/cdbs/jref/']
+bc.conda_channels = ['http://ssb.stsci.edu/astroconda']
+bc.conda_packages = ['python=3.6',
+                     'requests',
+                     'numpy',
+                     'matplotlib',
+                     'scipy',
+                     'scikit-image',
+                     'stsci.tools']
+bc.build_cmds = ["pip install ci-watson",
+                 "python setup.py install"]
+bc.test_cmds = ["pytest --basetemp=tests_output --junitxml results.xml --bigdata --slow -v"]
+bc.failedUnstableThresh = 1
+bc.failedFailureThresh = 6
+
+// TODO: Enable this when boyle can support parallel runs.
+//       https://github.com/spacetelescope/calcos/issues/41
+// Astropy dev and Python 3.7
+//bc1 = utils.copy(bc)
+//bc1.name = "dev"
+//bc1.conda_packages[0] = "python=3.7"
+//bc1.build_cmds = ["pip install ci-watson",
+//                  "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
+//                 "python setup.py install"]
+
+// Iterate over configurations that define the (distibuted) build matrix.
+// Spawn a host of the given nodetype for each combination and run in parallel.
+// TODO: Enable this when boyle can support parallel runs.
+//       https://github.com/spacetelescope/calcos/issues/41
+//utils.run([bc, bc1])
+utils.run([bc])

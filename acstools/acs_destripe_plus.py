@@ -120,7 +120,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                   scimask1=None, scimask2=None,
                   dqbits=None, rpt_clean=0, atol=0.01,
                   cte_correct=True, clobber=False, verbose=True):
-    """Calibrate post-SM4 ACS/WFC exposure(s) and use
+    r"""Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
     This takes a RAW image and generates a FLT file containing

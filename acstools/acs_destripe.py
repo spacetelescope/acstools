@@ -235,7 +235,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
           lower=None, upper=None, binwidth=0.3,
           mask1=None, mask2=None, dqbits=None,
           rpt_clean=0, atol=0.01, clobber=False, verbose=True):
-    """Remove horizontal stripes from ACS WFC post-SM4 data.
+    r"""Remove horizontal stripes from ACS WFC post-SM4 data.
 
     Parameters
     ----------
@@ -440,18 +440,18 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
     for image, maskfile1, maskfile2 in zip(flist, mlist1, mlist2):
         # Skip processing pre-SM4 images
         if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
-            LOG.warn('{0} is pre-SM4. Skipping...'.format(image))
+            LOG.warning('{0} is pre-SM4. Skipping...'.format(image))
             continue
 
         # Data must be in ELECTRONS
         if (fits.getval(image, 'BUNIT', ext=1) != 'ELECTRONS'):
-            LOG.warn('{0} is not in ELECTRONS. Skipping...'.format(image))
+            LOG.warning('{0} is not in ELECTRONS. Skipping...'.format(image))
             continue
 
         # Skip processing CTECORR-ed images
         if (fits.getval(image, 'PCTECORR') == 'COMPLETE'):
-            LOG.warn('{0} already has PCTECORR applied. '
-                     'Skipping...'.format(image))
+            LOG.warning('{0} already has PCTECORR applied. '
+                        'Skipping...'.format(image))
             continue
 
         # generate output filename for each input based on specification
@@ -534,10 +534,10 @@ def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
                      'de-stripe corrections:  =====')
 
         if (STDDEVCorr > 1.5*0.9):
-            LOG.warn('perform_correction - STDDEV of applied de-stripe '
-                     'corrections ({:.3g}) exceeds\nknown bias striping '
-                     'STDDEV of 0.9e (see ISR ACS 2011-05) more than '
-                     '1.5 times.'.format(STDDEVCorr))
+            LOG.warning('perform_correction - STDDEV of applied de-stripe '
+                        'corrections ({:.3g}) exceeds\nknown bias striping '
+                        'STDDEV of 0.9e (see ISR ACS 2011-05) more than '
+                        '1.5 times.'.format(STDDEVCorr))
 
         elif verbose:
             LOG.info('perform_correction - STDDEV of applied de-stripe '
@@ -775,7 +775,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
                 NMaxIter = NIter
 
         if tnpix <= 0:
-            LOG.warn('clean_streak - No good data points; cannot de-stripe.')
+            LOG.warning('clean_streak - No good data points; cannot de-stripe.')
             return False, 0, 0, 0.0, 0.0, 0
 
         if NMaxIter >= maxiter:
@@ -846,12 +846,12 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             if (nonconvi.shape[0] == nonconvi0.shape[0] and
                     nonconvi.shape[0] == nonconvi_int.shape[0] and
                     np.all(corr0[nonconvi]*corr[nonconvi] < 0.0) and Nrpt > 1):
-                LOG.warn("clean_streak - Repeat bias stripe cleaning\n"
-                         "process appears to be oscillatory for {:d} image "
-                         "rows.\nTry to adjust 'sigrej', 'maxiter', and/or "
-                         "'dqbits' parameters.\n"
-                         "In addition,  consider using masks or adjust "
-                         "existing masks.".format(nonconvi.shape[0]))
+                LOG.warning("clean_streak - Repeat bias stripe cleaning\n"
+                            "process appears to be oscillatory for {:d} image "
+                            "rows.\nTry to adjust 'sigrej', 'maxiter', and/or "
+                            "'dqbits' parameters.\n"
+                            "In addition,  consider using masks or adjust "
+                            "existing masks.".format(nonconvi.shape[0]))
                 break
 
             nonconvi0 = nonconvi.copy()
@@ -880,7 +880,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
     image.err[:, :] = np.sqrt(np.abs(imerr2 + truecorr_sig2))
 
     if warn_maxiter:
-        LOG.warn(
+        LOG.warning(
             'clean_streak - Maximum number of clipping iterations '
             'specified by the user ({}) has been reached.'.format(maxiter))
 
@@ -947,17 +947,17 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
     ArrShape = InputArr.shape
     if NGood == 0:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - No data points given' + imrow)
+        LOG.warning('djs_iterstat - No data points given' + imrow)
         return 0, 0, 0, 0, 0, None
     if NGood == 1:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - Only one data point; '
-                 'cannot compute stats{0}'.format(imrow))
+        LOG.warning('djs_iterstat - Only one data point; '
+                    'cannot compute stats{0}'.format(imrow))
         return 0, 0, 0, 0, 0, None
     if np.unique(InputArr).size == 1:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - Only one value in data; '
-                 'cannot compute stats{0}'.format(imrow))
+        LOG.warning('djs_iterstat - Only one value in data; '
+                    'cannot compute stats{0}'.format(imrow))
         return 0, 0, 0, 0, 0, None
 
     # Determine Max and Min
@@ -984,8 +984,8 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
     NGood = np.sum(Mask)
     if NGood < 2:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warn('djs_iterstat - No good data points; '
-                 'cannot compute stats{0}'.format(imrow))
+        LOG.warning('djs_iterstat - No good data points; '
+                    'cannot compute stats{0}'.format(imrow))
         return 0, 0, 0, 0, 0, None
 
     SaveMask = Mask.copy()
