@@ -3,12 +3,9 @@
 from astropy.tests.helper import enable_deprecations_as_exceptions
 
 # Turn deprecation warnings into exceptions.
-# TODO: What we really want to do.
-#enable_deprecations_as_exceptions()
-# TODO: Remove this workaround eventually.
-#       https://github.com/astropy/astropy/issues/7822
-enable_deprecations_as_exceptions(include_astropy_deprecations=False,
-                                  warnings_to_ignore_entire_module=['socks'])
+# NOTE: socks warning fixed by https://github.com/Anorov/PySocks/pull/106
+#       but not released yet.
+enable_deprecations_as_exceptions(warnings_to_ignore_entire_module=['socks'])
 
 # Require these pytest plugins to run.
 pytest_plugins = ["pytest_ciwatson"]

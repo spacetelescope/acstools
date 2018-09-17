@@ -22,14 +22,19 @@ bc.test_cmds = ["pytest --basetemp=tests_output --junitxml results.xml --bigdata
 bc.failedUnstableThresh = 1
 bc.failedFailureThresh = 6
 
+// TODO: Enable this when boyle can support parallel runs.
+//       https://github.com/spacetelescope/calcos/issues/41
 // Astropy dev and Python 3.7
-bc1 = utils.copy(bc)
-bc1.name = "dev"
-bc1.conda_packages[0] = "python=3.7"
-bc1.build_cmds = ["pip install ci-watson",
-                  "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
-                 "python setup.py install"]
+//bc1 = utils.copy(bc)
+//bc1.name = "dev"
+//bc1.conda_packages[0] = "python=3.7"
+//bc1.build_cmds = ["pip install ci-watson",
+//                  "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
+//                 "python setup.py install"]
 
 // Iterate over configurations that define the (distibuted) build matrix.
 // Spawn a host of the given nodetype for each combination and run in parallel.
-utils.run([bc, bc1])
+// TODO: Enable this when boyle can support parallel runs.
+//       https://github.com/spacetelescope/calcos/issues/41
+//utils.run([bc, bc1])
+utils.run([bc])
