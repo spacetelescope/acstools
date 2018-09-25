@@ -28,7 +28,7 @@ bc1.conda_packages = ['python=3.6',
                       'stsci.tools']
 bc1.build_cmds = ["pip install ci-watson",
                   "python setup.py install"]
-bc1.test_cmds = ["pytest --basetemp=tests_output --junitxml results.xml --bigdata -v"]
+bc1.test_cmds = ["pytest acstools --basetemp=tests_output --junitxml results.xml --bigdata -v"]
 bc1.failedUnstableThresh = 1
 bc1.failedFailureThresh = 6
 
@@ -40,12 +40,12 @@ bc2.env_vars += ['PATH=./_install/bin:$PATH',
 bc2.conda_packages[0] = "python=3.7"
 bc2.conda_packages += ['cfitsio', 'pkg-config']
 // Shell commands to build HSTCAL have to be all in one line
-bc2.build_cmds = ["git clone https://github.com/spacetelescope/hstcal.git",
-                  "cd hstcal; ${configure_cmd} --release-with-symbols; ./waf build; ./waf install; cd ..",
-                  "pip install ci-watson",
+bc2.build_cmds = ["pip install ci-watson",
                   "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
                   "python setup.py install",
-                  "calacs.e --version",]
+                  "git clone https://github.com/spacetelescope/hstcal.git",
+                  "cd hstcal; ${configure_cmd} --release-with-symbols; ./waf build; ./waf install; cd ..",
+                  "calacs.e --version"]
 
 // Run PEP 8 check
 bc3 = utils.copy(bc0)
