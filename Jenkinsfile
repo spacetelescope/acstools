@@ -39,12 +39,9 @@ bc2.env_vars += ['PATH=./_install/bin:$PATH',
                  'OMP_NUM_THREADS=8']
 bc2.conda_packages[0] = "python=3.7"
 bc2.conda_packages += ['cfitsio', 'pkg-config']
+// Shell commands to build HSTCAL have to be all in one line
 bc2.build_cmds = ["git clone https://github.com/spacetelescope/hstcal.git",
-                  "cd hstcal",
-                  "${configure_cmd} --release-with-symbols",
-                  "./waf build",
-                  "./waf install",
-                  "cd ..",
+                  "cd hstcal; ${configure_cmd} --release-with-symbols; ./waf build; ./waf install; cd ..",
                   "pip install ci-watson",
                   "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
                   "python setup.py install",
