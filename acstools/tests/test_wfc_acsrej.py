@@ -14,9 +14,8 @@ class TestREJ(BaseACSTOOLS):
     def _acsrej(self, input_list, output_file, truth_file):
 
         # Acquire the input files for processing
-        with open(input_list[0:], 'r') as flist:
-        for line in flist:
-            infile_flt = line.split()[0]
+        for infile_flt in input_list:
+            print(infile_flt)
             self.get_input_file(infile_flt)
 
         # ACSREJ
@@ -36,7 +35,6 @@ class TestREJ(BaseACSTOOLS):
     def test_fullframe(self):
 
         input_list  = ['jc4823bpq_flt.fits', 'jc4823brq_flt.fits']
-        #input_list  = 'wfc_acsrej_list1'
         output_root = 'crsplit2_acsrej_1'
         output_file = output_root + '.fits'
         tra_file    = output_root + '.tra'

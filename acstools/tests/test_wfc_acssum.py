@@ -14,10 +14,9 @@ class TestSUM(BaseACSTOOLS):
     def _acssum(self, input_list, output_file, truth_file):
 
         # Acquire the input files for processing
-        with open(input_list[1:], 'r') as flist:
-            for line in flist:
-                infile_flt = line.split()[0]
-                self.get_input_file(infile_flt)
+        for infile_flt in input_list:
+            print(infile_flt)
+            self.get_input_file(infile_flt)
 
         # ACSSUM
         acssum.acssum(input_list, output_file, time_stamps=True, verbose=True)
