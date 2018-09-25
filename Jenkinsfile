@@ -6,7 +6,7 @@ CFLAGS = ''
 LDFLAGS = ''
 DEFAULT_FLAGS = "${CFLAGS} ${LDFLAGS}"
 // Some waf flags cause a prompt for input during configuration, hence the 'yes'.
-configure_cmd = "yes '' | hstcal/waf configure --prefix=./_install ${DEFAULT_FLAGS}"
+configure_cmd = "yes '' | ./waf configure --prefix=./_install ${DEFAULT_FLAGS}"
 
 // Define each build configuration, copying and overriding values as necessary.
 bc0 = new BuildConfig()
@@ -40,13 +40,15 @@ bc2.env_vars += ['PATH=./_install/bin:$PATH',
 bc2.conda_packages[0] = "python=3.7"
 bc2.conda_packages += ['cfitsio', 'pkg-config']
 bc2.build_cmds = ["git clone https://github.com/spacetelescope/hstcal.git",
+                  "cd hstcal",
                   "${configure_cmd} --release-with-symbols",
-                  "hst/waf build",
-                  "hst/waf install",
-                  "calacs.e --version",
+                  "./waf build",
+                  "./waf install",
+                  "cd ..",
                   "pip install ci-watson",
                   "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
-                  "python setup.py install"]
+                  "python setup.py install",
+                  "calacs.e --version",]
 
 // Run PEP 8 check
 bc3 = utils.copy(bc0)
