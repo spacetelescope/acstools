@@ -22,6 +22,7 @@ from . import acscteforwardmodel
 from . import acs2d
 from . import acsrej
 from . import acssum
+from . import acszpt
 from . import satdet
 from . import utils_calib
 
