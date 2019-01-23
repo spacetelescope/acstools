@@ -86,7 +86,14 @@ class Query(object):
         One of the three channels on ACS: HRC, SBC, or WFC
     filt : str, optional
         One of valid filters for the chosen detector
-            * HRC and WFC:
+            * HRC:
+                 F220W, F250W, F330W,
+                 F344N, F435W, F475W,
+                 F502N, F550M, F555W,
+                 F606W, F625W, F658N, F660N,
+                 F775W, F814W, F850LP, F892N
+
+            * WFC:
                  F435W, F475W,
                  F502N, F550M, F555W,
                  F606W, F625W, F658N, F660N,
@@ -98,21 +105,13 @@ class Query(object):
     Attributes
     ----------
     date : str
-        Input date in the following ISO format, YYYY-MM-DD
+        **Attribute** for storing the user specified date.
     detector : str
-        One of the three channels on ACS: HRC, SBC, or WFC
-    filt : str, optional
-        One of valid filters for the chosen detector
-    zpt_table : astropy.table.Table object
-        Results returned from the ACS Zeropoint Calculator
-
-    Methods
-    -------
-    fetch() :
-        Submits the request to compute the zeropoints and returns an Astropy
-        Table
-
-
+        **Attribute** for storing the user specified detector.
+    filt : str, None
+        **Attribute** for storing the user specified filter (if supplied).
+    zpt_table : astropy.table.Table
+        **Attribute** for storing the results returned by the ACS Zeropoint Calculator
     """
 
     def __init__(self, date, detector, filt=None):
@@ -296,16 +295,18 @@ class Query(object):
         # Loop through each column and set the appropriate units
         for i, col in enumerate(tab.colnames):
             tab[col].unit = data_units[i]
-
         self.zpt_table = tab
 
     def fetch(self):
-        """ Submit the request and format the results
+        """ This method is used to submit a request to the ACS Zeropoints Calculator
+
+        Submit the request and format the results into an Astropy Table object
+        with the correspond units applied to each column
 
         Returns
         -------
-        If the request is successful, returns an Astropy table with the correct
-        units. If the request fails, returns None.
+        astropy.table.Table or None
+            Returns a table if the request was successful and None otherwise
         """
         valid_inputs = self._check_inputs()
         if valid_inputs:

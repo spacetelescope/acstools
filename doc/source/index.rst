@@ -20,17 +20,19 @@ Software tools for
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    calacs
    calacs_hstcal
    acsccd
    acscte
+   acscteforwardmodel
    acsrej
    acs2d
    acssum
    acs_destripe
    acs_destripe_plus
+   acszpt
    satdet
    utils_calib
 
