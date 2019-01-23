@@ -56,9 +56,6 @@ FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
  F435W   4329.2              3.148e-19  25.155  25.763  25.665
 """
 
-
-
-
 from astropy.table import Table
 import astropy.units as u
 from collections import OrderedDict
@@ -66,13 +63,11 @@ import datetime as dt
 import requests
 from bs4 import BeautifulSoup
 
-
 __taskname__ = "acszpt"
 __version__ = "1.0"
 __author__ = "Nathan Miles"
 __vdate__ = "22-Jan-2019"
-__all__ = ['acszpt']
-
+__all__ = ['Query']
 
 
 class Query(object):
@@ -105,13 +100,13 @@ class Query(object):
     Attributes
     ----------
     date : str
-        **Attribute** for storing the user specified date.
+        **Attribute**, the user supplied date.
     detector : str
-        **Attribute** for storing the user specified detector.
+        **Attribute**, the user supplied detector.
     filt : str, None
-        **Attribute** for storing the user specified filter (if supplied).
+        **Attribute**, the user supplied filter if one was given.
     zpt_table : astropy.table.Table
-        **Attribute** for storing the results returned by the ACS Zeropoint Calculator
+        **Attribute**, the results returned by the ACS Zeropoint Calculator
     """
 
     def __init__(self, date, detector, filt=None):
@@ -124,15 +119,15 @@ class Query(object):
         self.valid_filters = {
             'WFC': ['F435W', 'F475W', 'F502N', 'F550M',
                     'F555W', 'F606W', 'F625W', 'F658N',
-                    'F660N', 'F775W', 'F814W', 'F850LP','F892N'],
+                    'F660N', 'F775W', 'F814W', 'F850LP', 'F892N'],
 
             'HRC': ['F220W', 'F250W', 'F330W', 'F344N',
                     'F435W', 'F475W', 'F502N', 'F550M',
                     'F555W', 'F606W', 'F625W', 'F658N',
-                    'F660N', 'F775W', 'F814W', 'F850LP','F892N'],
+                    'F660N', 'F775W', 'F814W', 'F850LP', 'F892N'],
 
             'SBC': ['F115LP', 'F122M', 'F125LP',
-                   'F140LP', 'F150LP', 'F165LP']
+                    'F140LP', 'F150LP', 'F165LP']
         }
         self.zpt_table = None
 
@@ -162,7 +157,7 @@ class Query(object):
         valid_detector = True
         valid_filter = True
         # Determine the submitted detector is valid
-        if self.detector not in ['HRC','SBC','WFC']:
+        if self.detector not in ['HRC', 'SBC', 'WFC']:
             print('Whoops! {} is not a valid detector option.'.
                   format(self.detector))
             print('Please choose one of the following:')
@@ -209,8 +204,8 @@ class Query(object):
                 result = None
             else:
                 result = ValueError('The observation cannot occur before '
-                                 'ACS was installed ({})'.
-                                 format(min_date.strftime(fmt)))
+                                    'ACS was installed ({})'.
+                                    format(min_date.strftime(fmt)))
             return result
 
     def _submit_request(self):
@@ -306,7 +301,7 @@ class Query(object):
         Returns
         -------
         astropy.table.Table or None
-            Returns a table if the request was successful and None otherwise
+            If the request was successful returns a table, otherwise, None
         """
         valid_inputs = self._check_inputs()
         if valid_inputs:
