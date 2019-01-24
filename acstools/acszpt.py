@@ -136,14 +136,10 @@ class Query(object):
 
         # Set the private attributes
         if filt is None:
-            # 'http://127.0.0.1:5000/'
-            # self._url = ('https://acszeropoints.stsci.edu/results_all/?date={}'
-            #              '&detector={}'.format(self.date, self.detector))
-            self._url = ('http://127.0.0.1:5000/results_all/?date={}'
+            self._url = ('https://acszeropoints.stsci.edu/results_all/?date={}'
                          '&detector={}'.format(self.date, self.detector))
         else:
             self.filt = filt.upper()
-
             self._url = ('https://acszeropoints.stsci.edu/'
                          'results_single/?date1={0}&detector={1}'
                          '&{1}_filter={2}'.format(self.date,
