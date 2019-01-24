@@ -56,11 +56,12 @@ FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
  F435W   4329.2              3.148e-19  25.155  25.763  25.665
 """
 
-from astropy.table import Table
-import astropy.units as u
 from collections import OrderedDict
 import datetime as dt
-import requests
+from urllib import request, error as request_errors
+
+from astropy.table import Table
+import astropy.units as u
 from bs4 import BeautifulSoup
 
 __taskname__ = "acszpt"
@@ -76,11 +77,13 @@ class Query(object):
     Parameters
     ----------
     date : str
-        Input date in the following ISO format, YYYY-MM-DD
+        Input date in the following ISO format, YYYY-MM-DD.
     detector : str
-        One of the three channels on ACS: HRC, SBC, or WFC
+        One of the three channels on ACS: HRC, SBC, or WFC.
     filt : str, optional
-        One of valid filters for the chosen detector
+        One of valid filters for the chosen detector. If no filter is supplied,
+        all of the filters for the chosen detector will be used.
+
             * HRC:
                  F220W, F250W, F330W,
                  F344N, F435W, F475W,
@@ -133,26 +136,34 @@ class Query(object):
 
         # Set the private attributes
         if filt is None:
-            self._url = 'https://acszeropoints.stsci.edu/results_all/?date={}&' \
-                        'detector={}'.format(self.date, self.detector)
+            # 'http://127.0.0.1:5000/'
+            # self._url = ('https://acszeropoints.stsci.edu/results_all/?date={}'
+            #              '&detector={}'.format(self.date, self.detector))
+            self._url = ('http://127.0.0.1:5000/results_all/?date={}'
+                         '&detector={}'.format(self.date, self.detector))
         else:
             self.filt = filt.upper()
 
-            self._url = 'https://acszeropoints.stsci.edu/results_single/' \
-                        '?date1={0}&detector={1}&{1}_filter={2}'. \
-                format(self.date, self.detector, self.filt)
+            self._url = ('https://acszeropoints.stsci.edu/'
+                         'results_single/?date1={0}&detector={1}'
+                         '&{1}_filter={2}'.format(self.date,
+                                                  self.detector,
+                                                  self.filt))
 
         self._zpts = OrderedDict()
+        self._acs_installation_date = dt.datetime(2002, 3, 7)
         self._response = None
         self._failed = False
 
     def _check_inputs(self):
-        """ Check the input to ensure they are valid
+        """ Check the inputs to ensure they are valid
 
         Returns
         -------
-
+        Bool
+            True if all inputs are valid, False if one is not.
         """
+
         valid_date = True
         valid_detector = True
         valid_filter = True
@@ -170,7 +181,7 @@ class Query(object):
         # Determine if the submitted filter is valid
         if self.filt is None:
             pass
-        elif self.filt not in self.valid_filters[self.detector]:
+        elif valid_detector and self.filt not in self.valid_filters[self.detector]:
             valid_filter = False
             print('Whoops! {} is not a valid filter for {}'.
                   format(self.filt, self.detector))
@@ -181,9 +192,10 @@ class Query(object):
 
         # Determine if the submitted date is valid
         date_check = self._check_date()
-        if isinstance(date_check, ValueError):
+        if date_check is not None:
             valid_date = False
             print('Whoops! {}'.format(date_check))
+            print('-'*79)
 
         # Only continute if all the inputs are valid options
         if all([valid_date, valid_filter, valid_detector]):
@@ -192,20 +204,33 @@ class Query(object):
             return False
 
     def _check_date(self, fmt='%Y-%m-%d'):
-        """Convenience method for determing if the input date is valid
+        """Convenience method for determining if the input date is valid
+
+        Parameters
+        ----------
+        fmt : str
+            The format of the date string. The default is %Y-%m-%d, which
+            corresponds to YYYY-MM-DD.
+
+        Returns
+        -------
+        None, str
+            If the date is valid, returns None. If the date is invalid, returns
+            a message explaining the issue
         """
-        min_date = dt.datetime(2002, 3, 7)
+        result = None
         try:
             dt_obj = dt.datetime.strptime(self.date, fmt)
         except ValueError:
-            return ValueError('Date format does not match YYYY-MM-DD')
+            result =  'Date format does not match YYYY-MM-DD'
         else:
-            if min_date < dt_obj:
-                result = None
+            if self._acs_installation_date < dt_obj:
+                pass
             else:
-                result = ValueError('The observation cannot occur before '
-                                    'ACS was installed ({})'.
-                                    format(min_date.strftime(fmt)))
+                result = ('The observation cannot occur '
+                          'before ACS was installed ({})'.
+                          format(self._acs_installation_date.strftime(fmt)))
+        finally:
             return result
 
     def _submit_request(self):
@@ -216,11 +241,11 @@ class Query(object):
         attribute.
         """
         try:
-            self._response = requests.get(self._url)
-        except requests.exceptions.RequestException as e:
+            self._response = request.urlopen(self._url)
+        except request_errors.URLError as e:
             print(e)
             print('-'*79)
-            print('The query failed! Check your input args and if the error '
+            print('The query failed! Check your input args and if the error \n'
                   'persists submit a ticket to the ACS Help Desk at '
                   'hsthelp.stsci.edu with the error message displayed above.')
             self._failed = True
@@ -234,12 +259,16 @@ class Query(object):
         results.
 
         """
-        soup = BeautifulSoup(
-            self._response.content.decode(self._response.encoding),
-            'html.parser'
-        )
+        soup = BeautifulSoup(self._response.read(), 'html.parser')
+
         # Grab all elements in the table returned by the ZPT calc.
         td = soup.find_all('td')
+
+        # the td variable is a list of all of the table elements. They are
+        # ordered such that each block of 6 values corresponds to one row of
+        # the html table. The first 6 elements in the list of all elements
+        # correspond to the column names. The values after that correspond to
+        # actual data for each row
         for j in range(6):
             for i, val in enumerate(td[j::6]):
                 if not i:
@@ -249,12 +278,8 @@ class Query(object):
 
     def _format_results(self):
         """ Format the results into an astropy.table.Table with corresponding
-        units
+        units and assign it to the zpt_table attribute
 
-        Returns
-        -------
-        astropy.table.Table object with the zeropoints for the supplied date
-        and detector
         """
         data_types = []
         data_units = []
@@ -293,10 +318,13 @@ class Query(object):
         self.zpt_table = tab
 
     def fetch(self):
-        """ This method is used to submit a request to the ACS Zeropoints Calculator
+        """ **Method**, used to submit the request to the ACS Zeropoints Calculator
 
-        Submit the request and format the results into an Astropy Table object
-        with the correspond units applied to each column
+        This the method will:
+
+         - submit the request
+         - parse the response
+         - format the results into a table with the correct units
 
         Returns
         -------
@@ -315,10 +343,3 @@ class Query(object):
         else:
             print('Please fix the incorrect input(s)')
             return None
-
-
-if __name__ == '__main__':
-    date = '2014-03-01'
-    detector = 'WFC'
-    a = Query(date, detector)
-    a.fetch()
