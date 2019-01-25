@@ -58,6 +58,7 @@ FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
 
 from collections import OrderedDict
 import datetime as dt
+import logging
 from urllib import request, error as request_errors
 
 from astropy.table import Table
@@ -69,6 +70,11 @@ __version__ = "1.0"
 __author__ = "Nathan Miles"
 __vdate__ = "22-Jan-2019"
 __all__ = ['Query']
+
+# Initialize the logger
+logging.basicConfig()
+LOG = logging.getLogger('{}.{}'.format(__taskname__,__all__[0]))
+LOG.setLevel(logging.INFO)
 
 
 class Query(object):
@@ -148,6 +154,7 @@ class Query(object):
 
         self._zpts = OrderedDict()
         self._acs_installation_date = dt.datetime(2002, 3, 7)
+        self._valid_detectors = ['HRC', 'SBC', 'WFC']
         self._response = None
         self._failed = False
 
@@ -164,13 +171,14 @@ class Query(object):
         valid_detector = True
         valid_filter = True
         # Determine the submitted detector is valid
-        if self.detector not in ['HRC', 'SBC', 'WFC']:
-            print('Whoops! {} is not a valid detector option.'.
+        if self.detector not in self._valid_detectors:
+            LOG.error(' {} is not a valid detector option.'.
                   format(self.detector))
-            print('Please choose one of the following:')
-            print('HRC')
-            print('SBC')
-            print('WFC')
+            msg = ' Please choose one of the following:\n'
+            for val in self._valid_detectors:
+                msg += '{}\n'.format(val)
+
+            LOG.info(msg)
             print('-'*79)
             valid_detector = False
 
@@ -179,18 +187,20 @@ class Query(object):
             pass
         elif valid_detector and self.filt not in self.valid_filters[self.detector]:
             valid_filter = False
-            print('Whoops! {} is not a valid filter for {}'.
+            LOG.error(' {} is not a valid filter for {}'.
                   format(self.filt, self.detector))
-            print('Please choose one of the following:')
+            msg = ' Please choose one of the following:\n'
+
             for filt in self.valid_filters[self.detector]:
-                print(filt)
+                msg += '{}\n'.format(filt)
+            LOG.info(msg)
             print('-' * 79)
 
         # Determine if the submitted date is valid
         date_check = self._check_date()
         if date_check is not None:
             valid_date = False
-            print('Whoops! {}'.format(date_check))
+            LOG.error(' {}'.format(date_check))
             print('-'*79)
 
         # Only continute if all the inputs are valid options
@@ -239,9 +249,9 @@ class Query(object):
         try:
             self._response = request.urlopen(self._url)
         except request_errors.URLError as e:
-            print(e)
+            LOG.error(e)
             print('-'*79)
-            print('The query failed! Check your input args and if the error \n'
+            LOG.info('The query failed! Check your input args and if the error \n'
                   'persists submit a ticket to the ACS Help Desk at '
                   'hsthelp.stsci.edu with the error message displayed above.')
             self._failed = True
@@ -255,6 +265,7 @@ class Query(object):
         results.
 
         """
+
         soup = BeautifulSoup(self._response.read(), 'html.parser')
 
         # Grab all elements in the table returned by the ZPT calc.
@@ -327,15 +338,18 @@ class Query(object):
         astropy.table.Table or None
             If the request was successful returns a table, otherwise, None
         """
+        LOG.info(' Checking inputs...')
         valid_inputs = self._check_inputs()
         if valid_inputs:
+            LOG.info(' Submitting request to {}'.format(self._url))
             self._submit_request()
             if self._failed:
                 return None
             else:
+                LOG.info(' Parsing the response and formatting the results...')
                 self._parse_response()
                 self._format_results()
                 return self.zpt_table
         else:
-            print('Please fix the incorrect input(s)')
+            LOG.error('Please fix the incorrect input(s)')
             return None
