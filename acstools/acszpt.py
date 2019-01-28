@@ -90,41 +90,35 @@ class Query(object):
     date : str
         Input date in the following ISO format, YYYY-MM-DD.
 
-    detector : str
+    detector : {'HRC', 'SBC', 'WFC'}
         One of the three channels on ACS: HRC, SBC, or WFC.
 
     filt : str or `None`, optional
         One of valid filters for the chosen detector. If no filter is supplied,
         all of the filters for the chosen detector will be used:
 
-            * HRC: F220W, F250W, F330W, F344N, F435W, F475W,
-              F502N, F550M, F555W, F606W, F625W, F658N, F660N,
-              F775W, F814W, F850LP, F892N
-            * WFC: F435W, F475W, F502N, F550M, F555W,
-              F606W, F625W, F658N, F660N, F775W, F814W, F850LP, F892N
-            * SBC: F115LP, F122M, F125LP, F140LP, F150LP, F165LP
-
-    Attributes
-    ----------
-    date : str
-        The user supplied date.
-
-    detector : str
-        The user supplied detector.
-
-    filt : str or `None`
-        The user supplied filter, if one was given.
-
-    zpt_table : `astropy.table.Table`
-        The results returned by the ACS Zeropoint Calculator.
+            * HRC:
+                 F220W, F250W, F330W,
+                 F344N, F435W, F475W,
+                 F502N, F550M, F555W,
+                 F606W, F625W, F658N, F660N,
+                 F775W, F814W, F850LP, F892N
+            * WFC:
+                 F435W, F475W,
+                 F502N, F550M, F555W,
+                 F606W, F625W, F658N, F660N,
+                 F775W, F814W, F850LP, F892N
+            * SBC:
+                 F115LP, F122M, F125LP,
+                 F140LP, F150LP, F165LP
 
     """
     def __init__(self, date, detector, filt=None):
 
-        # Set the public attributes
-        self.date = date
-        self.detector = detector.upper()
-        self.filt = filt
+        # Set the attributes
+        self._date = date
+        self._detector = detector.upper()
+        self._filt = filt
 
         self.valid_filters = {
             'WFC': ['F435W', 'F475W', 'F502N', 'F550M',
@@ -139,14 +133,14 @@ class Query(object):
             'SBC': ['F115LP', 'F122M', 'F125LP',
                     'F140LP', 'F150LP', 'F165LP']
         }
-        self.zpt_table = None
+        self._zpt_table = None
 
         # Set the private attributes
         if filt is None:
             self._url = ('https://acszeropoints.stsci.edu/results_all/?date={}'
                          '&detector={}'.format(self.date, self.detector))
         else:
-            self.filt = filt.upper()
+            self._filt = filt.upper()
             self._url = ('https://acszeropoints.stsci.edu/'
                          'results_single/?date1={0}&detector={1}'
                          '&{1}_filter={2}'.format(self.date,
@@ -159,6 +153,26 @@ class Query(object):
         self._valid_detectors = ['HRC', 'SBC', 'WFC']
         self._response = None
         self._failed = False
+
+    @property
+    def date(self):
+        """The user supplied date. (str)"""
+        return self._date
+
+    @property
+    def detector(self):
+        """The user supplied detector. (str)"""
+        return self._detector
+
+    @property
+    def filt(self):
+        """The user supplied filter, if one was given. (str or `None`)"""
+        return self._filt
+
+    @property
+    def zpt_table(self):
+        """The results returned by the ACS Zeropoint Calculator. (`astropy.table.Table`)"""
+        return self._zpt_table
 
     def _check_inputs(self):
         """Check the inputs to ensure they are valid.
@@ -314,7 +328,7 @@ class Query(object):
         # Loop through each column and set the appropriate units
         for i, col in enumerate(tab.colnames):
             tab[col].unit = data_units[i]
-        self.zpt_table = tab
+        self._zpt_table = tab
 
     def fetch(self):
         """Submit the request to the ACS Zeropoints Calculator.

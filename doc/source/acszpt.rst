@@ -2,13 +2,7 @@
 ACSZPT
 ******
 
-.. currentmodule:: acstools.acszpt
-
 **Author**: Nathan Miles
 
-
-.. automodule:: acstools.acszpt
-
-
-.. autoclass:: Query
-    :members:
+.. automodapi:: acstools.acszpt
+    :no-inheritance-diagram:
