@@ -67,7 +67,8 @@ setup(
     install_requires=[
         'astropy>=1.1',
         'numpy',
-        'bs4'
+        'beautifulsoup4',
+        'six'
     ],
     tests_require=['pytest'],
     use_2to3=False,

@@ -11,11 +11,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
-
-# Check Sphinx version
-import sphinx
-
 # ACSTOOLS
 import acstools
 
@@ -33,7 +28,10 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.autosummary']
+    'sphinx.ext.autosummary',
+    'sphinx_automodapi.automodapi']
+
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -49,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'acstools'
-copyright = u'2016, STScI'
+copyright = u'2019, STScI'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -184,8 +182,8 @@ htmlhelp_basename = 'acstoolsdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'acstools.tex', u'acstools Documentation',
-   u'STScI', 'manual'),
+    ('index', 'acstools.tex', u'acstools Documentation',
+     u'STScI', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -214,4 +212,4 @@ intersphinx_mapping = {
     'skimage': ('http://scikit-image.org/docs/0.11.x/', None),
     'matplotlib': ('http://matplotlib.org/', None),
     'astropy': ('http://docs.astropy.org/en/stable/', None)
-    }
+}

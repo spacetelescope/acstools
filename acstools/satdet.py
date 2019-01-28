@@ -129,7 +129,7 @@ jc8m10syq_flc.fits[6] updated
 #
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from astropy.extern.six.moves import map
+from six.moves import map
 
 # STDLIB
 import glob
