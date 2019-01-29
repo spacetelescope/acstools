@@ -12,8 +12,8 @@ combination. In the first case, the query
 will return the zeropoint information for the specific filter and detector at
 specified date. In the second case, the query will return the zeropoint
 information for all the filters for the desired detector at the specified date.
-In either case, the result will be an Astropy table, where each column has the
-correct units attached.
+In either case, the result will be an ``astropy.table.QTable`` where each column
+is an ``astropy.units.quantity.Quantity`` object with the appropriate units attached.
 
 Examples
 --------
@@ -57,6 +57,25 @@ FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
 ------ -------- ---------------------- ------- ------- -------
  F435W   4329.2              3.148e-19  25.155  25.763  25.665
 
+
+Retrieve the zeropoint information for the F435W filter for WFC at multiple dates:
+
+>>> from acstools import acszpt
+>>> dates = ['2004-10-13', '2011-04-01', '2014-01-17', '2018-05-23']
+>>> queries = []
+>>> for date in dates:
+...     q = acszpt.Query(date=date, detector='WFC', filt='F435W')
+...     zpt_table = q.fetch()
+...     # Each object has a zpt_table attribute, so we save the instance
+...     queries.append(q)
+>>> for q in queries:
+...     print(q.date, q.zpt_table['PHOTFLAM'][0], q.zpt_table['STmag'][0])
+2004-10-13 3.074e-19 erg / (Angstrom cm2 s) 25.181 mag(ST)
+2011-04-01 3.138e-19 erg / (Angstrom cm2 s) 25.158 mag(ST)
+2014-01-17 3.144e-19 erg / (Angstrom cm2 s) 25.156 mag(ST)
+2018-05-23 3.152e-19 erg / (Angstrom cm2 s) 25.154 mag(ST)
+>>> type(queries[0].zpt_table['PHOTFLAM'])
+astropy.units.quantity.Quantity
 """
 from six.moves.urllib.request import urlopen
 from six.moves.urllib.error import URLError
@@ -66,8 +85,9 @@ import logging
 from collections import OrderedDict
 
 import astropy.units as u
-from astropy.table import Table
+from astropy.table import QTable
 from bs4 import BeautifulSoup
+import numpy as np
 
 __taskname__ = "acszpt"
 __author__ = "Nathan Miles"
@@ -146,13 +166,24 @@ class Query(object):
                          '&{1}_filter={2}'.format(self.date,
                                                   self.detector,
                                                   self.filt))
-
-        self._zpts = OrderedDict()
+        # ACS Launch Date
         self._acs_installation_date = dt.datetime(2002, 3, 7)
+        # The farthest date in future that the component and throughput files
+        # are valid for. If input date is larger, extrapolation is not valid.
+        self._extrapolation_date = dt.datetime(2021, 12, 31)
         self._msg_div = '-' * 79
         self._valid_detectors = ['HRC', 'SBC', 'WFC']
         self._response = None
         self._failed = False
+        self._data_units = {
+            'FILTER': u.dimensionless_unscaled,
+            'PHOTPLAM': u.angstrom,
+            'PHOTFLAM': u.erg / u.cm ** 2 / u.second / u.angstrom,
+            'STmag': u.STmag,
+            'VEGAmag': u.mag,
+            'ABmag': u.ABmag
+        }
+        self._block_size = len(self._data_units)
 
     @property
     def date(self):
@@ -171,7 +202,7 @@ class Query(object):
 
     @property
     def zpt_table(self):
-        """The results returned by the ACS Zeropoint Calculator. (`astropy.table.Table`)"""
+        """The results returned by the ACS Zeropoint Calculator. (`astropy.table.QTable`)"""
         return self._zpt_table
 
     def _check_inputs(self):
@@ -183,6 +214,9 @@ class Query(object):
             True if all inputs are valid, False if one is not.
 
         """
+        valid_detector = True
+        valid_filter = True
+        valid_date = True
         # Determine the submitted detector is valid
         if self.detector not in self._valid_detectors:
             msg = ('{} is not a valid detector option.\n'
@@ -191,7 +225,7 @@ class Query(object):
                                '\n'.join(self._valid_detectors),
                                self._msg_div))
             LOG.error(msg)
-            return False
+            valid_detector = False
 
         # Determine if the submitted filter is valid
         if (self.filt is not None and
@@ -202,12 +236,15 @@ class Query(object):
                                '\n'.join(self.valid_filters[self.detector]),
                                self._msg_div))
             LOG.error(msg)
-            return False
+            valid_filter = False
 
         # Determine if the submitted date is valid
         date_check = self._check_date()
         if date_check is not None:
             LOG.error('{}\n{}'.format(date_check, self._msg_div))
+            valid_date = False
+
+        if not valid_detector or not valid_filter or not valid_date:
             return False
 
         return True
@@ -235,9 +272,15 @@ class Query(object):
             result = '{} does not match YYYY-MM-DD format'.format(self.date)
         else:
             if dt_obj < self._acs_installation_date:
-                result = ('The observation cannot occur '
+                result = ('The observation date cannot occur '
                           'before ACS was installed ({})'.
                           format(self._acs_installation_date.strftime(fmt)))
+            elif dt_obj > self._extrapolation_date:
+                result = ('The observation date cannot occur after the '
+                          'maximum allowable date, {}. Extrapolations after '
+                          'this date invalid due to high uncertainties in the ' 
+                          'component and throughput files'.
+                          format(self._extrapolation_date.strftime(fmt)))
         finally:
             return result
 
@@ -261,74 +304,49 @@ class Query(object):
         else:
             self._failed = False
 
-    def _parse_response(self):
-        """Parse the HTML response returned from the request to find all
-        tables on the webpage.
+    def _parse_and_format(self):
+        """ Parse and format the results returned by the ACS Zeropoint Calculator.
 
         Using ``beautifulsoup4``, find all the ``<tb> </tb>`` tags present in
-        the response. Save
-        the results in an :py:class:`OrderedDict` so when parsing occurs,
-        we get stable results.
-
+        the response. Format the results into an astropy.table.QTable with
+        corresponding units and assign it to the zpt_table attribute.
         """
+
         soup = BeautifulSoup(self._response.read(), 'html.parser')
 
         # Grab all elements in the table returned by the ZPT calc.
         td = soup.find_all('td')
 
-        # the td variable is a list of all of the table elements. They are
-        # ordered such that each block of 6 values corresponds to one row of
-        # the html table. The first 6 elements in the list of all elements
-        # correspond to the column names. The values after that correspond to
-        # actual data for each row
-        BLOCK_SIZE = 6
-        for j in range(BLOCK_SIZE):
-            for i, val in enumerate(td[j::BLOCK_SIZE]):
-                if not i:
-                    self._zpts[val.text.split('[')[0].strip()] = []
-                else:
-                    self._zpts[list(self._zpts.keys())[j]].append(val.text)
+        # Remove the units attached to PHOTFLAM and PHOTPLAM column names.
+        td = [val.text.split(' ')[0] for val in td]
 
-    def _format_results(self):
-        """Format the results into an `astropy.table.Table` with corresponding
-        units and assign it to the ``zpt_table`` attribute.
+        # Turn the single list into a 2-D numpy array
+        data = np.reshape(td,
+                          (int(len(td) / self._block_size), self._block_size))
+        # Create the QTable, note that sometimes self._response will be empty
+        # even though the return was successful; hence the try/except to catch
+        # any potential index errors. Provide the user with a message and
+        # set the zpt_table to None.
+        try:
+            tab = QTable(data[1:, :], names=data[0],
+                       dtype=[str, float, float, float, float, float])
+        except IndexError as e:
+            msg = ('{}\n{}\nHmm, there was an issue parsing the request. '
+                   'Try resubmitting the query. If this issue persists, please '
+                   'submit a ticket to the Help Desk at'
+                   'https://stsci.service-now.com/hst'.format(e, self._msg_div))
+            LOG.info(msg)
+            self._zpt_table = None
+        else:
+            # If and only if no exception was raised, attach the units to each
+            # column of the QTable. Note we skip the FILTER column because
+            # Quantity objects in astropy must be numerical (i.e. not str)
+            for col in tab.colnames:
+                if col.lower() == 'filter':
+                    continue
+                tab[col].unit = self._data_units[col]
 
-        """
-        data_types = []
-        data_units = []
-        for i, key in enumerate(self._zpts.keys()):
-            if key.lower() == 'filter':
-                data_types.append(str)
-                data_units.append(u.dimensionless_unscaled)
-
-            elif key.lower() == 'photplam':
-                data_types.append(float)
-                data_units.append(u.angstrom)
-
-            elif key.lower() == 'photflam':
-                data_types.append(float)
-                data_units.append(u.erg / u.cm**2 / u.second / u.angstrom)
-
-            elif key.lower() == 'stmag':
-                data_types.append(float)
-                data_units.append(u.STmag)
-
-            elif key.lower() == 'vegamag':
-                data_types.append(float)
-                data_units.append(u.mag)
-
-            elif key.lower() == 'abmag':
-                data_types.append(float)
-                data_units.append(u.ABmag)
-
-        tab = Table(list(self._zpts.values()),
-                    names=list(self._zpts.keys()),
-                    dtype=data_types)
-
-        # Loop through each column and set the appropriate units
-        for i, col in enumerate(tab.colnames):
-            tab[col].unit = data_units[i]
-        self._zpt_table = tab
+            self._zpt_table = tab
 
     def fetch(self):
         """Submit the request to the ACS Zeropoints Calculator.
@@ -341,7 +359,7 @@ class Query(object):
 
         Returns
         -------
-        tab : `astropy.table.Table` or `None`
+        tab : `astropy.table.QTable` or `None`
             If the request was successful, returns a table; otherwise, `None`.
 
         """
@@ -355,8 +373,7 @@ class Query(object):
                 return
 
             LOG.info('Parsing the response and formatting the results...')
-            self._parse_response()
-            self._format_results()
+            self._parse_and_format()
             return self.zpt_table
 
         LOG.error('Please fix the incorrect input(s)')
