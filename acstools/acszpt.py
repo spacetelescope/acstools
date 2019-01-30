@@ -82,7 +82,6 @@ from six.moves.urllib.error import URLError
 
 import datetime as dt
 import logging
-from collections import OrderedDict
 
 import astropy.units as u
 from astropy.table import QTable
@@ -228,7 +227,7 @@ class Query(object):
             valid_detector = False
 
         # Determine if the submitted filter is valid
-        if (self.filt is not None and
+        if (self.filt is not None and valid_detector and
                 self.filt not in self.valid_filters[self.detector]):
             msg = ('{} is not a valid filter for {}\n'
                    'Please choose one of the following:\n{}\n'
@@ -273,14 +272,14 @@ class Query(object):
         else:
             if dt_obj < self._acs_installation_date:
                 result = ('The observation date cannot occur '
-                          'before ACS was installed ({})'.
-                          format(self._acs_installation_date.strftime(fmt)))
+                          'before ACS was installed ({})'
+                          .format(self._acs_installation_date.strftime(fmt)))
             elif dt_obj > self._extrapolation_date:
                 result = ('The observation date cannot occur after the '
-                          'maximum allowable date, {}. Extrapolations after '
-                          'this date invalid due to high uncertainties in the ' 
-                          'component and throughput files'.
-                          format(self._extrapolation_date.strftime(fmt)))
+                          'maximum allowable date, {}. Extrapolations of the '
+                          'instrument throughput after this date lead to '
+                          'high uncertainties and are therefore invalid.'
+                          .format(self._extrapolation_date.strftime(fmt)))
         finally:
             return result
 
@@ -328,13 +327,15 @@ class Query(object):
         # any potential index errors. Provide the user with a message and
         # set the zpt_table to None.
         try:
-            tab = QTable(data[1:, :], names=data[0],
-                       dtype=[str, float, float, float, float, float])
+            tab = QTable(data[1:, :],
+                         names=data[0],
+                         dtype=[str, float, float, float, float, float])
         except IndexError as e:
-            msg = ('{}\n{}\nHmm, there was an issue parsing the request. '
+            msg = ('{}\n{}\n There was an issue parsing the request. '
                    'Try resubmitting the query. If this issue persists, please '
                    'submit a ticket to the Help Desk at'
-                   'https://stsci.service-now.com/hst'.format(e, self._msg_div))
+                   'https://stsci.service-now.com/hst'
+                   .format(e, self._msg_div))
             LOG.info(msg)
             self._zpt_table = None
         else:
