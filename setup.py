@@ -66,7 +66,9 @@ setup(
     entry_points=entry_points,
     install_requires=[
         'astropy>=1.1',
-        'numpy'
+        'numpy',
+        'beautifulsoup4',
+        'six'
     ],
     tests_require=['pytest'],
     use_2to3=False,
