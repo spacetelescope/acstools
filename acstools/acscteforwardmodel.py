@@ -8,6 +8,8 @@ Only WFC full-frame and some 2K subarrays are currently supported. See
 `ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_
 for more details.
 
+For guidance on running the CTE forward model, see the Jupyter notebook `ACS CTE Forward Model Example <https://github.com/spacetelescope/acs-notebook/blob/master/acs_cte_forward_model/acs_cte_forward_model_example.ipynb>`_
+
 .. note:: Calibration flags are controlled by primary header.
 
 Examples
