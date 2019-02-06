@@ -26,6 +26,7 @@ Contents:
    calacs_hstcal
    acsccd
    acscte
+   acscteforwardmodel
    acsrej
    acs2d
    acssum
