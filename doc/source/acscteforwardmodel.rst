@@ -1,6 +1,6 @@
-******
+******************
 ACSCTEFORWARDMODEL
-******
+******************
 
 .. currentmodule:: acstools.acscteforwardmodel
 
