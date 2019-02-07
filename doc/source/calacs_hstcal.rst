@@ -135,6 +135,14 @@ For post-SM4 full-frame WFC exposures, it also includes:
       (ACS ISR 2012-02) and cross-talk (N. Grogin; ACS ISR 2010-02).
 
 
+SINKCORR
+========
+
+SINKCORR flags sink pixels and the adjacent affected pixels with the value
+1024 in the DQ array of WFC images using the SNKCFILE. Only performed on images
+taken after January 2015.
+
+
 Pixel-Based CTE Correction (PCTECORR)
 =====================================
 
