@@ -11,7 +11,7 @@ for more details.
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acscte
 >>> acscte.acscte('*blv_tmp.fits')
@@ -21,11 +21,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import acscte
 >>> teal.teal('acscte')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar acscte
 
 For help usage use ``exe_args=['--help']``
 

@@ -16,7 +16,7 @@ within an ACS/WFC image as published in
 
     Performance is faster when ``plot=False``, where applicable.
 
-    Currently *not* supported in TEAL and PyRAF.
+    Currently *not* supported in TEAL.
 
 Examples
 --------
@@ -127,9 +127,6 @@ jc8m10syq_flc.fits[6] updated
 #    Dec 07, 2015 - PLL - Minor changes based on feedback from DMB.
 #    May 24, 2016 - SMO - Minor import changes to skimage
 #
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-from six.moves import map
 
 # STDLIB
 import glob
@@ -140,7 +137,6 @@ from functools import partial
 from multiprocessing import Process, Queue
 
 # THIRD PARTY
-import astropy
 import numpy as np
 from astropy.io import fits
 # from astropy.stats import biweight_location
@@ -149,11 +145,8 @@ from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils.introspection import minversion
 
 # See https://github.com/astropy/astropy/issues/6364
-if minversion(astropy, '2.0'):
-    from astropy.stats import biweight_scale
-    biweight_midvariance = partial(biweight_scale, modify_sample_size=False)
-else:
-    from astropy.stats import biweight_midvariance
+from astropy.stats import biweight_scale
+biweight_midvariance = partial(biweight_scale, modify_sample_size=False)
 
 # OPTIONAL
 try:
@@ -183,8 +176,6 @@ __vdate__ = '11-Jul-2017'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask', 'update_dq']
 
-
-# ########################### from satdet.py ################################ #
 
 def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
                 small_edge=60, line_len=200, line_gap=75,

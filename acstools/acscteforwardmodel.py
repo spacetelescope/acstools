@@ -16,7 +16,7 @@ For guidance on running the CTE forward model, see the Jupyter notebook
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acscteforwardmodel
 >>> acscteforwardmodel.acscteforwardmodel('*blc_tmp.fits')
@@ -26,11 +26,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import acscteforwardmodel
 >>> teal.teal('acscteforwardmodel')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar acscteforwardmodel
 
 For help usage use ``exe_args=['--help']``
 

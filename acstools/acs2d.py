@@ -5,7 +5,7 @@ Use this function to facilitate batch runs of ACS2D, or for the TEAL interface.
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acs2d
 >>> acs2d.acs2d('*blv_tmp.fits')
@@ -15,11 +15,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import acs2d
 >>> teal.teal('acs2d')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar acs2d
 
 For help usage use ``exe_args=['--help']``
 
@@ -34,7 +29,8 @@ __vdate__ = "10-Oct-2014"
 __all__ = ['acs2d']
 
 
-def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
+def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
+          exe_args=None):
     r"""
     Run the acs2d.e executable as from the shell.
 

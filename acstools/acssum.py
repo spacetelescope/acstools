@@ -5,7 +5,7 @@ Use this function to facilitate batch runs of ACSSUM, or for the TEAL interface.
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acssum
 >>> acssum.acssum('*flt.fits', 'combined_image.fits')
@@ -15,11 +15,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import acssum
 >>> teal.teal('acssum')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar acssum
 
 For help usage use ``exe_args=['--help']``
 

@@ -18,7 +18,7 @@ For more information, see
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acs_destripe_plus
 >>> acs_destripe_plus.destripe_plus(
@@ -31,11 +31,6 @@ In Python with TEAL:
 >>> from acstools import acs_destripe_plus
 >>> from stsci.tools import teal
 >>> teal.teal('acs_destripe_plus')
-
-In Pyraf::
-
-    --> import acstools
-    --> teal acs_destripe_plus
 
 From command line::
 
@@ -68,8 +63,6 @@ From command line::
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
 # 12JAN2016 (v0.4.1) Lim added new subarray modes that are allowed CTE corr.
-
-from __future__ import absolute_import, division, print_function
 
 # STDLIB
 import logging

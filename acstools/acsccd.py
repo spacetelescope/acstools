@@ -9,7 +9,7 @@ Use this function to facilitate batch runs of ACSCCD, or for the TEAL interface.
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acsccd
 >>> acsccd.acsccd('*raw.fits')
@@ -19,11 +19,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import acsccd
 >>> teal.teal('acsccd')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar acsccd
 
 For help usage use ``exe_args=['--help']``
 
@@ -49,7 +44,8 @@ __all__ = ['acsccd']
 #     If all False, will set all but ATODCORR to PERFORM.
 #     If any is True, will set that to PERFORM and the rest to OMIT.
 #
-def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False, exe_args=None):
+def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
+           exe_args=None):
     r"""
     Run the acsccd.e executable as from the shell.
 

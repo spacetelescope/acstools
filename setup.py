@@ -25,10 +25,7 @@ if not pkgutil.find_loader('relic'):
 import relic.release
 
 # Get some values from the setup.cfg
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
+from configparser import ConfigParser
 conf = ConfigParser()
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
@@ -64,13 +61,12 @@ setup(
     package_dir={PACKAGENAME: PACKAGENAME},
     package_data={PACKAGENAME: ['pars/*']},
     entry_points=entry_points,
+    python_requires='>=3.5',
     install_requires=[
-        'astropy>=1.1',
+        'astropy>=2',
         'numpy',
-        'beautifulsoup4',
-        'six'
+        'beautifulsoup4'
     ],
     tests_require=['pytest'],
-    use_2to3=False,
     zip_safe=False
 )

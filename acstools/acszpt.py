@@ -77,11 +77,10 @@ Retrieve the zeropoint information for the F435W filter for WFC at multiple date
 >>> type(queries[0].zpt_table['PHOTFLAM'])
 astropy.units.quantity.Quantity
 """
-from six.moves.urllib.request import urlopen
-from six.moves.urllib.error import URLError
-
 import datetime as dt
 import logging
+from urllib.request import urlopen
+from urllib.error import URLError
 
 import astropy.units as u
 from astropy.table import QTable
