@@ -6,8 +6,6 @@ Utility and library functions used by these tasks are also included in this
 module.
 
 """
-from __future__ import absolute_import, print_function
-
 try:
     from .version import *
 except ImportError:

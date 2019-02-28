@@ -1,7 +1,6 @@
 """ACSTOOLS regression test helpers."""
 
 import os
-import sys
 
 import pytest
 from ci_watson.artifactory_helpers import get_bigdata
@@ -96,11 +95,6 @@ class BaseACSTOOLS:
             environment in which input and truth files reside.
 
         """
-        # Since ACSTOOLS still runs in PY2, need to check here because
-        # tests can only run in PY3.
-        if sys.version_info < (3, ):
-            raise SystemError('tests can only run in Python 3')
-
         self.env = envopt
 
     def get_input_file(self, filename):

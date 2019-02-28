@@ -17,6 +17,10 @@ Software tools for
     Standalone CTE correction (``PixCteCorr``) is no longer supported.
     Please use :ref:`acstools-doc-acscte`.
 
+.. note::
+
+    Python 2 is no longer supported. Please use Python 3.5 or later.
+
 Contents:
 
 .. toctree::

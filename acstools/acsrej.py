@@ -6,7 +6,7 @@ TEAL interface.
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acsrej
 >>> acsrej.acsrej('*flt.fits', 'combined_image.fits')
@@ -16,11 +16,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import acsrej
 >>> teal.teal('acsrej')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar acsrej
 
 For help usage use ``exe_args=['--help']``
 

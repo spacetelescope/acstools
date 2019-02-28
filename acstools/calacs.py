@@ -5,7 +5,7 @@ Use this function to facilitate batch runs of CALACS, or for the TEAL interface.
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import calacs
 >>> calacs.calacs(filename)
@@ -15,11 +15,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> from acstools import calacs
 >>> teal.teal('calacs')
-
-In Pyraf::
-
-    --> import acstools
-    --> epar calacs
 
 For help usage use ``exe_args=['--help']``
 
@@ -31,7 +26,8 @@ __all__ = ['calacs']
 
 
 def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
-           verbose=False, debug=False, quiet=False, single_core=False, exe_args=None):
+           verbose=False, debug=False, quiet=False, single_core=False,
+           exe_args=None):
     """
     Run the calacs.e executable as from the shell.
 

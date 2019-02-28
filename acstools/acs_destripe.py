@@ -22,7 +22,7 @@ For more information, see
 Examples
 --------
 
-In Python without TEAL:
+In Python without TEAL (recommended):
 
 >>> from acstools import acs_destripe
 >>> acs_destripe.clean('uncorrected_flt.fits', 'csck',
@@ -35,11 +35,6 @@ In Python with TEAL:
 >>> from stsci.tools import teal
 >>> teal.teal('acs_destripe')
 
-In Pyraf::
-
-    --> import acstools
-    --> teal acs_destripe
-
 From command line::
 
     % acs_destripe [-h] [--stat STAT] [--lower [LOWER]] [--upper [UPPER]]
@@ -49,15 +44,11 @@ From command line::
                    input suffix [maxiter] [sigrej]
 
 """
-from __future__ import absolute_import, division, print_function
-
 # STDLIB
 import logging
 
 # THIRD-PARTY
-import astropy
 import numpy as np
-from astropy.utils.introspection import minversion
 
 try:
     # This supports PIXVALUE
@@ -197,10 +188,7 @@ class StripeArray(object):
             self.hdulist['err', 1].data = self.err.copy()
 
         # Write the output
-        if minversion(astropy, '1.3'):
-            self.hdulist.writeto(output, overwrite=clobber)
-        else:
-            self.hdulist.writeto(output, clobber=clobber)
+        self.hdulist.writeto(output, overwrite=clobber)
 
     def close(self):
         """Close open file(s)."""
