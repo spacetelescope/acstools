@@ -19,10 +19,10 @@ bc.conda_packages = ['python=3.6',
                      'numpy',
                      'matplotlib',
                      'scipy',
-                     'scikit-image',
                      'stsci.tools',
                      'ci-watson']
-bc.build_cmds = ["python setup.py install"]
+bc.build_cmds = ["pip install scikit-image",
+                 "python setup.py install"]
 bc.test_cmds = ["pytest --basetemp=tests_output --junitxml results.xml --bigdata --slow -v"]
 bc.failedUnstableThresh = 1
 bc.failedFailureThresh = 6
