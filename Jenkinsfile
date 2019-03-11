@@ -29,14 +29,14 @@ bc1.failedFailureThresh = 6
 bc2 = utils.copy(bc1)
 bc2.name = "dev"
 bc2.conda_packages[0] = "python=3.7"
-bc2.build_cmds = ["pip install ci-watson",
+bc2.build_cmds = ["pip install scikit-image",
                   "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
                   "python setup.py install"]
 
 // Run PEP 8 check
 bc3 = utils.copy(bc0)
 bc3.name = "pep8"
-bc3.conda_packages = ['python=3.6', 'flake8']
+bc3.conda_packages = ['python=3.7', 'flake8']
 bc3.test_cmds = ["flake8 acstools --count"]
 
 // Run doc build
