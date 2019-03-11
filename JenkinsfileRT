@@ -31,8 +31,9 @@ bc.failedFailureThresh = 6
 bc1 = utils.copy(bc)
 bc1.name = "dev"
 bc1.conda_packages[0] = "python=3.7"
-bc1.build_cmds = ["pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
-                 "python setup.py install"]
+bc1.build_cmds = ["pip install scikit-image",
+                  "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
+                  "python setup.py install"]
 
 // Iterate over configurations that define the (distributed) build matrix.
 // Spawn a host (or workdir) for each combination and run in parallel.
