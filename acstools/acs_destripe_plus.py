@@ -511,7 +511,7 @@ def _read_DQ_arrays(flt_name):
 
 def _get_mask(scimask, n):
     if isinstance(scimask, str):
-        if scimask.strip() is '':
+        if scimask.strip() == '':
             mask = None
         else:
             mask = fits.getdata(scimask)
