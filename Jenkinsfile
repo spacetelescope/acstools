@@ -3,7 +3,7 @@ if (utils.scm_checkout()) return
 
 // Define each build configuration, copying and overriding values as necessary.
 bc0 = new BuildConfig()
-bc0.nodetype = "linux-stable"
+bc0.nodetype = "linux"
 bc0.name = "egg"
 bc0.build_cmds = ["python setup.py egg_info"]
 
