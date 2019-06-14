@@ -53,7 +53,7 @@ copyright = u'2019, STScI'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = get_distribution('myproject').version
+release = get_distribution('acstools').version
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
 
