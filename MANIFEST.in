@@ -3,13 +3,6 @@ include LICENSE.txt
 include setup.cfg
 recursive-include doc *
 
-include RELIC-INFO
-exclude acstools/version.py
-
-recursive-include relic/ *
-prune relic/.git
-prune relic/tests
-
 prune build
 prune doc/build
 

@@ -6,10 +6,15 @@ Utility and library functions used by these tasks are also included in this
 module.
 
 """
+from pkg_resources import get_distribution, DistributionNotFound
+
+
 try:
-    from .version import *
-except ImportError:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
     __version__ = 'unknown'
+
 
 from . import acs_destripe
 from . import acs_destripe_plus
@@ -23,6 +28,7 @@ from . import acssum
 from . import acszpt
 from . import satdet
 from . import utils_calib
+
 
 # These lines allow TEAL to print out the names of TEAL-enabled tasks
 # upon importing this package.
