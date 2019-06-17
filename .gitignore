@@ -5,10 +5,6 @@
 *.so
 __pycache__
 
-# RELIC
-RELIC-INFO
-acstools/version.py
-
 # Other generated files
 htmlcov
 .coverage
