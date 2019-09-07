@@ -32,20 +32,3 @@ jobs:
       pip install flake8
       flake8 acstools --count
     displayName: 'PEP 8 check'
-
-- job: 'Doc'
-  pool:
-    vmImage: 'Ubuntu-16.04'
-
-  steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.6'
-
-  - script: |
-      python -m pip install --upgrade pip setuptools
-      pip install numpydoc matplotlib sphinx-automodapi sphinx_rtd_theme
-      python setup.py install
-      cd doc
-      make html
-    displayName: 'Doc build'
