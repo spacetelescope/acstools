@@ -24,7 +24,7 @@ bc1.failedFailureThresh = 6
 bc2 = utils.copy(bc1)
 bc2.name = "dev"
 bc2.conda_packages[0] = "python=3.7"
-bc2.build_cmds = ["pip install scikit-image",
+bc2.build_cmds = ["pip install scikit-image ci-watson",
                   "pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
                   "python setup.py install"]
 
