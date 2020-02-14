@@ -7,9 +7,6 @@ from astropy.tests.helper import enable_deprecations_as_exceptions
 #       but not released yet.
 enable_deprecations_as_exceptions(warnings_to_ignore_entire_module=['socks'])
 
-# Require these pytest plugins to run.
-pytest_plugins = ["pytest_ciwatson"]
-
 
 # For easy inspection on what dependencies were used in test.
 def pytest_report_header(config):
