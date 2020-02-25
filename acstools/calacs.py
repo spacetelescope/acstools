@@ -1,20 +1,14 @@
 """
 The calacs module contains a function `calacs` that calls the CALACS executable.
-Use this function to facilitate batch runs of CALACS, or for the TEAL interface.
+Use this function to facilitate batch runs of CALACS.
 
 Examples
 --------
 
-In Python without TEAL (recommended):
+In Python:
 
 >>> from acstools import calacs
 >>> calacs.calacs(filename)
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import calacs
->>> teal.teal('calacs')
 
 For help usage use ``exe_args=['--help']``
 
@@ -22,7 +16,25 @@ For help usage use ``exe_args=['--help']``
 import os
 import subprocess
 
+from astropy.config import ConfigNamespace, ConfigItem
+
 __all__ = ['calacs']
+
+
+class Conf(ConfigNamespace):
+    """Configuration parameters."""
+
+    input_file = ConfigItem("", "Input file (single image or ASN)")
+    exec_path = ConfigItem("", "Optional path to CALACS executable")
+    time_stamps = ConfigItem(False, "Verbose time stamps in output")
+    temp_files = ConfigItem(False, "Save temporary files")
+    verbose = ConfigItem(False, "Verbose output")
+    debug = ConfigItem(False, "Debugging output")
+    quiet = ConfigItem(False, "No output")
+    single_core = ConfigItem(False, "No parallel CTE processing")
+
+
+conf = Conf()
 
 
 def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
@@ -104,25 +116,15 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     subprocess.check_call(call_list)
 
 
-def getHelpAsString():
-    """
-    Returns documentation on the `calacs` function. Required by TEAL.
+def run():
+    """Run CALACS using with config values."""
 
-    """
-    return calacs.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `calacs` function.
-
-    """
-    calacs(configobj['input_file'],
-           exec_path=configobj['exec_path'],
-           time_stamps=configobj['time_stamps'],
-           temp_files=configobj['temp_files'],
-           verbose=configobj['verbose'],
-           debug=configobj['debug'],
-           quiet=configobj['quiet'],
-           single_core=configobj['single_core']
-           )
+    # TODO: What problem are we trying to fix here?
+    calacs(conf.input_file,
+           exec_path=conf.exec_path,
+           time_stamps=conf.time_stamps,
+           temp_files=conf.temp_files,
+           verbose=conf.verbose,
+           debug=conf.debug,
+           quiet=conf.quiet,
+           single_core=conf.single_core)
