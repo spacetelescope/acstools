@@ -1,8 +1,7 @@
 """
 The acscteforwardmodel module contains a function `acscteforwardmodel`
 that calls the ACSCTE forward model executable.
-Use this function to facilitate batch runs of the forward model, or for the
-TEAL interface.
+Use this function to facilitate batch runs of the forward model.
 
 Only WFC full-frame and some 2K subarrays are currently supported. See
 `ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_
@@ -16,16 +15,8 @@ For guidance on running the CTE forward model, see the Jupyter notebook
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import acscteforwardmodel
 >>> acscteforwardmodel.acscteforwardmodel('*blc_tmp.fits')
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import acscteforwardmodel
->>> teal.teal('acscteforwardmodel')
 
 For help usage use ``exe_args=['--help']``
 
@@ -113,26 +104,3 @@ def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `acscteforwardmodel` function.
-    Required by TEAL.
-
-    """
-    return acscteforwardmodel.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `acscteforwardmodel` function.
-
-    """
-    acscteforwardmodel(configobj['input'],
-                       exec_path=configobj['exec_path'],
-                       time_stamps=configobj['time_stamps'],
-                       verbose=configobj['verbose'],
-                       quiet=configobj['quiet'],
-                       single_core=configobj['single_core']
-                       )

@@ -1,6 +1,6 @@
 """
 The acsccd module contains a function `acsccd` that calls the ACSCCD executable.
-Use this function to facilitate batch runs of ACSCCD, or for the TEAL interface.
+Use this function to facilitate batch runs of ACSCCD.
 
 .. note:: Calibration flags are controlled by primary header.
 
@@ -9,16 +9,8 @@ Use this function to facilitate batch runs of ACSCCD, or for the TEAL interface.
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import acsccd
 >>> acsccd.acsccd('*raw.fits')
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import acsccd
->>> teal.teal('acsccd')
 
 For help usage use ``exe_args=['--help']``
 
@@ -121,43 +113,3 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     #    call_list.append('-bias')
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `acsccd` function. Required by TEAL.
-
-    """
-    return acsccd.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `acsccd` function.
-
-    """
-    acsccd(configobj['input'],
-           exec_path=configobj['exec_path'],
-           time_stamps=configobj['time_stamps'],
-           verbose=configobj['verbose'],
-           quiet=configobj['quiet']  #,
-           #dqicorr=configobj['dqicorr'],
-           #atodcorr=configobj['atodcorr'],
-           #blevcorr=configobj['blevcorr'],
-           #biascorr=configobj['biascorr']
-           )
-
-
-# Taken out from pars/acsccd.cfg
-#
-#dqicorr = False
-#atodcorr = False
-#blevcorr = False
-#biascorr = False
-
-# Taken out from pars/acsccd.cfgspc
-#
-#dqicorr = boolean_kw(default=False, comment="Initialize DQ array")
-#atodcorr = boolean_kw(default=False, comment="Apply A-to-D correction")
-#blevcorr = boolean_kw(default=False, comment="Subtract bias from overscan")
-#biascorr = boolean_kw(default=False, comment="Subtract bias image")

@@ -1,21 +1,12 @@
 """
 This module contains a function :func:`acsrej` that calls the ``acsrej.e``
-executable. Use this function to facilitate batch runs of ACSREJ, or for the
-TEAL interface.
+executable. Use this function to facilitate batch runs of ACSREJ.
 
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import acsrej
 >>> acsrej.acsrej('*flt.fits', 'combined_image.fits')
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import acsrej
->>> teal.teal('acsrej')
 
 For help usage use ``exe_args=['--help']``
 
@@ -196,34 +187,3 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `acsrej` function. Required by TEAL.
-
-    """
-    return acsrej.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `acsrej` function.
-
-    """
-    acsrej(configobj['input'],
-           configobj['output'],
-           exec_path=configobj['exec_path'],
-           time_stamps=configobj['time_stamps'],
-           verbose=configobj['verbose'],
-           shadcorr=configobj['shadcorr'],
-           crrejtab=configobj['crrejtab'],
-           crmask=configobj['crmask'],
-           scalense=configobj['scalense'],
-           initgues=configobj['initgues'],
-           skysub=configobj['skysub'],
-           crsigmas=configobj['crsigmas'],
-           crradius=configobj['crradius'],
-           crthresh=configobj['crthresh'],
-           badinpdq=configobj['badinpdq'],
-           readnoise_only=configobj['readnoise_only'])

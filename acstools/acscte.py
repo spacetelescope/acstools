@@ -1,6 +1,6 @@
 """
 The acscte module contains a function `acscte` that calls the ACSCTE executable.
-Use this function to facilitate batch runs of ACSCTE, or for the TEAL interface.
+Use this function to facilitate batch runs of ACSCTE.
 
 Only WFC full-frame and some 2K subarrays are currently supported. See
 `ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_
@@ -11,16 +11,8 @@ for more details.
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import acscte
 >>> acscte.acscte('*blv_tmp.fits')
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import acscte
->>> teal.teal('acscte')
 
 For help usage use ``exe_args=['--help']``
 
@@ -108,25 +100,3 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `acscte` function. Required by TEAL.
-
-    """
-    return acscte.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `acscte` function.
-
-    """
-    acscte(configobj['input'],
-           exec_path=configobj['exec_path'],
-           time_stamps=configobj['time_stamps'],
-           verbose=configobj['verbose'],
-           quiet=configobj['quiet'],
-           single_core=configobj['single_core']
-           )
