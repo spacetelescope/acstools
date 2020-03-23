@@ -37,6 +37,7 @@ Contents:
    acs_destripe
    acs_destripe_plus
    acszpt
+   acsphotcte
    satdet
    utils_calib
 
