@@ -1,22 +1,14 @@
 """
 The acs2d module contains a function `acs2d` that calls the ACS2D executable.
-Use this function to facilitate batch runs of ACS2D, or for the TEAL interface.
+Use this function to facilitate batch runs of ACS2D.
 
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import acs2d
 >>> acs2d.acs2d('*blv_tmp.fits')
 
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import acs2d
->>> teal.teal('acs2d')
-
-For help usage use ``exe_args=['--help']``
+For help usage use ``exe_args=['--help']``.
 
 """
 # STDLIB
@@ -107,24 +99,3 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `acs2d` function. Required by TEAL.
-
-    """
-    return acs2d.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `acs2d` function.
-
-    """
-    acs2d(configobj['input'],
-          exec_path=configobj['exec_path'],
-          time_stamps=configobj['time_stamps'],
-          verbose=configobj['verbose'],
-          quiet=configobj['quiet']
-          )

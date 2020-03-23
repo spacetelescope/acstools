@@ -1,20 +1,12 @@
 """
 The calacs module contains a function `calacs` that calls the CALACS executable.
-Use this function to facilitate batch runs of CALACS, or for the TEAL interface.
+Use this function to facilitate batch runs of CALACS.
 
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import calacs
 >>> calacs.calacs(filename)
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import calacs
->>> teal.teal('calacs')
 
 For help usage use ``exe_args=['--help']``
 
@@ -102,27 +94,3 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `calacs` function. Required by TEAL.
-
-    """
-    return calacs.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `calacs` function.
-
-    """
-    calacs(configobj['input_file'],
-           exec_path=configobj['exec_path'],
-           time_stamps=configobj['time_stamps'],
-           temp_files=configobj['temp_files'],
-           verbose=configobj['verbose'],
-           debug=configobj['debug'],
-           quiet=configobj['quiet'],
-           single_core=configobj['single_core']
-           )

@@ -16,8 +16,6 @@ within an ACS/WFC image as published in
 
     Performance is faster when ``plot=False``, where applicable.
 
-    Currently *not* supported in TEAL.
-
 Examples
 --------
 >>> from acstools.satdet import detsat, make_mask, update_dq

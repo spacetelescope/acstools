@@ -1,20 +1,12 @@
 """
 The acssum module contains a function `acssum` that calls the ACSSUM executable.
-Use this function to facilitate batch runs of ACSSUM, or for the TEAL interface.
+Use this function to facilitate batch runs of ACSSUM.
 
 Examples
 --------
 
-In Python without TEAL (recommended):
-
 >>> from acstools import acssum
 >>> acssum.acssum('*flt.fits', 'combined_image.fits')
-
-In Python with TEAL:
-
->>> from stsci.tools import teal
->>> from acstools import acssum
->>> teal.teal('acssum')
 
 For help usage use ``exe_args=['--help']``
 
@@ -98,25 +90,3 @@ def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
         call_list.extend(exe_args)
 
     subprocess.check_call(call_list)
-
-
-def getHelpAsString():
-    """
-    Returns documentation on the `acssum` function. Required by TEAL.
-
-    """
-    return acssum.__doc__
-
-
-def run(configobj=None):
-    """
-    TEAL interface for the `acssum` function.
-
-    """
-    acssum(configobj['input'],
-           configobj['output'],
-           exec_path=configobj['exec_path'],
-           time_stamps=configobj['time_stamps'],
-           verbose=configobj['verbose'],
-           quiet=configobj['quiet']
-           )

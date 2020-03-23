@@ -18,19 +18,13 @@ For more information, see
 Examples
 --------
 
-In Python without TEAL (recommended):
+In Python:
 
 >>> from acstools import acs_destripe_plus
 >>> acs_destripe_plus.destripe_plus(
 ...     'j12345678_raw.fits', suffix='strp', maxiter=15, sigrej=2.0,
 ...     scimask1='mymask_sci1.fits', scimask2='mymask_sci2.fits',
 ...     clobber=False, cte_correct=True)
-
-In Python with TEAL:
-
->>> from acstools import acs_destripe_plus
->>> from stsci.tools import teal
->>> teal.teal('acs_destripe_plus')
 
 From command line::
 
@@ -523,36 +517,6 @@ def _get_mask(scimask, n):
         raise TypeError("'scimask{}' must be either a str file name, "
                         "a numpy.ndarray, or None.".format(n))
     return mask
-
-
-#-------------------------#
-# Interfaces used by TEAL #
-#-------------------------#
-
-def getHelpAsString(fulldoc=True):
-    """Returns documentation on :func:`destripe_plus`. Required by TEAL."""
-    return destripe_plus.__doc__
-
-
-def run(configobj=None):
-    """TEAL interface for :func:`destripe_plus`."""
-    destripe_plus(
-        configobj['input'],
-        suffix=configobj['suffix'],
-        stat=configobj['stat'],
-        maxiter=configobj['maxiter'],
-        sigrej=configobj['sigrej'],
-        lower=configobj['lower'],
-        upper=configobj['upper'],
-        binwidth=configobj['binwidth'],
-        scimask1=configobj['scimask1'],
-        scimask2=configobj['scimask2'],
-        dqbits=configobj['dqbits'],
-        rpt_clean=configobj['rpt_clean'],
-        atol=configobj['atol'],
-        cte_correct=configobj['cte_correct'],
-        clobber=configobj['clobber'],
-        verbose=configobj['verbose'])
 
 
 #-----------------------------#

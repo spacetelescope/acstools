@@ -22,18 +22,12 @@ For more information, see
 Examples
 --------
 
-In Python without TEAL (recommended):
+In Python:
 
 >>> from acstools import acs_destripe
 >>> acs_destripe.clean('uncorrected_flt.fits', 'csck',
 ...                    mask1='mymask_sci1.fits', mask2='mymask_sci2.fits',
 ...                    clobber=False, maxiter=15, sigrej=2.0)
-
-In Python with TEAL:
-
->>> from acstools import acs_destripe
->>> from stsci.tools import teal
->>> teal.teal('acs_destripe')
 
 From command line::
 
@@ -1008,35 +1002,6 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
         FMedian = FMean
 
     return FMean, FSig, FMedian, NLast, Iter, logical_mask
-
-
-# ----------------------- #
-# Interfaces used by TEAL #
-# ----------------------- #
-
-def getHelpAsString(fulldoc=True):
-    """Returns documentation on the `clean` function. Required by TEAL."""
-    return clean.__doc__
-
-
-def run(configobj=None):
-    """TEAL interface for the `clean` function."""
-    clean(configobj['input'],
-          suffix=configobj['suffix'],
-          stat=configobj['stat'],
-          maxiter=configobj['maxiter'],
-          sigrej=configobj['sigrej'],
-          lower=configobj['lower'],
-          upper=configobj['upper'],
-          binwidth=configobj['binwidth'],
-          mask1=configobj['mask1'],
-          mask2=configobj['mask2'],
-          dqbits=configobj['dqbits'],
-          rpt_clean=configobj['rpt_clean'],
-          atol=configobj['atol'],
-          cte_correct=configobj['cte_correct'],
-          clobber=configobj['clobber'],
-          verbose=configobj['verbose'])
 
 
 # --------------------------- #
