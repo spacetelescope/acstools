@@ -22,7 +22,7 @@ For more information, see
 Examples
 --------
 
-In Python (recommended):
+In Python:
 
 >>> from acstools import acs_destripe
 >>> acs_destripe.clean('uncorrected_flt.fits', 'csck',

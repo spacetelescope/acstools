@@ -18,7 +18,7 @@ For more information, see
 Examples
 --------
 
-In Python (recommended):
+In Python:
 
 >>> from acstools import acs_destripe_plus
 >>> acs_destripe_plus.destripe_plus(
