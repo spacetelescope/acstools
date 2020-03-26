@@ -5,18 +5,19 @@ trigger:
 - master
 
 jobs:
-- job: 'EggInfo'
+- job: 'PEP517'
   pool:
     vmImage: 'Ubuntu-16.04'
 
   steps:
   - task: UsePythonVersion@0
 
-  # Make sure that egg_info works without dependencies
+  # Make sure that packaging will work
   - script: |
-      python -m pip install --upgrade pip setuptools
-      python setup.py egg_info
-    displayName: 'egg_info'
+      python -m pip install --upgrade pip setuptools pep517 twine
+      python -m pep517.build --source .
+      twine check dist/*
+    displayName: 'pep517 build'
 
 - job: 'PEP8'
   pool:
@@ -32,3 +33,36 @@ jobs:
       pip install flake8
       flake8 acstools --count
     displayName: 'PEP 8 check'
+
+- job: 'Audit'
+  pool:
+    vmImage: 'Ubuntu-16.04'
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+
+  - script: |
+      python -m pip install --upgrade pip setuptools
+      pip install bandit
+      bandit -r . -c .bandit.yaml
+    displayName: 'Security audit'
+
+- job: 'LinkCheck'
+  pool:
+    vmImage: 'Ubuntu-16.04'
+  strategy:
+    maxParallel: 4
+
+  steps:
+  - task: UsePythonVersion@0
+
+  - script: |
+      python -m pip install --upgrade pip setuptools
+      pip install -e .[docs]
+
+  - bash: |
+      cd doc
+      make linkcheck
+    displayName: 'Run docs link check'

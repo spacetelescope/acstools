@@ -205,10 +205,10 @@ latex_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-    'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
-    'skimage': ('http://scikit-image.org/docs/0.11.x/', None),
-    'matplotlib': ('http://matplotlib.org/', None),
-    'astropy': ('http://docs.astropy.org/en/stable/', None)
+    'python': ('https://docs.python.org/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'skimage': ('https://scikit-image.org/docs/0.11.x/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
+    'astropy': ('https://docs.astropy.org/en/stable/', None)
 }
