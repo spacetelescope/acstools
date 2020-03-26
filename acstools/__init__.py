@@ -26,5 +26,6 @@ from . import acs2d
 from . import acsrej
 from . import acssum
 from . import acszpt
+from . import acsphotcte
 from . import satdet
 from . import utils_calib

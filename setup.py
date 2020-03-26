@@ -39,7 +39,8 @@ setup(
     install_requires=[
         'astropy>=2',
         'numpy',
-        'beautifulsoup4'
+        'beautifulsoup4',
+        'requests'
     ],
     tests_require=['pytest'],
     zip_safe=False
