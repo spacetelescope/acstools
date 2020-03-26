@@ -55,7 +55,7 @@ number of Y transfers is 2048 and so we scale by 2048.
 >>> print(cte_corrected_magnitudes[:5])
 [-10.85516545  -9.68284332 -10.11060704  -9.11828746 -10.4918177 ]
 """
-from collections import Iterable
+from collections.abc import Iterable
 import json
 import logging
 
