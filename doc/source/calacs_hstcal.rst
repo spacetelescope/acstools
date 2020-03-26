@@ -15,8 +15,8 @@ Running CALACS
 Where to Find CALACS
 --------------------
 
-CALACS is now part of HSTCAL package, which can be downloaded from
-`STSDAS download page <http://www.stsci.edu/institute/software_hardware/stsdas/download-stsdas>`_.
+CALACS is now part of
+`HSTCAL package <https://github.com/spacetelescope/hstcal>`_.
 
 
 Usage
@@ -95,8 +95,7 @@ Batch CALACS
 ------------
 
 The recommended method for running CALACS in batch mode is to use Python and
-the `acstools` package in `STSDAS distribution
-<http://www.stsci.edu/institute/software_hardware/stsdas/download-stsdas>`_.
+the `acstools` package.
 
 For example::
 

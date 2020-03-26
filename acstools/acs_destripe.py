@@ -241,10 +241,10 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         background in image rows:
 
         * 'pmode1' - SEXTRACTOR-like mode estimate based on a
-          modified `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          modified `Pearson's rule <https://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
           ``2.5*median-1.5*mean``;
         * 'pmode2' - mode estimate based on
-          `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          `Pearson's rule <https://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
           ``3*median-2*mean``;
         * 'mean' - the mean of the distribution of the "good" pixels (after
           clipping, masking, etc.);
