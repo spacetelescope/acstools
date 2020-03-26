@@ -690,7 +690,9 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         def getcorr():
             imstat = ImageStats(image.science[i][BMask], 'mode',
                                 lower=lower, upper=upper, nclip=0)
-            assert(imstat.npix == NPix)
+            if imstat.npix != NPix:
+                raise ValueError('imstate.npix ({}) != NPix ({})'.format(
+                    imstat.npix, NPix))
             return (imstat.mode)
 
     elif stat == 'midpt':
@@ -700,7 +702,9 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         def getcorr():
             imstat = ImageStats(image.science[i][BMask], 'midpt',
                                 lower=lower, upper=upper, nclip=0)
-            assert(imstat.npix == NPix)
+            if imstat.npix != NPix:
+                raise ValueError('imstate.npix ({}) != NPix ({})'.format(
+                    imstat.npix, NPix))
             return (imstat.midpt)
 
     nmax_rpt = 1 if rpt_clean is None else max(1, rpt_clean+1)

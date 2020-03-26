@@ -212,3 +212,9 @@ intersphinx_mapping = {
     'matplotlib': ('https://matplotlib.org/', None),
     'astropy': ('https://docs.astropy.org/en/stable/', None)
 }
+
+# -- Options for linkcheck output ---------------------------------------------
+linkcheck_retry = 5
+linkcheck_ignore = ['https://hsthelp.stsci.edu']
+linkcheck_timeout = 180
+linkcheck_anchors = False

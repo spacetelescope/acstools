@@ -200,12 +200,9 @@ class PhotCTEAPI:
                         return key
         # the last step is to ensure all the iterable inputs are the same length
         nl = "\n"
-        try:
-            # First we check if there were any iterable inputs
-            if iterable_lengths:
-                # if there are we make sure theyre all the same size
-                assert len(set(iterable_lengths)) == 1
-        except AssertionError:
+        # First we check if there were any iterable inputs.
+        # If there are, we make sure theyre all the same size.
+        if iterable_lengths and len(set(iterable_lengths)) != 1:
             iterable_lengths = list(map(str, iterable_lengths))
             msg = (
                 "Iterable inputs are not the same length.\n"
@@ -213,8 +210,8 @@ class PhotCTEAPI:
             )
             LOG.error(msg)
             return
-        else:
-            return inputs
+
+        return inputs
 
     def correct_photometry(
             self,

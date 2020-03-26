@@ -61,7 +61,7 @@ From command line::
 # STDLIB
 import logging
 import os
-import subprocess
+import subprocess  # nosec
 
 # ASTROPY
 from astropy.time import Time
@@ -366,7 +366,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
                          "or not specified together.")
 
-    calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
+    calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]  # nosec # noqa
     calacs_ver = [int(x) for x in calacs_str.decode().split('.')]
     if calacs_ver < [8, 3, 1]:
         raise ValueError('CALACS {0} is incomptible. '

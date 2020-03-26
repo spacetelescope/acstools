@@ -25,7 +25,7 @@ bc1 = utils.copy(bc)
 bc1.name = "dev"
 bc1.conda_packages[0] = "python=3.8"
 bc1.build_cmds = ["pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps",
-                  "pip install -e [test,all]"]
+                  "pip install -e .[test,all]"]
 
 // Iterate over configurations that define the (distributed) build matrix.
 // Spawn a host (or workdir) for each combination and run in parallel.
