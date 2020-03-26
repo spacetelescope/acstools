@@ -12,7 +12,7 @@ For help usage use ``exe_args=['--help']``
 
 """
 import os
-import subprocess
+import subprocess  # nosec
 
 __all__ = ['calacs']
 
@@ -93,4 +93,4 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.check_call(call_list)
+    subprocess.check_call(call_list)  # nosec

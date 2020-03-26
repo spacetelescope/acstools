@@ -290,8 +290,10 @@ class Query(object):
         attribute.
 
         """
+        if not self._url.startswith('http'):
+            raise ValueError(f'Invalid URL {self._url}')
         try:
-            self._response = urlopen(self._url)
+            self._response = urlopen(self._url)  # nosec
         except URLError as e:
             msg = ('{}\n{}\nThe query failed! Please check your inputs. '
                    'If the error persists, submit a ticket to the '

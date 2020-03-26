@@ -1,6 +1,8 @@
 include README.rst
 include LICENSE.txt
+include CHANGES.rst
 include setup.cfg
+include pyproject.toml
 recursive-include doc *
 
 prune build

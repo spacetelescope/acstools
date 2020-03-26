@@ -19,7 +19,7 @@ Software tools for
 
 .. note::
 
-    Python 2 is no longer supported. Please use Python 3.5 or later.
+    Python 2 is no longer supported. Please use Python 3.6 or later.
 
 Contents:
 

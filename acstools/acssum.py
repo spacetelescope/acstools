@@ -13,7 +13,7 @@ For help usage use ``exe_args=['--help']``
 """
 # STDLIB
 import os
-import subprocess
+import subprocess  # nosec
 
 __taskname__ = "acssum"
 __version__ = "1.0"
@@ -89,4 +89,4 @@ def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.check_call(call_list)
+    subprocess.check_call(call_list)  # nosec

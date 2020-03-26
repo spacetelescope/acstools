@@ -1,31 +1,21 @@
-"""The acstools package holds Python tasks useful for analyzing ACS data.
-
-These tasks include:
-
-Utility and library functions used by these tasks are also included in this
-module.
-
-"""
-from pkg_resources import get_distribution, DistributionNotFound
-
-
+"""The acstools package holds Python tasks useful for analyzing ACS data."""
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    from .version import version as __version__
+except ImportError:
     # package is not installed
-    __version__ = 'unknown'
+    __version__ = ''
 
 
-from . import acs_destripe
-from . import acs_destripe_plus
-from . import calacs
-from . import acsccd
-from . import acscte
-from . import acscteforwardmodel
-from . import acs2d
-from . import acsrej
-from . import acssum
-from . import acszpt
-from . import acsphotcte
-from . import satdet
-from . import utils_calib
+from . import acs_destripe  # noqa
+from . import acs_destripe_plus  # noqa
+from . import calacs  # noqa
+from . import acsccd  # noqa
+from . import acscte  # noqa
+from . import acscteforwardmodel  # noqa
+from . import acs2d  # noqa
+from . import acsrej  # noqa
+from . import acssum  # noqa
+from . import acszpt  # noqa
+from . import acsphotcte  # noqa
+from . import satdet  # noqa
+from . import utils_calib  # noqa

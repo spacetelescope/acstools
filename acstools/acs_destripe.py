@@ -241,10 +241,10 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         background in image rows:
 
         * 'pmode1' - SEXTRACTOR-like mode estimate based on a
-          modified `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          modified `Pearson's rule <https://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
           ``2.5*median-1.5*mean``;
         * 'pmode2' - mode estimate based on
-          `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          `Pearson's rule <https://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
           ``3*median-2*mean``;
         * 'mean' - the mean of the distribution of the "good" pixels (after
           clipping, masking, etc.);
@@ -690,7 +690,9 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         def getcorr():
             imstat = ImageStats(image.science[i][BMask], 'mode',
                                 lower=lower, upper=upper, nclip=0)
-            assert(imstat.npix == NPix)
+            if imstat.npix != NPix:
+                raise ValueError('imstate.npix ({}) != NPix ({})'.format(
+                    imstat.npix, NPix))
             return (imstat.mode)
 
     elif stat == 'midpt':
@@ -700,7 +702,9 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
         def getcorr():
             imstat = ImageStats(image.science[i][BMask], 'midpt',
                                 lower=lower, upper=upper, nclip=0)
-            assert(imstat.npix == NPix)
+            if imstat.npix != NPix:
+                raise ValueError('imstate.npix ({}) != NPix ({})'.format(
+                    imstat.npix, NPix))
             return (imstat.midpt)
 
     nmax_rpt = 1 if rpt_clean is None else max(1, rpt_clean+1)

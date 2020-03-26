@@ -61,7 +61,7 @@ From command line::
 # STDLIB
 import logging
 import os
-import subprocess
+import subprocess  # nosec
 
 # ASTROPY
 from astropy.time import Time
@@ -135,10 +135,10 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         background in image rows:
 
         * 'pmode1' - SEXTRACTOR-like mode estimate based on a
-          modified `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          modified `Pearson's rule <https://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
           ``2.5*median-1.5*mean``;
         * 'pmode2' - mode estimate based on
-          `Pearson's rule <http://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
+          `Pearson's rule <https://en.wikipedia.org/wiki/Nonparametric_skew#Pearson.27s_rule>`_:
           ``3*median-2*mean``;
         * 'mean' - the mean of the distribution of the "good" pixels (after
           clipping, masking, etc.);
@@ -366,7 +366,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
                          "or not specified together.")
 
-    calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]
+    calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]  # nosec # noqa
     calacs_ver = [int(x) for x in calacs_str.decode().split('.')]
     if calacs_ver < [8, 3, 1]:
         raise ValueError('CALACS {0} is incomptible. '

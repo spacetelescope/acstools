@@ -17,7 +17,7 @@ For help usage use ``exe_args=['--help']``
 """
 # STDLIB
 import os
-import subprocess
+import subprocess  # nosec
 
 __taskname__ = "acsccd"
 __version__ = "2.0"
@@ -112,4 +112,4 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     #if biascorr:
     #    call_list.append('-bias')
 
-    subprocess.check_call(call_list)
+    subprocess.check_call(call_list)  # nosec

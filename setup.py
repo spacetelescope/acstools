@@ -1,47 +1,37 @@
 #!/usr/bin/env python
+import sys
 from setuptools import setup
 
-# Get some values from the setup.cfg
-from configparser import ConfigParser
-conf = ConfigParser()
-conf.read(['setup.cfg'])
-metadata = dict(conf.items('metadata'))
+TEST_HELP = """
+Note: running tests is no longer done using 'python setup.py test'. Instead
+you will need to run:
 
-PACKAGENAME = metadata.get('package_name', 'packagename')
-DESCRIPTION = metadata.get('description', 'package')
-AUTHOR = metadata.get('author', '')
-AUTHOR_EMAIL = metadata.get('author_email', '')
-LICENSE = metadata.get('license', 'unknown')
-URL = metadata.get('url', 'http://www.stsci.edu')
-CLASSIFIERS = [c for c in metadata.get('classifier', ['']).splitlines() if c]
+    pip install -e .
+    pytest
 
-# Define entry points for command-line scripts
-entry_points = {'console_scripts': []}
-entry_point_list = conf.items('entry_points')
-for entry_point in entry_point_list:
-    entry_points['console_scripts'].append('{0} = {1}'.format(entry_point[0],
-                                                              entry_point[1]))
-setup(
-    name=PACKAGENAME,
-    use_scm_version=True,
-    description=DESCRIPTION,
-    author=AUTHOR,
-    author_email=AUTHOR_EMAIL,
-    license=LICENSE,
-    url=URL,
-    classifiers=CLASSIFIERS,
-    packages=[PACKAGENAME],
-    package_dir={PACKAGENAME: PACKAGENAME},
-    package_data={PACKAGENAME: ['pars/*']},
-    entry_points=entry_points,
-    python_requires='>=3.5',
-    setup_requires=['setuptools_scm'],
-    install_requires=[
-        'astropy>=2',
-        'numpy',
-        'beautifulsoup4',
-        'requests'
-    ],
-    tests_require=['pytest'],
-    zip_safe=False
-)
+For more information, see:
+
+  https://docs.astropy.org/en/latest/development/testguide.html#running-tests
+"""
+
+if 'test' in sys.argv:
+    print(TEST_HELP)
+    sys.exit(1)
+
+DOCS_HELP = """
+Note: building the documentation is no longer done using
+'python setup.py build_docs'. Instead you will need to run:
+
+    cd docs
+    make html
+
+For more information, see:
+
+  https://docs.astropy.org/en/latest/install.html#builddocs
+"""
+
+if 'build_docs' in sys.argv or 'build_sphinx' in sys.argv:
+    print(DOCS_HELP)
+    sys.exit(1)
+
+setup(use_scm_version={'write_to': 'acstools/version.py'})

@@ -19,7 +19,7 @@ For help usage use ``exe_args=['--help']``
 """
 # STDLIB
 import os
-import subprocess
+import subprocess  # nosec
 
 __taskname__ = "acscte"
 __version__ = "1.0"
@@ -99,4 +99,4 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
     if exe_args:
         call_list.extend(exe_args)
 
-    subprocess.check_call(call_list)
+    subprocess.check_call(call_list)  # nosec
