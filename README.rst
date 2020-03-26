@@ -1,6 +1,10 @@
 ACSTOOLS
 ========
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3728240.svg
+   :alt: zenodo.3728240
+   :target: https://doi.org/10.5281/zenodo.3728240
+
 .. image:: https://readthedocs.org/projects/acstools/badge/?version=latest
     :alt: Documentation Status
     :target: https://acstools.readthedocs.io/en/latest/?badge=latest
