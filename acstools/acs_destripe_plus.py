@@ -354,7 +354,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     # verify that the RAW image exists in cwd
     cwddir = os.getcwd()
     if not os.path.exists(os.path.join(cwddir, inputfile)):
-        raise IOError("{0} does not exist.".format(inputfile))
+        raise IOError(f"{inputfile} does not exist.")
 
     # get image's primary header:
     header = fits.getheader(inputfile)
@@ -369,8 +369,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]  # nosec # noqa
     calacs_ver = [int(x) for x in calacs_str.decode().split('.')]
     if calacs_ver < [8, 3, 1]:
-        raise ValueError('CALACS {0} is incomptible. '
-                         'Must be 8.3.1 or later.'.format(calacs_str))
+        raise ValueError(f'CALACS {calacs_str} is incomptible. '
+                         'Must be 8.3.1 or later.')
 
     # check date for post-SM4 and if supported subarray or full frame
     is_subarray = False
@@ -389,12 +389,11 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     flc_name = inputfile.replace('raw', 'flc')
 
     if detector != 'WFC':
-        raise ValueError("{0} is not a WFC image, please check the 'DETECTOR'"
-                         " keyword.".format(inputfile))
+        raise ValueError(f"{inputfile} is not a WFC image, please check the "
+                         "'DETECTOR' keyword.")
 
     if date_obs < SM4_DATE:
-        raise ValueError(
-            "{0} is a pre-SM4 image.".format(inputfile))
+        raise ValueError(f"{inputfile} is a pre-SM4 image.")
 
     if header['SUBARRAY'] and cte_correct:
         if aperture in SUBARRAY_LIST:
@@ -459,7 +458,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         lower=lower, upper=upper, binwidth=binwidth,
         mask1=scimask1, mask2=scimask2, dqbits=dqbits,
         rpt_clean=rpt_clean, atol=atol, clobber=clobber, verbose=verbose)
-    blvtmpsfx = 'blv_tmp_{0}'.format(suffix)
+    blvtmpsfx = f'blv_tmp_{suffix}'
     os.rename(inputfile.replace('raw', blvtmpsfx), blvtmp_name)
 
     # update subarray header
@@ -472,8 +471,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         if ctecorr == 'PERFORM':
             acscte.acscte(blvtmp_name)
         else:
-            LOG.warning(
-                "PCTECORR={0}, cannot run CTE correction".format(ctecorr))
+            LOG.warning(f"PCTECORR={ctecorr}, cannot run CTE correction")
             cte_correct = False
 
     # run ACS2D to get FLT and FLC images
@@ -486,9 +484,9 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     if cte_correct and os.path.isfile(blctmp_name):
         os.remove(blctmp_name)
 
-    info_str = 'Done.\nFLT: {0}\n'.format(flt_name)
+    info_str = f'Done.\nFLT: {flt_name}\n'
     if cte_correct:
-        info_str += 'FLC: {0}\n'.format(flc_name)
+        info_str += f'FLC: {flc_name}\n'
     LOG.info(info_str)
 
 
@@ -514,8 +512,8 @@ def _get_mask(scimask, n):
     elif scimask is None:
         mask = None
     else:
-        raise TypeError("'scimask{}' must be either a str file name, "
-                        "a numpy.ndarray, or None.".format(n))
+        raise TypeError(f"'scimask{n}' must be either a str file name, "
+                        "a numpy.ndarray, or None.")
     return mask
 
 
@@ -577,7 +575,7 @@ def main():
         help='Do not print informational messages')
     parser.add_argument(
         '--version', action='version',
-        version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
+        version=f'{__taskname__} v{__version__} ({__vdate__})')
     options = parser.parse_args()
 
     if options.sci1_mask:

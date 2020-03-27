@@ -79,6 +79,7 @@ astropy.units.quantity.Quantity
 """
 import datetime as dt
 import logging
+import os
 from urllib.request import urlopen
 from urllib.error import URLError
 
@@ -96,11 +97,11 @@ __all__ = ['Query']
 
 # Initialize the logger
 logging.basicConfig()
-LOG = logging.getLogger('{}.{}'.format(__taskname__, 'Query'))
+LOG = logging.getLogger(f'{__taskname__}.Query')
 LOG.setLevel(logging.INFO)
 
 
-class Query(object):
+class Query:
     """Class used to interface with the ACS Zeropoints Calculator API.
 
     Parameters
@@ -155,15 +156,13 @@ class Query(object):
 
         # Set the private attributes
         if filt is None:
-            self._url = ('https://acszeropoints.stsci.edu/results_all/?date={}'
-                         '&detector={}'.format(self.date, self.detector))
+            self._url = ('https://acszeropoints.stsci.edu/results_all/?'
+                         f'date={self.date}&detector={self.detector}')
         else:
             self._filt = filt.upper()
-            self._url = ('https://acszeropoints.stsci.edu/'
-                         'results_single/?date1={0}&detector={1}'
-                         '&{1}_filter={2}'.format(self.date,
-                                                  self.detector,
-                                                  self.filt))
+            self._url = ('https://acszeropoints.stsci.edu/results_single/?'
+                         f'date1={self.date}&detector={self.detector}'
+                         f'&{self.detector}_filter={self.filt}')
         # ACS Launch Date
         self._acs_installation_date = dt.datetime(2002, 3, 7)
         # The farthest date in future that the component and throughput files
@@ -217,29 +216,27 @@ class Query(object):
         valid_date = True
         # Determine the submitted detector is valid
         if self.detector not in self._valid_detectors:
-            msg = ('{} is not a valid detector option.\n'
-                   'Please choose one of the following:\n{}\n'
-                   '{}'.format(self.detector,
-                               '\n'.join(self._valid_detectors),
-                               self._msg_div))
+            msg = (f'{self.detector} is not a valid detector option.\n'
+                   'Please choose one of the following:\n'
+                   f'{os.linesep.join(self._valid_detectors)}\n'
+                   f'{self._msg_div}')
             LOG.error(msg)
             valid_detector = False
 
         # Determine if the submitted filter is valid
         if (self.filt is not None and valid_detector and
                 self.filt not in self.valid_filters[self.detector]):
-            msg = ('{} is not a valid filter for {}\n'
-                   'Please choose one of the following:\n{}\n'
-                   '{}'.format(self.filt, self.detector,
-                               '\n'.join(self.valid_filters[self.detector]),
-                               self._msg_div))
+            msg = (f'{self.filt} is not a valid filter for {self.detector}\n'
+                   'Please choose one of the following:\n'
+                   f'{os.linesep.join(self.valid_filters[self.detector])}\n'
+                   f'{self._msg_div}')
             LOG.error(msg)
             valid_filter = False
 
         # Determine if the submitted date is valid
         date_check = self._check_date()
         if date_check is not None:
-            LOG.error('{}\n{}'.format(date_check, self._msg_div))
+            LOG.error(f'{date_check}\n{self._msg_div}')
             valid_date = False
 
         if not valid_detector or not valid_filter or not valid_date:
@@ -267,18 +264,19 @@ class Query(object):
         try:
             dt_obj = dt.datetime.strptime(self.date, fmt)
         except ValueError:
-            result = '{} does not match YYYY-MM-DD format'.format(self.date)
+            result = f'{self.date} does not match YYYY-MM-DD format'
         else:
             if dt_obj < self._acs_installation_date:
                 result = ('The observation date cannot occur '
-                          'before ACS was installed ({})'
-                          .format(self._acs_installation_date.strftime(fmt)))
+                          'before ACS was installed '
+                          f'({self._acs_installation_date.strftime(fmt)})')
             elif dt_obj > self._extrapolation_date:
                 result = ('The observation date cannot occur after the '
-                          'maximum allowable date, {}. Extrapolations of the '
+                          'maximum allowable date, '
+                          f'{self._extrapolation_date.strftime(fmt)}. '
+                          'Extrapolations of the '
                           'instrument throughput after this date lead to '
-                          'high uncertainties and are therefore invalid.'
-                          .format(self._extrapolation_date.strftime(fmt)))
+                          'high uncertainties and are therefore invalid.')
         finally:
             return result
 
@@ -295,10 +293,11 @@ class Query(object):
         try:
             self._response = urlopen(self._url)  # nosec
         except URLError as e:
-            msg = ('{}\n{}\nThe query failed! Please check your inputs. '
+            msg = (f'{repr(e)}\n{self._msg_div}\nThe query failed! '
+                   'Please check your inputs. '
                    'If the error persists, submit a ticket to the '
                    'ACS Help Desk at hsthelp.stsci.edu with the error message '
-                   'displayed above.'.format(str(e), self._msg_div))
+                   'displayed above.')
             LOG.error(msg)
             self._failed = True
         else:
@@ -332,11 +331,11 @@ class Query(object):
                          names=data[0],
                          dtype=[str, float, float, float, float, float])
         except IndexError as e:
-            msg = ('{}\n{}\n There was an issue parsing the request. '
+            msg = (f'{repr(e)}\n{self._msg_div}\n'
+                   'There was an issue parsing the request. '
                    'Try resubmitting the query. If this issue persists, please '
                    'submit a ticket to the Help Desk at'
-                   'https://stsci.service-now.com/hst'
-                   .format(e, self._msg_div))
+                   'https://stsci.service-now.com/hst')
             LOG.info(msg)
             self._zpt_table = None
         else:
@@ -369,7 +368,7 @@ class Query(object):
         valid_inputs = self._check_inputs()
 
         if valid_inputs:
-            LOG.info('Submitting request to {}'.format(self._url))
+            LOG.info(f'Submitting request to {self._url}')
             self._submit_request()
             if self._failed:
                 return

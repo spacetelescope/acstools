@@ -182,12 +182,12 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
     if verbose:
         t_beg = time.time()
 
-    fname = '{0}[{1}]'.format(filename, ext)
+    fname = f'{filename}[{ext}]'
 
     # check extension
     if ext not in (1, 4, 'SCI', ('SCI', 1), ('SCI', 2)):
-        warnings.warn('{0} is not a valid science extension for '
-                      'ACS/WFC'.format(ext), AstropyUserWarning)
+        warnings.warn(f'{ext} is not a valid science extension for ACS/WFC',
+                      AstropyUserWarning)
 
     # get the data
     image = fits.getdata(filename, ext)
@@ -202,7 +202,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         p1 = 0.0
 
     if verbose:
-        print('Rescale intensity percentiles: {0}, {1}'.format(p1, p2))
+        print(f'Rescale intensity percentiles: {p1}, {p2}')
 
     image = exposure.rescale_intensity(image, in_range=(p1, p2))
 
@@ -244,7 +244,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
     # returned from the PHT
     if n_result > 1:
         if verbose:
-            print('Length of PHT result: {0}'.format(n_result))
+            print(f'Length of PHT result: {n_result}')
 
         # create lists for X and Y positions of lines and build points
         x0 = result[:, 0, 0]
@@ -258,12 +258,12 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         topy = ymax - buf
 
         if verbose:
-            print('min(x0)={0:4d}, min(x1)={1:4d}, min(y0)={2:4d}, '
-                  'min(y1)={3:4d}'.format(min(x0), min(x1), min(y0), min(y1)))
-            print('max(x0)={0:4d}, max(x1)={1:4d}, max(y0)={2:4d}, '
-                  'max(y1)={3:4d}'.format(max(x0), max(x1), max(y0), max(y1)))
-            print('buf={0}'.format(buf))
-            print('topx={0}, topy={1}'.format(topx, topy))
+            print(f'min(x0)={min(x0):4d}, min(x1)={min(x1):4d}, '
+                  f'min(y0)={min(y0):4d}, min(y1)={min(y1):4d}')
+            print(f'max(x0)={max(x0):4d}, max(x1)={max(x1):4d}, '
+                  f'max(y0)={max(y0):4d}, max(y1)={max(y1):4d}')
+            print(f'buf={buf}')
+            print(f'topx={topx}, topy={topy}')
 
         # set up trail angle "tracking" arrays.
         # find the angle of each segment and filter things out.
@@ -290,9 +290,9 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         truth = round_angle == ang[0]
 
         if verbose:
-            print('trail_angle: {0}'.format(trail_angle))
-            print('round_angle: {0}'.format(round_angle))
-            print('mode(round_angle): {0}'.format(ang[0]))
+            print(f'trail_angle: {trail_angle}')
+            print(f'round_angle: {round_angle}')
+            print(f'mode(round_angle): {ang[0]}')
 
         # filter out the outliers
         trail_angle = trail_angle[truth]
@@ -300,7 +300,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         n_result = len(result)
 
         if verbose:
-            print('Filtered trail_angle: {0}'.format(trail_angle))
+            print(f'Filtered trail_angle: {trail_angle}')
 
         if n_result < 1:
             return np.empty(0)
@@ -308,9 +308,8 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         # if there is an unreasonable amount of points, it picked up garbage
         elif n_result > 300:
             warnings.warn(
-                'Way too many segments results to be correct ({0}). '
-                'Rejecting detection on {1}.'.format(n_result, fname),
-                AstropyUserWarning)
+                f'Way too many segments results to be correct ({n_result}). '
+                f'Rejecting detection on {fname}.', AstropyUserWarning)
             return np.empty(0)
 
         # remake the point lists with things taken out
@@ -381,13 +380,11 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     if satellite:
         if verbose:
-            print('{0} trail segment(s) detected'.format(n_result))
-            print('Trail angle list (not returned): ')
-            print(trail_angle)
+            print(f'{n_result} trail segment(s) detected')
+            print(f'Trail angle list (not returned):\n{trail_angle}')
             print('End point list:')
             for i, ((px0, py0), (px1, py1)) in enumerate(result, 1):
-                print('{0:5d}. ({1:4d}, {2:4d}), ({3:4d}, {4:4d})'.format(
-                    i, px0, py0, px1, py1))
+                print(f'{i:5d}. ({px0:4d}, {py0:4d}), ({px1:4d}, {py1:4d})')
 
         if plot and plt is not None:
             mean = np.median(image)
@@ -397,7 +394,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
             fig1, ax1 = plt.subplots()
             ax1.imshow(edge, cmap=plt.cm.gray)
-            ax1.set_title('Edge image for {0}'.format(fname))
+            ax1.set_title(f'Edge image for {fname}')
 
             for (px0, py0), (px1, py1) in result:  # Draw trails
                 ax1.plot((px0, px1), (py0, py1), scalex=False, scaley=False)
@@ -424,7 +421,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         result = np.empty(0)
 
         if verbose:
-            print('No trail detected; found {0} segments'.format(n_result))
+            print(f'No trail detected; found {n_result} segments')
 
         if plot and plt is not None:
             fig1, ax1 = plt.subplots()
@@ -437,7 +434,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     if verbose:
         t_end = time.time()
-        print('Run time: {0} s'.format(t_end - t_beg))
+        print(f'Run time: {t_end - t_beg} s')
 
     return result
 
@@ -457,8 +454,7 @@ def _get_valid_indices(shape, ix0, ix1, iy0, iy1):
         iy1 = ymax
 
     if iy1 <= iy0 or ix1 <= ix0:
-        raise IndexError(
-            'array[{0}:{1},{2}:{3}] is invalid'.format(iy0, iy1, ix0, ix1))
+        raise IndexError(f'array[{iy0}:{iy1},{ix0}:{ix1}] is invalid')
 
     return list(map(int, [ix0, ix1, iy0, iy1]))
 
@@ -601,7 +597,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     if verbose:
         t_beg = time.time()
 
-    fname = '{0}[{1}]'.format(filename, ext)
+    fname = f'{filename}[{ext}]'
     image = fits.getdata(filename, ext)
 
     dx = image.max()
@@ -621,7 +617,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     deg = np.degrees(rad)
 
     if verbose:
-        print('Rotation: {0}'.format(deg))
+        print(f'Rotation: {deg}')
 
     rotate = transform.rotate(image, deg, resize=True, order=order)
 
@@ -638,7 +634,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
         fig2, ax2 = plt.subplots()
         ax2.imshow(rotate, vmin=lower, vmax=upper, cmap=plt.cm.gray)
-        ax2.set_title('{0} rotated by {1} deg'.format(fname, deg))
+        ax2.set_title(f'{fname} rotated by {deg} deg')
 
         plt.draw()
 
@@ -653,8 +649,8 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         rotate.shape, sx - dx, sx + dx, sy - sublen, sy + sublen)
     subr = rotate[iy0:iy1, ix0:ix1]
     if len(subr) <= sublen:
-        raise ValueError('Trail subarray size is {0} but expected {1} or '
-                         'larger'.format(len(subr), sublen))
+        raise ValueError(f'Trail subarray size is {len(subr)} but expected '
+                         f'{sublen} or larger')
 
     # Flatten the array so we are looking along rows
     # Take median of each row, should filter out most outliers
@@ -683,8 +679,8 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     if len(z) < 1:
         raise ValueError(
             'First look at finding a profile failed. '
-            'Nothing found at {0} from background! '
-            'Adjust parameters and try again.'.format(sigma))
+            f'Nothing found at {sigma} from background! '
+            'Adjust parameters and try again.')
 
     # get the bounds of the flagged points
     lower = z.min()
@@ -726,8 +722,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         # hit.
         if 0 in subr.shape:
             if verbose:
-                print('Hit edge, subr shape={0}, first={1}'.format(
-                    subr.shape, first))
+                print(f'Hit edge, subr shape={subr.shape}, first={first}')
             if first:
                 first = False
                 centery = sy
@@ -748,15 +743,15 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         if len(z) < 1:
             if first:
                 if verbose:
-                    print('No good profile found for counter={0}. Start '
-                          'moving left from starting point.'.format(counter))
+                    print(f'No good profile found for counter={counter}. '
+                          'Start moving left from starting point.')
                 centery = sy
                 nextx = sx
                 first = False
             else:
                 if verbose:
-                    print('z={0} is less than 1, subr shape={1}, '
-                          'we are done'.format(z, subr.shape))
+                    print(f'z={z} is less than 1, subr shape={subr.shape}, '
+                          'we are done')
                 done = True
             continue
 
@@ -796,11 +791,11 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
             if (nextx + subwidth) > rotate.shape[1]:
                 if verbose:
-                    print('Hit rotate edge at counter={0}'.format(counter))
+                    print(f'Hit rotate edge at counter={counter}')
                 first = False
             elif (highy > image.shape[0]) or (highx > image.shape[1]):
                 if verbose:
-                    print('Hit image edge at counter={0}'.format(counter))
+                    print(f'Hit image edge at counter={counter}')
                 first = False
 
             if not first:
@@ -814,11 +809,11 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
             if (nextx - subwidth) < 0:
                 if verbose:
-                    print('Hit rotate edge at counter={0}'.format(counter))
+                    print(f'Hit rotate edge at counter={counter}')
                 done = True
             elif (highy > image.shape[0]) or (highx > image.shape[1]):
                 if verbose:
-                    print('Hit image edge at counter={0}'.format(counter))
+                    print(f'Hit image edge at counter={counter}')
                 done = True
 
         counter += 1
@@ -839,8 +834,8 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     if mask.shape != image.shape:
         warnings.warn(
-            'Output mask shape is {0} but input image shape is '
-            '{1}'.format(mask.shape, image.shape), AstropyUserWarning)
+            f'Output mask shape is {mask.shape} but input image shape is '
+            f'{image.shape}', AstropyUserWarning)
 
     # Change to boolean mask
     mask = mask.astype(np.bool)
@@ -867,7 +862,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     if verbose:
         t_end = time.time()
-        print('Run time: {0} s'.format(t_end - t_beg))
+        print(f'Run time: {t_end - t_beg} s')
 
     return mask
 
@@ -905,24 +900,23 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
         # Update DQ extension only if necessary
         if npix_updated > 0:
             pf[ext].data[new_mask] += dqval
-            pf['PRIMARY'].header.add_history('{0} satdet v{1}({2})'.format(
-                time.ctime(), __version__, __vdate__))
             pf['PRIMARY'].header.add_history(
-                '  Updated {0} px in EXT {1} with DQ={2}'.format(
-                    npix_updated, ext, dqval))
+                f'{time.ctime()} satdet v{__version__}({__vdate__})')
+            pf['PRIMARY'].header.add_history(
+                f'  Updated {npix_updated} px in EXT {ext} with DQ={dqval}')
 
     if verbose:
-        fname = '{0}[{1}]'.format(filename, ext)
+        fname = f'{filename}[{ext}]'
 
-        print('DQ flag value is {0}'.format(dqval))
-        print('Input... flagged NPIX={0}'.format(np.count_nonzero(mask)))
-        print('Existing flagged NPIX={0}'.format(np.count_nonzero(old_mask)))
-        print('Newly... flagged NPIX={0}'.format(npix_updated))
+        print(f'DQ flag value is {dqval}\n'
+              f'Input... flagged NPIX={np.count_nonzero(mask)}\n'
+              f'Existing flagged NPIX={np.count_nonzero(old_mask)}\n'
+              f'Newly... flagged NPIX={npix_updated}')
 
         if npix_updated > 0:
-            print('{0} updated'.format(fname))
+            print(f'{fname} updated')
         else:
-            print('No updates necessary for {0}'.format(fname))
+            print(f'No updates necessary for {fname}')
 
 
 # ############################ from decttest.py ############################# #
@@ -942,7 +936,7 @@ def _satdet_worker(work_queue, done_queue, sigma=2.0, low_thresh=0.1,
                 percentile=percentile, buf=buf, plot=False, verbose=False)
         except Exception as e:
             retcode = False
-            result = '{0}: {1}'.format(type(e), str(e))
+            result = f'{type(e)}: {repr(e)}'
         else:
             retcode = True
         done_queue.put((retcode, fil, chip, result))
@@ -1053,7 +1047,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
     errors = {}
 
     if verbose:
-        print('{0} file(s) found...'.format(n_files))
+        print(f'{n_files} file(s) found...')
 
     # Nothing to do
     if n_files < 1 or n_chips < 1:
@@ -1070,7 +1064,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
         for fil in files:
             for chip in chips:
                 if verbose:
-                    print('\nProcessing {0}[{1}]...'.format(fil, chip))
+                    print(f'\nProcessing {fil}[{chip}]...')
 
                 key = (fil, chip)
                 try:
@@ -1081,7 +1075,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
                         line_gap=line_gap, percentile=percentile, buf=buf,
                         plot=plot, verbose=verbose)
                 except Exception as e:
-                    errmsg = '{0}: {1}'.format(type(e), str(e))
+                    errmsg = f'{type(e)}: {repr(e)}'
                     errors[key] = errmsg
                     if verbose:
                         print(errmsg)
@@ -1095,7 +1089,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
     # processes. When a worker finishes, its output is put into done queue.
     else:
         if verbose:
-            print('Using {0} processes'.format(n_processes))
+            print(f'Using {n_processes} processes')
 
         work_queue = Queue()
         done_queue = Queue()
@@ -1133,15 +1127,14 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
             if len(results) > 0:
                 print('Number of trail segment(s) found:')
             for key in sorted(results):
-                print('  {0}[{1}]: {2}'.format(
-                    key[0], key[1], len(results[key])))
+                print(f'  {key[0]}[{key[1]}]: {len(results[key])}')
             if len(errors) > 0:
                 print('These have errors:')
             for key in sorted(errors):
-                print('  {0}[{1}]'.format(key[0], key[1]))
+                print(f'  {key[0]}[{key[1]}]')
 
     if verbose:
         t_end = time.time()
-        print('Total run time: {0} s'.format(t_end - t_beg))
+        print(f'Total run time: {t_end - t_beg} s')
 
     return results, errors

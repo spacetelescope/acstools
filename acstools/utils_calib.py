@@ -99,8 +99,7 @@ def extract_flash(prihdr, scihdu):
         return None
 
     if flashsta != 'SUCCESSFUL':
-        warnings.warn('Flash status is {0}'.format(flashsta),
-                      AstropyUserWarning)
+        warnings.warn(f'Flash status is {flashsta}', AstropyUserWarning)
 
     flshfile = from_irafpath(flshfile)
     ampstring = prihdr['CCDAMP']
@@ -141,7 +140,7 @@ def extract_flatfield(prihdr, scihdu):
     for ff in ['DFLTFILE', 'LFLTFILE']:
         vv = prihdr.get(ff, 'N/A')
         if vv != 'N/A':
-            warnings.warn('{0}={1} is not accounted for'.format(ff, vv),
+            warnings.warn(f'{ff}={vv} is not accounted for',
                           AstropyUserWarning)
 
     flatfile = prihdr.get('PFLTFILE', 'N/A')
@@ -195,7 +194,7 @@ def from_irafpath(irafpath):
     try:
         refdir = os.environ[s[0]]
     except KeyError:
-        raise ValueError('{0} environment variable undefined'.format(s[0]))
+        raise ValueError(f'{s[0]} environment variable undefined')
 
     return os.path.join(refdir, s[1])
 
@@ -243,8 +242,8 @@ def extract_ref(scihdu, refhdu):
     refdata = refhdu.data[y0:y0+ny, x0:x0+nx]
 
     if refdata.shape != (ny, nx):
-        raise ValueError('Extracted reference image is {0} but science image '
-                         'is {1}'.format(refdata.shape, (ny, nx)))
+        raise ValueError(f'Extracted reference image is {refdata.shape} but '
+                         f'science image is ({ny}, {nx})')
 
     return refdata
 
@@ -422,7 +421,7 @@ def get_lt(hdr):
     ltm = (hdr.get('LTM1_1', 1.0), hdr.get('LTM2_2', 1.0))
 
     if ltm[0] <= 0 or ltm[1] <= 0:
-        raise ValueError('(LTM1_1, LTM2_2) = {0} is invalid'.format(ltm))
+        raise ValueError(f'(LTM1_1, LTM2_2) = {ltm} is invalid')
 
     ltv = (hdr.get('LTV1', 0.0), hdr.get('LTV2', 0.0))
     return ltm, ltv
