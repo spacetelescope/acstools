@@ -70,8 +70,7 @@ class TestDestripe(BaseACSTOOLS):
         flt_file = rootname + '_flt.fits'
         out_file = rootname + '_flt_' + out_sfx + '.fits'
         ref_file = rootname + '_flt_ref.fits'
-        mask_files = ['{0}_mask{1}.fits'.format(rootname, i + 1)
-                      for i in range(2)]
+        mask_files = [f'{rootname}_mask{i + 1}.fits' for i in range(2)]
 
         self._destripe_one(flt_file, out_sfx, out_file, ref_file,
                            masks=mask_files)

@@ -79,7 +79,7 @@ LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
 
-class StripeArray(object):
+class StripeArray:
     """Class to handle data array to be destriped."""
 
     def __init__(self, image):
@@ -422,18 +422,17 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
     for image, maskfile1, maskfile2 in zip(flist, mlist1, mlist2):
         # Skip processing pre-SM4 images
         if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
-            LOG.warning('{0} is pre-SM4. Skipping...'.format(image))
+            LOG.warning(f'{image} is pre-SM4. Skipping...')
             continue
 
         # Data must be in ELECTRONS
         if (fits.getval(image, 'BUNIT', ext=1) != 'ELECTRONS'):
-            LOG.warning('{0} is not in ELECTRONS. Skipping...'.format(image))
+            LOG.warning(f'{image} is not in ELECTRONS. Skipping...')
             continue
 
         # Skip processing CTECORR-ed images
         if (fits.getval(image, 'PCTECORR') == 'COMPLETE'):
-            LOG.warning('{0} already has PCTECORR applied. '
-                        'Skipping...'.format(image))
+            LOG.warning(f'{image} already has PCTECORR applied. Skipping...')
             continue
 
         # generate output filename for each input based on specification
@@ -517,25 +516,25 @@ def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
 
         if (STDDEVCorr > 1.5*0.9):
             LOG.warning('perform_correction - STDDEV of applied de-stripe '
-                        'corrections ({:.3g}) exceeds\nknown bias striping '
-                        'STDDEV of 0.9e (see ISR ACS 2011-05) more than '
-                        '1.5 times.'.format(STDDEVCorr))
+                        f'corrections ({STDDEVCorr:.3g}) exceeds\n'
+                        'known bias striping STDDEV of 0.9e '
+                        '(see ISR ACS 2011-05) more than 1.5 times.')
 
         elif verbose:
             LOG.info('perform_correction - STDDEV of applied de-stripe '
-                     'corrections {:.3g}.'.format(STDDEVCorr))
+                     f'corrections {STDDEVCorr:.3g}.')
 
         if verbose:
             LOG.info('perform_correction - Estimated background: '
-                     '{:.5g}.'.format(Bkgrnd))
+                     f'{Bkgrnd:.5g}.')
             LOG.info('perform_correction - Maximum applied correction: '
-                     '{:.3g}.'.format(MaxCorr))
+                     f'{MaxCorr:.3g}.')
             LOG.info('perform_correction - Effective number of clipping '
-                     'iterations: {}.'.format(NMaxIter))
+                     f'iterations: {NMaxIter}.')
             LOG.info('perform_correction - Effective number of additional '
-                     '(repeated) cleanings: {}.'.format(Nrpt))
+                     f'(repeated) cleanings: {Nrpt}.')
             LOG.info('perform_correction - Total number of corrected rows: '
-                     '{}.'.format(NUpdRows))
+                     f'{NUpdRows}.')
 
     frame.write_corrected(output, clobber=clobber)
     frame.close()
@@ -691,8 +690,8 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             imstat = ImageStats(image.science[i][BMask], 'mode',
                                 lower=lower, upper=upper, nclip=0)
             if imstat.npix != NPix:
-                raise ValueError('imstate.npix ({}) != NPix ({})'.format(
-                    imstat.npix, NPix))
+                raise ValueError(f'imstate.npix ({imstat.npix}) != '
+                                 f'NPix ({NPix})')
             return (imstat.mode)
 
     elif stat == 'midpt':
@@ -703,8 +702,8 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             imstat = ImageStats(image.science[i][BMask], 'midpt',
                                 lower=lower, upper=upper, nclip=0)
             if imstat.npix != NPix:
-                raise ValueError('imstate.npix ({}) != NPix ({})'.format(
-                    imstat.npix, NPix))
+                raise ValueError(f'imstate.npix ({imstat.npix}) != '
+                                 f'NPix ({NPix})')
             return (imstat.midpt)
 
     nmax_rpt = 1 if rpt_clean is None else max(1, rpt_clean+1)
@@ -721,7 +720,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
                     LOG.info("clean_streak - Performing image bias de-stripe:")
             else:
                 LOG.info("clean_streak - Performing repeated image bias "
-                         "de-stripe #{}:".format(Nrpt - 1))
+                         f"de-stripe #{Nrpt - 1}:")
 
         # reset accumulators and arrays:
         corr[:] = 0.0
@@ -833,11 +832,12 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
                     nonconvi.shape[0] == nonconvi_int.shape[0] and
                     np.all(corr0[nonconvi]*corr[nonconvi] < 0.0) and Nrpt > 1):
                 LOG.warning("clean_streak - Repeat bias stripe cleaning\n"
-                            "process appears to be oscillatory for {:d} image "
+                            "process appears to be oscillatory for "
+                            f"{nonconvi.shape[0]:d} image "
                             "rows.\nTry to adjust 'sigrej', 'maxiter', and/or "
                             "'dqbits' parameters.\n"
                             "In addition,  consider using masks or adjust "
-                            "existing masks.".format(nonconvi.shape[0]))
+                            "existing masks.")
                 break
 
             nonconvi0 = nonconvi.copy()
@@ -847,16 +847,16 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
             if Nrpt <= 1:
                 LOG.info("clean_streak - Image bias de-stripe: Done.")
             else:
-                LOG.info("clean_streak - Repeated (#{}) image bias de-stripe: "
-                         "Done.".format(Nrpt - 1))
+                LOG.info(f"clean_streak - Repeated (#{Nrpt - 1}) image bias "
+                         "de-stripe: Done.")
 
     if verbose and Nrpt > 1:
         LOG.info('clean_streak - =====  Repeated de-stripe "residual" '
                  'estimates:  =====')
         LOG.info('clean_streak - STDDEV of the last applied de-stripe '
-                 'corrections {:.3g}'.format(STDDEVCorr))
+                 f'corrections {STDDEVCorr:.3g}')
         LOG.info('clean_streak - Maximum of the last applied correction: '
-                 '{:.3g}.'.format(current_max_corr))
+                 f'{current_max_corr:.3g}.')
 
     # add (in quadratures) an error term associated with the accuracy of
     # bias stripe correction:
@@ -868,7 +868,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
     if warn_maxiter:
         LOG.warning(
             'clean_streak - Maximum number of clipping iterations '
-            'specified by the user ({}) has been reached.'.format(maxiter))
+            f'specified by the user ({maxiter}) has been reached.')
 
     # weighted mean, sample variance, and max value for
     # total (cummulative) corrections to the *RAW* image:
@@ -891,7 +891,7 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
 def _write_row_number(lineno, offset=1, pad=1):
     if lineno is None:
         return ''
-    return (pad * ' ' + '(row #{:d})'.format(lineno + offset))
+    return (pad * ' ' + f'(row #{lineno + offset:d})')
 
 
 def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
@@ -933,17 +933,17 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
     ArrShape = InputArr.shape
     if NGood == 0:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
-        LOG.warning('djs_iterstat - No data points given' + imrow)
+        LOG.warning(f'djs_iterstat - No data points given{imrow}')
         return 0, 0, 0, 0, 0, None
     if NGood == 1:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warning('djs_iterstat - Only one data point; '
-                    'cannot compute stats{0}'.format(imrow))
+                    f'cannot compute stats{imrow}')
         return 0, 0, 0, 0, 0, None
     if np.unique(InputArr).size == 1:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warning('djs_iterstat - Only one value in data; '
-                    'cannot compute stats{0}'.format(imrow))
+                    f'cannot compute stats{imrow}')
         return 0, 0, 0, 0, 0, None
 
     # Determine Max and Min
@@ -971,7 +971,7 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
     if NGood < 2:
         imrow = _write_row_number(lineno=lineno, offset=0, pad=1)
         LOG.warning('djs_iterstat - No good data points; '
-                    'cannot compute stats{0}'.format(imrow))
+                    f'cannot compute stats{imrow}')
         return 0, 0, 0, 0, 0, None
 
     SaveMask = Mask.copy()
@@ -1060,7 +1060,7 @@ def main():
         help='Do not print informational messages')
     parser.add_argument(
         '--version', action="version",
-        version='{0} v{1} ({2})'.format(__taskname__, __version__, __vdate__))
+        version=f'{__taskname__} v{__version__} ({__vdate__})')
     args = parser.parse_args()
 
     if args.mask1:
