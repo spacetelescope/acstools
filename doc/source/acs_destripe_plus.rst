@@ -7,7 +7,7 @@ ACS Destripe Plus
 .. currentmodule:: acstools.acs_destripe_plus
 
 .. automodule:: acstools.acs_destripe_plus
-   :members: destripe_plus
+   :members: destripe_plus, crrej_plus
 
 
 Global Variables
