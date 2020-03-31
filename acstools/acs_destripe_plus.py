@@ -34,7 +34,7 @@ From command line::
                         [--binwidth BINWIDTH] [--sci1_mask SCI1_MASK]
                         [--sci2_mask SCI2_MASK] [--dqbits [DQBITS]]
                         [--rpt_clean RPT_CLEAN] [--atol [ATOL]] [--nocte]
-                        [--clobber] [-q] [--version]
+                        [--keep_intermediate_files] [--clobber] [-q] [--version]
                         input
 
 """
@@ -108,7 +108,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                   sigrej=2.0, lower=None, upper=None, binwidth=0.3,
                   scimask1=None, scimask2=None,
                   dqbits=None, rpt_clean=0, atol=0.01,
-                  cte_correct=True, clobber=False, verbose=True):
+                  cte_correct=True, keep_intermediate_files=False,
+                  clobber=False, verbose=True):
     r"""Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -185,10 +186,6 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         background statistics. This parameter is aplicable *only* to *stat*
         parameter values of `'mode'` or `'midpt'`.
 
-    clobber : bool
-        Specify whether or not to 'clobber' (delete then replace)
-        previously generated products with the same names.
-
     scimask1 : str or list of str
         Mask images for *calibrated* ``SCI,1``, one for each input file.
         Pixels with zero values will be masked out, in addition to clipping.
@@ -249,6 +246,14 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     cte_correct : bool
         Perform CTE correction.
+
+    keep_intermediate_files : bool
+        Keep de-striped BLV_TMP and BLC_TMP files around for CRREJ,
+        if needed. Set to `True` if you want to run :func:`crrej_plus`.
+
+    clobber : bool
+        Specify whether or not to 'clobber' (delete then replace)
+        previously generated products with the same names.
 
     verbose : bool
         Print informational messages. Default = True.
@@ -482,9 +487,10 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         acs2d.acs2d(blctmp_name)
 
     # delete intermediate files
-    os.remove(blvtmp_name)
-    if cte_correct and os.path.isfile(blctmp_name):
-        os.remove(blctmp_name)
+    if not keep_intermediate_files:
+        os.remove(blvtmp_name)
+        if cte_correct and os.path.isfile(blctmp_name):
+            os.remove(blctmp_name)
 
     info_str = f'Done.\nFLT: {flt_name}\n'
     if cte_correct:
@@ -519,7 +525,7 @@ def _get_mask(scimask, n):
     return mask
 
 
-def crrej_plus(filelist, outroot, keep_intermediate_files=True, verbose=True):
+def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
     """Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
     The purpose of this is primarily for combining destriped
     products from :func:`destripe_plus`.
@@ -559,7 +565,7 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=True, verbose=True):
 
     First, run :func:`destripe_plus`. Remember to keep its intermediate files:
 
-    >>> destripe_plus(...)
+    >>> destripe_plus(..., keep_intermediate_files=True)
 
     Now, run this function, once on BLV only, and once again on BLC only:
 
@@ -640,6 +646,9 @@ def main():
     parser.add_argument(
         '--nocte', action='store_true', help='Turn off CTE correction.')
     parser.add_argument(
+        '--keep_intermediate_files', action='store_true',
+        help='Keep intermediate BLV_TMP and BLC_TMP files')
+    parser.add_argument(
         '--clobber', action='store_true', help='Clobber output')
     parser.add_argument(
         '-q', '--quiet', action="store_true",
@@ -665,8 +674,9 @@ def main():
                   binwidth=options.binwidth,
                   scimask1=mask1, scimask2=mask2, dqbits=options.dqbits,
                   rpt_clean=options.rpt_clean, atol=options.atol,
-                  cte_correct=not options.nocte, clobber=options.clobber,
-                  verbose=not options.quiet)
+                  cte_correct=not options.nocte,
+                  keep_intermediate_files=options.keep_intermediate_files,
+                  clobber=options.clobber, verbose=not options.quiet)
 
 
 if __name__ == '__main__':
