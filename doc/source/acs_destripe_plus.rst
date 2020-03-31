@@ -13,7 +13,6 @@ ACS Destripe Plus
 Global Variables
 ----------------
 
-.. autodata:: acstools.acs_destripe_plus.SM4_DATE
 .. autodata:: acstools.acs_destripe_plus.SUBARRAY_LIST
 
 

@@ -10,12 +10,6 @@ ACS Destripe
    :members: clean
 
 
-Global Variables
-----------------
-
-.. autodata:: acstools.acs_destripe.MJD_SM4
-
-
 Version
 -------
 
