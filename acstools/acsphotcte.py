@@ -4,9 +4,9 @@ The ACS Photometric CTE API is a programmatic interface for the
 `ACS Photometric CTE Webtool <https://acsphotometriccte.stsci.edu>`_.
 The API is a cloud-based service that employs a serverless approach on AWS
 with API Gateway and Lambda to compute the photometric CTE corrections
-using the model described in ACS ISR 2012-02.
+using the model described in ACS ISR 2012-05.
 The model corrects ACS/WFC aperture photometry extracted from FLT images for
-CTE losses using the most recent formula from Chiaberge's ISR 2012-05. It is
+CTE losses using the most recent formula described in Chiaberge's ISR 2012-05. It is
 only calibrated for photometry obtained after SM4 in May 2009. For pre-SM4
 data, please see Chiaberge et al. 2009 (ISR 2009-01), or use pixel-based
 CTE-corrected files obtained from MAST. Currently,  only 3 and 5
@@ -36,12 +36,13 @@ number of Y transfers is 2048 and so we scale by 2048.
 
 >>> import numpy as np
 >>> from acstools import acsphotcte
->>> ytransfers = 2048 * np.random.random(size=1000)
->>> fluxes = 20000*np.random.random(size=len(ytransfers))
+>>> n_sample = 1000
+>>> ytransfers = 2048 * np.random.random(size=n_sample)
+>>> fluxes = 20000*np.random.random(size=n_sample)
 >>> magnitudes = -2.5 * np.log10(fluxes)
 >>> print(magnitudes[:5])
 [-10.75088228  -9.56321561 -10.10571966  -9.01893015 -10.48463087]
->>> local_skys = 80*np.random.random(size=len(ytransfers))
+>>> local_skys = 80*np.random.random(size=n_sample)
 >>> mjd = 59341.
 >>> radius = 3.
 >>> photctecalc = acsphotcte.PhotCTEAPI()
@@ -58,6 +59,9 @@ number of Y transfers is 2048 and so we scale by 2048.
 from collections.abc import Iterable
 import json
 import logging
+
+# LOCAL
+from .utils_calib import SM4_MJD
 
 import numpy as np
 import requests
@@ -210,6 +214,10 @@ class PhotCTEAPI:
             )
             LOG.error(msg)
             return
+        # Check to see if the date occurs before SM4
+        if inputs['mjd'] < SM4_MJD:
+            LOG.error(f"Observation MJD must occur after SM4, {SM4_MJD}")
+            return 'mjd'
 
         return inputs
 
@@ -258,7 +266,7 @@ class PhotCTEAPI:
         inputs = self._check_inputs(**inputs)
 
         if not isinstance(inputs, dict) and isinstance(inputs, str):
-            LOG.error(f'Please check the following input {inputs}')
+            LOG.error(f'Please check the following input: {inputs}')
             return
         elif inputs is None:
             LOG.error('Please check the iterable inputs')
