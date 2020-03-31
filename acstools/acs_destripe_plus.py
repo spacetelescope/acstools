@@ -20,8 +20,8 @@ Examples
 
 In Python:
 
->>> from acstools import acs_destripe_plus
->>> acs_destripe_plus.destripe_plus(
+>>> from acstools.acs_destripe_plus import destripe_plus
+>>> destripe_plus(
 ...     'j12345678_raw.fits', suffix='strp', maxiter=15, sigrej=2.0,
 ...     scimask1='mymask_sci1.fits', scimask2='mymask_sci2.fits',
 ...     clobber=False, cte_correct=True)
@@ -57,6 +57,7 @@ From command line::
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
 # 12JAN2016 (v0.4.1) Lim added new subarray modes that are allowed CTE corr.
+# 01APR2020 (v0.4.3) Lim added capability to produce CRJ/CRC outputs.
 
 # STDLIB
 import logging
@@ -81,13 +82,14 @@ from . import acs_destripe
 from . import acs2d
 from . import acsccd
 from . import acscte
+from . import acsrej
 from .utils_calib import SM4_MJD
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.2'
-__vdate__ = '31-May-2018'
+__version__ = '0.4.3'
+__vdate__ = '01-Apr-2020'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
-__all__ = ['destripe_plus']
+__all__ = ['destripe_plus', 'crrej_plus']
 
 SUBARRAY_LIST = [
     'WFC1-2K', 'WFC1-POL0UV', 'WFC1-POL0V', 'WFC1-POL60V',
@@ -399,7 +401,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         if aperture in SUBARRAY_LIST:
             is_subarray = True
         else:
-            LOG.warning('Using non-supported subarray, '
+            LOG.warning(f'Using non-supported subarray ({aperture}), '
                         'turning CTE correction off')
             cte_correct = False
 
@@ -515,6 +517,75 @@ def _get_mask(scimask, n):
         raise TypeError(f"'scimask{n}' must be either a str file name, "
                         "a numpy.ndarray, or None.")
     return mask
+
+
+def crrej_plus(filelist, outroot, keep_intermediate_files=True, verbose=True):
+    """Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
+    The purpose of this is primarily for combining destriped
+    products from :func:`destripe_plus`.
+
+    .. note::
+
+        If you want to run this step, it is important to keep
+        intermediate files when running :func:`destripe_plus`.
+
+    Parameters
+    ----------
+    filelist : list of str
+        List of BLV_TMP or BLC_TMP files to be combined and processed.
+        Do not mix BLV and BLC in the same list, but rather run this
+        once for BLV and once for BLC separately.
+
+    outroot : str
+        Rootname for combined product, which will be named
+        ``<outroot>_crj.fits`` (for BLV inputs) or
+        ``<outroot>_crc.fits`` (for BLC inputs).
+
+    keep_intermediate_files : bool
+        Keep de-striped CRJ_TMP or CRC_TMP around after CRREJ.
+
+    verbose : bool
+        Print informational messages.
+
+    Raises
+    ------
+    ValueError
+        Ambiguous input list.
+
+    Examples
+    --------
+    >>> import glob
+    >>> from acstools.acs_destripe_plus import destripe_plus, crrej_plus
+
+    First, run :func:`destripe_plus`. Remember to keep its intermediate files:
+
+    >>> destripe_plus(...)
+
+    Now, run this function, once on BLV only, and once again on BLC only:
+
+    >>> rootname = 'j12345678'
+    >>> crrej_plus(glob.glob('*_blv_tmp.fits'), rootname)
+    >>> crrej_plus(glob.glob('*_blc_tmp.fits'), rootname)
+
+    """
+    is_blv = np.all(['blv_tmp.fits' in f for f in filelist])
+    is_blc = np.all(['blc_tmp.fits' in f for f in filelist])
+
+    if is_blv is is_blc:
+        raise ValueError('Inputs must be all BLV_TMP or all BLC_TMP files')
+
+    if is_blv:
+        sfx = 'crj'
+    else:  # is_blc
+        sfx = 'crc'
+
+    tmpname = f'{outroot}_{sfx}_tmp.fits'
+    acsrej.acsrej(filelist, tmpname, verbose=verbose)
+    acs2d.acs2d(tmpname, verbose=verbose)  # crx_tmp -> crx
+
+    # Delete intermediate file
+    if not keep_intermediate_files and os.path.isfile(tmpname):
+        os.remove(tmpname)
 
 
 #-----------------------------#
