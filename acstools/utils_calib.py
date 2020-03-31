@@ -21,6 +21,9 @@ __all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
            'from_lt', 'hdr_vals_for_overscan', 'check_oscntab',
            'check_overscan']
 
+# The MJD date of the EVA during SM4 to restore ACS/WFC and ACS/HRC
+SM4_MJD = 54967.0
+
 
 def extract_dark(prihdr, scihdu):
     """Extract superdark data from ``DARKFILE`` or ``DRKCFILE``.

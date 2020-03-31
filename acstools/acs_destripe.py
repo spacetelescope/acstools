@@ -52,7 +52,7 @@ except ImportError:
     from astropy.io import fits
 
 # LOCAL
-from .utils_calib import extract_dark, extract_flash, extract_flatfield
+from .utils_calib import extract_dark, extract_flash, extract_flatfield, SM4_MJD
 
 __taskname__ = 'acs_destripe'
 __version__ = '0.8.2'
@@ -72,7 +72,6 @@ __all__ = ['clean']
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
 
-MJD_SM4 = 54967
 
 logging.basicConfig()
 LOG = logging.getLogger(__taskname__)
@@ -421,7 +420,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
 
     for image, maskfile1, maskfile2 in zip(flist, mlist1, mlist2):
         # Skip processing pre-SM4 images
-        if (fits.getval(image, 'EXPSTART') <= MJD_SM4):
+        if (fits.getval(image, 'EXPSTART') <= SM4_MJD):
             LOG.warning(f'{image} is pre-SM4. Skipping...')
             continue
 
