@@ -350,8 +350,9 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                 lower=lower, upper=upper, binwidth=binwidth,
                 maxiter=maxiter, sigrej=sigrej,
                 scimask1=scimask1, scimask2=scimask2, dqbits=dqbits,
-                cte_correct=cte_correct, clobber=clobber, verbose=verbose
-            )
+                cte_correct=cte_correct,
+                keep_intermediate_files=keep_intermediate_files,
+                clobber=clobber, verbose=verbose)
         return
 
     inputfile = flist[0]
