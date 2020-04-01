@@ -527,7 +527,7 @@ def _get_mask(scimask, n):
 
 
 def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
-    """Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
+    r"""Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
     The purpose of this is primarily for combining destriped
     products from :func:`destripe_plus`.
 
@@ -538,10 +538,16 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     Parameters
     ----------
-    filelist : list of str
+    filelist : str or list of str
         List of BLV_TMP or BLC_TMP files to be combined and processed.
         Do not mix BLV and BLC in the same list, but rather run this
         once for BLV and once for BLC separately.
+        Input filenames in one of these formats:
+
+            * a Python list of filenames
+            * a partial filename with wildcards ('\*blx_tmp.fits')
+            * filename of an ASN table ('j12345670_asn.fits')
+            * an at-file (``@input``)
 
     outroot : str
         Rootname for combined product, which will be named
@@ -561,7 +567,6 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     Examples
     --------
-    >>> import glob
     >>> from acstools.acs_destripe_plus import destripe_plus, crrej_plus
 
     First, run :func:`destripe_plus`. Remember to keep its intermediate files:
@@ -571,10 +576,15 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
     Now, run this function, once on BLV only, and once again on BLC only:
 
     >>> rootname = 'j12345678'
-    >>> crrej_plus(glob.glob('*_blv_tmp.fits'), rootname)
-    >>> crrej_plus(glob.glob('*_blc_tmp.fits'), rootname)
+    >>> crrej_plus('*_blv_tmp.fits', rootname)
+    >>> crrej_plus('*_blc_tmp.fits', rootname)
 
     """
+    # Optional package dependencies
+    from stsci.tools import parseinput
+
+    filelist = parseinput.parseinput(filelist)[0]
+
     is_blv = np.all(['blv_tmp.fits' in f for f in filelist])
     is_blc = np.all(['blc_tmp.fits' in f for f in filelist])
 
