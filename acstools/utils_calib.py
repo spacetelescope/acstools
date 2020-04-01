@@ -22,7 +22,7 @@ __all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
            'check_overscan', 'SM4_MJD']
 
 # The MJD date of the EVA during SM4 to restore ACS/WFC and ACS/HRC.
-# This value is also defined in header file, acs.h, for us by calacs.e in hstcal
+# This value is also defined in header file, acs.h, for use by calacs.e in hstcal
 SM4_MJD = 54967.0
 
 
