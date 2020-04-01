@@ -81,6 +81,7 @@ from . import acs_destripe
 from . import acs2d
 from . import acsccd
 from . import acscte
+from .utils_calib import SM4_MJD
 
 __taskname__ = 'acs_destripe_plus'
 __version__ = '0.4.2'
@@ -88,7 +89,6 @@ __vdate__ = '31-May-2018'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
 __all__ = ['destripe_plus']
 
-SM4_DATE = Time('2008-01-01')
 SUBARRAY_LIST = [
     'WFC1-2K', 'WFC1-POL0UV', 'WFC1-POL0V', 'WFC1-POL60V',
     'WFC1-POL60UV', 'WFC1-POL120V', 'WFC1-POL120UV', 'WFC1-SMFL',
@@ -377,7 +377,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     ctecorr = header['PCTECORR']
     aperture = header['APERTURE']
     detector = header['DETECTOR']
-    date_obs = Time(header['DATE-OBS'])
+    date_obs = Time(header['DATE-OBS']).mjd  # Convert to MJD for comparison
 
     # intermediate filenames
     blvtmp_name = inputfile.replace('raw', 'blv_tmp')
@@ -392,7 +392,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         raise ValueError(f"{inputfile} is not a WFC image, please check the "
                          "'DETECTOR' keyword.")
 
-    if date_obs < SM4_DATE:
+    if date_obs < SM4_MJD:
         raise ValueError(f"{inputfile} is a pre-SM4 image.")
 
     if header['SUBARRAY'] and cte_correct:
