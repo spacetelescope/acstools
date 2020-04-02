@@ -484,7 +484,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     # run ACS2D to get FLT and FLC images
     acs2d.acs2d(blvtmp_name)
-    if cte_correct:
+    if cte_correct and os.path.isfile(blctmp_name):
         acs2d.acs2d(blctmp_name)
 
     # delete intermediate files
@@ -593,12 +593,21 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     if is_blv:
         sfx = 'crj'
+        wrongsfx = 'flt'
     else:  # is_blc
         sfx = 'crc'
+        wrongsfx = 'flc'
 
     tmpname = f'{outroot}_{sfx}_tmp.fits'
     acsrej.acsrej(filelist, tmpname, verbose=verbose)
     acs2d.acs2d(tmpname, verbose=verbose)  # crx_tmp -> crx
+
+    # Work around a bug in ACS2D that names crx_tmp -> crx_tmp_flt, see
+    # https://github.com/spacetelescope/hstcal/pull/470
+    wrongname = f'{outroot}_{sfx}_tmp_{wrongsfx}.fits'
+    rightname = f'{outroot}_{sfx}.fits'
+    if os.path.isfile(wrongname) and not os.path.exists(rightname):
+        os.rename(wrongname, rightname)
 
     # Delete intermediate file
     if not keep_intermediate_files and os.path.isfile(tmpname):
