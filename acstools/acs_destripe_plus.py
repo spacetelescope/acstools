@@ -593,10 +593,8 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     if is_blv:
         sfx = 'crj'
-        wrongsfx = 'flt'
     else:  # is_blc
         sfx = 'crc'
-        wrongsfx = 'flc'
 
     tmpname = f'{outroot}_{sfx}_tmp.fits'
     acsrej.acsrej(filelist, tmpname, verbose=verbose)
@@ -604,7 +602,7 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     # Work around a bug in ACS2D that names crx_tmp -> crx_tmp_flt, see
     # https://github.com/spacetelescope/hstcal/pull/470
-    wrongname = f'{outroot}_{sfx}_tmp_{wrongsfx}.fits'
+    wrongname = f'{outroot}_{sfx}_tmp_flt.fits'
     rightname = f'{outroot}_{sfx}.fits'
     if os.path.isfile(wrongname) and not os.path.exists(rightname):
         os.rename(wrongname, rightname)
