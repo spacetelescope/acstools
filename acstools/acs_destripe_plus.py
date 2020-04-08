@@ -607,6 +607,15 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
     if os.path.isfile(wrongname) and not os.path.exists(rightname):
         os.rename(wrongname, rightname)
 
+        # Brute-force fixing of final output header.
+        with fits.open(rightname, 'update') as pf:
+            pf[0].header['FILENAME'] = rightname
+            pf[0].header['ROOTNAME'] = outroot
+
+            for hdu in pf[1:]:
+                hdu.header['EXPNAME'] = outroot
+                hdu.header['ROOTNAME'] = outroot
+
     # Delete intermediate file
     if not keep_intermediate_files and os.path.isfile(tmpname):
         os.remove(tmpname)
