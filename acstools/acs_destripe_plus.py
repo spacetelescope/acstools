@@ -20,8 +20,8 @@ Examples
 
 In Python:
 
->>> from acstools import acs_destripe_plus
->>> acs_destripe_plus.destripe_plus(
+>>> from acstools.acs_destripe_plus import destripe_plus
+>>> destripe_plus(
 ...     'j12345678_raw.fits', suffix='strp', maxiter=15, sigrej=2.0,
 ...     scimask1='mymask_sci1.fits', scimask2='mymask_sci2.fits',
 ...     clobber=False, cte_correct=True)
@@ -34,7 +34,7 @@ From command line::
                         [--binwidth BINWIDTH] [--sci1_mask SCI1_MASK]
                         [--sci2_mask SCI2_MASK] [--dqbits [DQBITS]]
                         [--rpt_clean RPT_CLEAN] [--atol [ATOL]] [--nocte]
-                        [--clobber] [-q] [--version]
+                        [--keep_intermediate_files] [--clobber] [-q] [--version]
                         input
 
 """
@@ -57,6 +57,7 @@ From command line::
 #           corrections in the "RAW" space) and support for various
 #           statistics modes. See Ticket #1183.
 # 12JAN2016 (v0.4.1) Lim added new subarray modes that are allowed CTE corr.
+# 01APR2020 (v0.4.3) Lim added capability to produce CRJ/CRC outputs.
 
 # STDLIB
 import logging
@@ -81,13 +82,14 @@ from . import acs_destripe
 from . import acs2d
 from . import acsccd
 from . import acscte
+from . import acsrej
 from .utils_calib import SM4_MJD
 
 __taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.2'
-__vdate__ = '31-May-2018'
+__version__ = '0.4.3'
+__vdate__ = '01-Apr-2020'
 __author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
-__all__ = ['destripe_plus']
+__all__ = ['destripe_plus', 'crrej_plus']
 
 SUBARRAY_LIST = [
     'WFC1-2K', 'WFC1-POL0UV', 'WFC1-POL0V', 'WFC1-POL60V',
@@ -106,7 +108,8 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                   sigrej=2.0, lower=None, upper=None, binwidth=0.3,
                   scimask1=None, scimask2=None,
                   dqbits=None, rpt_clean=0, atol=0.01,
-                  cte_correct=True, clobber=False, verbose=True):
+                  cte_correct=True, keep_intermediate_files=False,
+                  clobber=False, verbose=True):
     r"""Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -183,10 +186,6 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         background statistics. This parameter is aplicable *only* to *stat*
         parameter values of `'mode'` or `'midpt'`.
 
-    clobber : bool
-        Specify whether or not to 'clobber' (delete then replace)
-        previously generated products with the same names.
-
     scimask1 : str or list of str
         Mask images for *calibrated* ``SCI,1``, one for each input file.
         Pixels with zero values will be masked out, in addition to clipping.
@@ -247,6 +246,14 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     cte_correct : bool
         Perform CTE correction.
+
+    keep_intermediate_files : bool
+        Keep de-striped BLV_TMP and BLC_TMP files around for CRREJ,
+        if needed. Set to `True` if you want to run :func:`crrej_plus`.
+
+    clobber : bool
+        Specify whether or not to 'clobber' (delete then replace)
+        previously generated products with the same names.
 
     verbose : bool
         Print informational messages. Default = True.
@@ -343,8 +350,9 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
                 lower=lower, upper=upper, binwidth=binwidth,
                 maxiter=maxiter, sigrej=sigrej,
                 scimask1=scimask1, scimask2=scimask2, dqbits=dqbits,
-                cte_correct=cte_correct, clobber=clobber, verbose=verbose
-            )
+                cte_correct=cte_correct,
+                keep_intermediate_files=keep_intermediate_files,
+                clobber=clobber, verbose=verbose)
         return
 
     inputfile = flist[0]
@@ -399,7 +407,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         if aperture in SUBARRAY_LIST:
             is_subarray = True
         else:
-            LOG.warning('Using non-supported subarray, '
+            LOG.warning(f'Using non-supported subarray ({aperture}), '
                         'turning CTE correction off')
             cte_correct = False
 
@@ -476,13 +484,14 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     # run ACS2D to get FLT and FLC images
     acs2d.acs2d(blvtmp_name)
-    if cte_correct:
+    if cte_correct and os.path.isfile(blctmp_name):
         acs2d.acs2d(blctmp_name)
 
     # delete intermediate files
-    os.remove(blvtmp_name)
-    if cte_correct and os.path.isfile(blctmp_name):
-        os.remove(blctmp_name)
+    if not keep_intermediate_files:
+        os.remove(blvtmp_name)
+        if cte_correct and os.path.isfile(blctmp_name):
+            os.remove(blctmp_name)
 
     info_str = f'Done.\nFLT: {flt_name}\n'
     if cte_correct:
@@ -515,6 +524,112 @@ def _get_mask(scimask, n):
         raise TypeError(f"'scimask{n}' must be either a str file name, "
                         "a numpy.ndarray, or None.")
     return mask
+
+
+def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
+    r"""Perform CRREJ and ACS2D on given BLV_TMP or BLC_TMP files.
+    The purpose of this is primarily for combining destriped
+    products from :func:`destripe_plus`.
+
+    .. note::
+
+        If you want to run this step, it is important to keep
+        intermediate files when running :func:`destripe_plus`.
+
+    Parameters
+    ----------
+    filelist : str or list of str
+        List of BLV_TMP or BLC_TMP files to be combined and processed.
+        Do not mix BLV and BLC in the same list, but rather run this
+        once for BLV and once for BLC separately.
+        Input filenames in one of these formats:
+
+            * a Python list of filenames
+            * a partial filename with wildcards ('\*blx_tmp.fits')
+            * filename of an ASN table ('j12345670_asn.fits')
+            * an at-file (``@input``)
+
+    outroot : str
+        Rootname for combined product, which will be named
+        ``<outroot>_crj.fits`` (for BLV inputs) or
+        ``<outroot>_crc.fits`` (for BLC inputs).
+
+    keep_intermediate_files : bool
+        Keep de-striped CRJ_TMP or CRC_TMP around after CRREJ.
+
+    verbose : bool
+        Print informational messages.
+
+    Raises
+    ------
+    ValueError
+        Ambiguous input list.
+
+    Examples
+    --------
+    >>> from acstools.acs_destripe_plus import destripe_plus, crrej_plus
+
+    First, run :func:`destripe_plus`. Remember to keep its intermediate files:
+
+    >>> destripe_plus(..., keep_intermediate_files=True)
+
+    Now, run this function, once on BLV only, and once again on BLC only:
+
+    >>> rootname = 'j12345678'
+    >>> crrej_plus('*_blv_tmp.fits', rootname)
+    >>> crrej_plus('*_blc_tmp.fits', rootname)
+
+    """
+    # Optional package dependencies
+    from stsci.tools import parseinput
+
+    filelist = parseinput.parseinput(filelist)[0]
+
+    is_blv = np.all(['blv_tmp.fits' in f for f in filelist])
+    is_blc = np.all(['blc_tmp.fits' in f for f in filelist])
+
+    if is_blv is is_blc:
+        raise ValueError('Inputs must be all BLV_TMP or all BLC_TMP files')
+
+    if is_blv:
+        sfx = 'crj'
+    else:  # is_blc
+        sfx = 'crc'
+
+    tmpname = f'{outroot}_{sfx}_tmp.fits'
+    acsrej.acsrej(filelist, tmpname, verbose=verbose)
+    acs2d.acs2d(tmpname, verbose=verbose)  # crx_tmp -> crx
+
+    # Work around a bug in ACS2D that names crx_tmp -> crx_tmp_flt, see
+    # https://github.com/spacetelescope/hstcal/pull/470
+    wrongname = f'{outroot}_{sfx}_tmp_flt.fits'
+    rightname = f'{outroot}_{sfx}.fits'
+    if os.path.isfile(wrongname) and not os.path.exists(rightname):
+        os.rename(wrongname, rightname)
+
+        # Brute-force fixing of final output header.
+        with fits.open(rightname, 'update') as pf:
+            pf[0].header['FILENAME'] = rightname
+            pf[0].header['ROOTNAME'] = outroot
+
+            for hdu in pf[1:]:
+                hdu.header['EXPNAME'] = outroot
+                hdu.header['ROOTNAME'] = outroot
+
+    # Delete intermediate file
+    if not keep_intermediate_files and os.path.isfile(tmpname):
+        os.remove(tmpname)
+
+    # Delete extraneous trailer file generated by ACSREJ. Its contents are
+    # copied to the trailer file generated by ACS2D after anyway.
+    final_tra = f'{outroot}_{sfx}_tmp.tra'
+    extra_tra = f'{outroot}.tra'
+    if os.path.isfile(extra_tra) and os.path.isfile(final_tra):
+        os.remove(extra_tra)
+
+        # If fixing the HSTCAL bug changes TRA naming too, this needs to be
+        # adjusted accordingly.
+        os.rename(final_tra, f'{outroot}_{sfx}.tra')
 
 
 #-----------------------------#
@@ -569,6 +684,9 @@ def main():
     parser.add_argument(
         '--nocte', action='store_true', help='Turn off CTE correction.')
     parser.add_argument(
+        '--keep_intermediate_files', action='store_true',
+        help='Keep intermediate BLV_TMP and BLC_TMP files')
+    parser.add_argument(
         '--clobber', action='store_true', help='Clobber output')
     parser.add_argument(
         '-q', '--quiet', action="store_true",
@@ -594,8 +712,9 @@ def main():
                   binwidth=options.binwidth,
                   scimask1=mask1, scimask2=mask2, dqbits=options.dqbits,
                   rpt_clean=options.rpt_clean, atol=options.atol,
-                  cte_correct=not options.nocte, clobber=options.clobber,
-                  verbose=not options.quiet)
+                  cte_correct=not options.nocte,
+                  keep_intermediate_files=options.keep_intermediate_files,
+                  clobber=options.clobber, verbose=not options.quiet)
 
 
 if __name__ == '__main__':
