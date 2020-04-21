@@ -1,6 +1,7 @@
-***********************
-ACS Photometric CTE API
-***********************
+*******************
+ACS Photometric CTE
+*******************
 
 .. automodapi:: acstools.acsphotcte
+    :no-heading:
     :no-inheritance-diagram:

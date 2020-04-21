@@ -1,5 +1,0 @@
-******************
-ACSCTEFORWARDMODEL
-******************
-
-.. automodapi:: acstools.acscteforwardmodel

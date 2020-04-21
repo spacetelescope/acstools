@@ -1,5 +1,0 @@
-******
-ACSSUM
-******
-
-.. automodapi:: acstools.acssum

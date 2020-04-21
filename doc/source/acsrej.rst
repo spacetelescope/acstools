@@ -1,5 +1,0 @@
-******
-ACSREJ
-******
-
-.. automodapi:: acstools.acsrej

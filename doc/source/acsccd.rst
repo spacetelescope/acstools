@@ -1,5 +1,0 @@
-******
-ACSCCD
-******
-
-.. automodapi:: acstools.acsccd
