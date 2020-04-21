@@ -13,6 +13,8 @@
 
 from pkg_resources import get_distribution
 
+import stsci_rtd_theme
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -94,12 +96,11 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 modindex_common_prefix = ['acstools.']
 
-
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'stsci_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -107,8 +108,7 @@ html_theme = 'sphinx_rtd_theme'
 #html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
-html_static_path = ['_static']
+html_theme_path = [stsci_rtd_theme.get_html_theme_path()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -169,7 +169,6 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'acstoolsdoc'
 
-
 # -- Options for LaTeX output --------------------------------------------------
 
 # The paper size ('letter' or 'a4').
@@ -202,8 +201,7 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_use_modindex = True
 
-
-# Example configuration for intersphinx: refer to the Python standard library.
+# Configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'python': ('https://docs.python.org/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
@@ -218,3 +216,8 @@ linkcheck_retry = 5
 linkcheck_ignore = ['https://hsthelp.stsci.edu']
 linkcheck_timeout = 180
 linkcheck_anchors = False
+
+
+# STScI theme CSS
+def setup(app):
+    app.add_css_file("stsci.css")
