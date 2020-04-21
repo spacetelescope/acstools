@@ -274,9 +274,9 @@ Using ASN as input with ACSREJ:
 
 CALACS uses HSTIO that utilizes ``PIXVALUE`` keyword to represent a data
 extension with constant value. However, this is not a standard FITS behavior
-and is not recognized by PyFITS. Therefore, one should use
+and is not recognized by ``astropy.io.fits``. Therefore, one should use
 ``stsci.tools.stpyfits``, which is distributed as part of ``stsci_python``,
-instead of ``pyfits`` or `astropy.io.fits` when working with CALACS products.
+instead of `astropy.io.fits` when working with CALACS products.
 To use ``stpyfits`` in Python::
 
-    from stsci.tools import stpyfits as pyfits
+    from stsci.tools import stpyfits as fits

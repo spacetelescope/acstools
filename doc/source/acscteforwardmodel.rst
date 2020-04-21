@@ -2,7 +2,4 @@
 ACSCTEFORWARDMODEL
 ******************
 
-.. currentmodule:: acstools.acscteforwardmodel
-
-.. automodule:: acstools.acscteforwardmodel
-   :members: acscteforwardmodel
+.. automodapi:: acstools.acscteforwardmodel

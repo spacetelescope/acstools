@@ -2,7 +2,4 @@
 Calibration Utilities
 *********************
 
-.. currentmodule:: acstools.utils_calib
-
-.. automodule:: acstools.utils_calib
-   :members:
+.. automodapi:: acstools.utils_calib
