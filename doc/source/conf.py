@@ -13,8 +13,6 @@
 
 from pkg_resources import get_distribution
 
-import stsci_rtd_theme
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -100,7 +98,7 @@ modindex_common_prefix = ['acstools.']
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
-html_theme = 'stsci_rtd_theme'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -108,7 +106,7 @@ html_theme = 'stsci_rtd_theme'
 #html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [stsci_rtd_theme.get_html_theme_path()]
+#html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -216,8 +214,3 @@ linkcheck_retry = 5
 linkcheck_ignore = ['https://hsthelp.stsci.edu']
 linkcheck_timeout = 180
 linkcheck_anchors = False
-
-
-# STScI theme CSS
-def setup(app):
-    app.add_css_file("stsci.css")

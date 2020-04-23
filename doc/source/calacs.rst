@@ -4,25 +4,52 @@
 CALACS
 ******
 
-Pipeline Python Wrappers
-========================
+CALACS Python Wrapper
+=====================
 
 .. automodapi:: acstools.calacs
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
+
+ACSCCD Python Wrapper
+=====================
 
 .. automodapi:: acstools.acsccd
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
+
+ACSCTE Python Wrapper
+=====================
 
 .. automodapi:: acstools.acscte
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
+
+ACSREJ Python Wrapper
+=====================
 
 .. automodapi:: acstools.acsrej
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
+
+ACS2D Python Wrapper
+====================
 
 .. automodapi:: acstools.acs2d
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
 
+ACSSUM Python Wrapper
+=====================
+
 .. automodapi:: acstools.acssum
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
 
 CTE Forward Model
@@ -31,6 +58,8 @@ CTE Forward Model
 This functionality is provided but not run as part of the pipeline.
 
 .. automodapi:: acstools.acscteforwardmodel
+    :no-heading:
+    :headings: =-
     :no-inheritance-diagram:
 
 PIXVALUE in FITS File
@@ -45,8 +74,8 @@ To use ``stpyfits`` in Python::
 
     from stsci.tools import stpyfits as fits
 
-calacs.e (HSTCAL)
-=================
+calacs.e (C Program)
+====================
 
 A detailed description of this new and improved CALACS is available in
 `ACS Data Handbook v7.0 or later <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_.
