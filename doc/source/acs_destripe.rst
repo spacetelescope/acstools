@@ -1,23 +1,21 @@
+*******************************
+Standalone WFC Destriping Tools
+*******************************
+
 .. _acsdestripe:
 
-************
 ACS Destripe
-************
+============
 
-.. currentmodule:: acstools.acs_destripe
+.. automodapi:: acstools.acs_destripe
+    :no-heading:
+    :no-inheritance-diagram:
 
-.. automodule:: acstools.acs_destripe
-   :members: clean
+.. _acsdestripeplus:
 
+ACS Destripe Plus
+=================
 
-Version
--------
-
-.. autodata:: acstools.acs_destripe.__version__
-.. autodata:: acstools.acs_destripe.__vdate__
-
-
-Author
-------
-
-.. autodata:: acstools.acs_destripe.__author__
+.. automodapi:: acstools.acs_destripe_plus
+    :no-heading:
+    :no-inheritance-diagram:

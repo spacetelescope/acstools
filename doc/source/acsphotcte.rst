@@ -1,8 +1,7 @@
-***********************
-ACS Photometric CTE API
-***********************
-
-**Author**: Nathan Miles
+*******************
+ACS Photometric CTE
+*******************
 
 .. automodapi:: acstools.acsphotcte
+    :no-heading:
     :no-inheritance-diagram:
