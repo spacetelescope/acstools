@@ -270,14 +270,10 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         Invalid header values or CALACS version.
 
     """
+    from astropy.nddata.bitmask import interpret_bit_flags
+
     # Optional package dependencies
     from stsci.tools import parseinput
-    try:
-        from stsci.tools.bitmask import interpret_bit_flags
-    except ImportError:
-        from stsci.tools.bitmask import (
-            interpret_bits_value as interpret_bit_flags
-        )
 
     # process input file(s) and if we have multiple input files - recursively
     # call acs_destripe_plus for each input image:

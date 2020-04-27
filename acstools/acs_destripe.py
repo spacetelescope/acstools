@@ -540,15 +540,8 @@ def perform_correction(image, output, stat="pmode1", maxiter=15, sigrej=2.0,
 
 
 def _mergeUserMaskAndDQ(dq, mask, dqbits):
-    # Optional package dependency
-    try:
-        from stsci.tools.bitmask import (interpret_bit_flags,
-                                         bitfield_to_boolean_mask)
-    except ImportError:
-        from stsci.tools.bitmask import (
-            interpret_bits_value as interpret_bit_flags,
-            bitmask2mask as bitfield_to_boolean_mask
-        )
+    from astropy.nddata.bitmask import (interpret_bit_flags,
+                                        bitfield_to_boolean_mask)
 
     dqbits = interpret_bit_flags(dqbits)
     if dqbits is None:
