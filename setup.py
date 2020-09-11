@@ -36,9 +36,4 @@ if 'build_docs' in sys.argv or 'build_sphinx' in sys.argv:
 
 setup(
     use_scm_version={'write_to': 'acstools/version.py'},
-    #project_urls={
-    #    'Bug Reports': 'https://github.com/spacetelescope/acstools/issues/',
-    #    'Source': 'https://github.com/spacetelescope/acstools/',
-    #    'Help': 'https://hsthelp.stsci.edu',
-    #},
 )
