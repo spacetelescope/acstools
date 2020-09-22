@@ -29,6 +29,11 @@ class PolarizerTables:
         self.hrc_transmission = Table(self.table_data['transmission']['hrc'],
                                       names=('filter', 't_para', 't_perp', 'correction'))
 
+        self.wfc_efficiency = Table(self.table_data['efficiency']['wfc'],
+                                    names=('filter', 'pol0', 'pol60', 'pol120'))
+
+        self.hrc_efficiency = Table(self.table_data['efficiency']['hrc'],
+                                    names=('filter', 'pol0', 'pol60', 'pol120'))
 
 class Polarization:
     """
