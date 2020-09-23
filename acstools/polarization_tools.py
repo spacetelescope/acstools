@@ -1,85 +1,328 @@
-#!/usr/bin/env python
 """
-Toolkit for analyzing HST/ACS polarization data.
+Toolkit for analyzing HST/ACS WFC and HRC polarization data. For more information
+about ACS polarization data analysis, see section 5.3 of the ACS Data Handbook:
 
-CHANGE LOG
-----------
-2020-09-22: Creation. (T. Desjardins)
+https://hst-docs.stsci.edu/acsdhb/chapter-5-acs-data-analysis/5-3-polarimetry
 """
 
-import numpy as np
 import os
+import numpy as np
 import yaml
 
+from astropy import units
 from astropy.table import Table
+from astropy.utils.data import get_pkg_data_filename
+
+
+def calc_stokes(pol0, pol60, pol120, c0=1, c60=1, c120=1):
+    """
+    Calculate the Stokes parameters for ACS observations.
+
+    Parameters
+    ----------
+    pol0 : float
+        Measurement in the POL0 filter. Units: electrons or electrons/second.
+    pol60 : float
+        Measurement in the POL60 filter. Units: electrons or electrons/second.
+    pol120 : float
+        Measurement in the POL120 filter. Units: electrons or electrons/second.
+    c0 : float (Default = 1; optional)
+        Efficiency term for the POL0 filter. This comes from the ACS Data Handbook
+        Table 5.6 in Section 5.3.4.
+    c60 : float (Default = 1; optional)
+        Efficiency term for the POL60 filter. This comes from the ACS Data Handbook
+        Table 5.6 in Section 5.3.4.
+    c120 : float (Default = 1; optional)
+        Efficiency term for the POL120 filter. This comes from the ACS Data Handbook
+        Table 5.6 in Section 5.3.4.
+
+    Returns
+    -------
+    i, q, u : tuple of floats
+        Stokes I, Q, and U parameters.
+    """
+
+    r0 = pol0 * c0
+    r60 = pol60 * c60
+    r120 = pol120 * c120
+
+    i = (2 / 3) * (r0 + r60 + r120)
+    q = (2 / 3) * ((2 * r0) - r60 - r120)
+    u = (2 / np.sqrt(3)) * (r60 - r120)
+
+    return i, q, u
+
+
+def calc_fraction(i, q, u, transmission_correction=1):
+    """
+    Method for determining the fractional polarization.
+
+    Parameters
+    ----------
+    i : float
+        Stokes I parameter.
+    q : float
+        Stokes Q parameter.
+    u : float
+        Stokes U parameter.
+    transmission_correction : float (Default = 1)
+        Correction factor to account for the leak of photons with
+        non-parallel electric field position angles. See Section 5.3.4
+        of the ACS Data Handbook.
+
+    Returns
+    -------
+    pol_fraction : float
+        Polarization fraction.
+    """
+
+    pol_fraction = np.sqrt(q**2 + u**2) / i
+    pol_fraction *= transmission_correction
+
+    return pol_fraction
+
+
+def calc_theta(q, u, detector, pav3):
+    """
+    Calculate the position angle of the electric field vector given Stokes Q and U.
+    For ACS, it is also necessary to supply the position angle of the V3 axis of the
+    telescope (PA_V3 in the primary header) and the name of the ACS detector used.
+
+    Parameters
+    ----------
+    q : float
+        Stokes Q parameter.
+    u : float
+        Stokes U parameter.
+    detector : ['wfc', 'hrc']
+        Name of the ACS detector used for the observation. Must be either WFC or HRC.
+    pav3 : float
+        Position angle of the V3 axis in units of degrees. Found in ACS primary headers
+        with keyword PA_V3.
+
+    Returns
+    -------
+    theta : float
+        Position angle of the electric field vector in degrees.
+    """
+
+    if detector.lower() not in ['wfc', 'hrc']:
+        raise ValueError('Detector must be either WFC or HRC.')
+
+    chi = -38.2 if detector.lower() == 'wfc' else -69.4
+    theta = 0.5 * np.degrees(np.arctan2(u, q)) + pav3 + chi
+    theta -= 360 if theta > 360 else 0
+
+    return theta
 
 
 class PolarizerTables:
     """
-    A simple class for holding all of the polarization tables (as astropy tables) in attributes.
-    """
-    def __init__(self):
-        with open(os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir, 'data',
-                                                'polarizer_tables.yaml')), 'r') as yf:
-            self.table_data = yaml.safe_load(yf)
+    A class for holding all of the polarization tables (as astropy tables) in attributes.
+    These attributes are:
 
-        self.wfc_transmission = Table(self.table_data['transmission']['wfc'],
-                                      names=('filter', 't_para', 't_perp', 'correction'))
+    wfc_transmission: Transmission and leak correction factors for computing ACS/WFC fractional polarization.
+    hrc_transmission: Transmission and leak correction factors for computing ACS/HRC fractional polarization.
 
-        self.hrc_transmission = Table(self.table_data['transmission']['hrc'],
-                                      names=('filter', 't_para', 't_perp', 'correction'))
+    wfc_efficiency : Efficiencies of the ACS/WFC polarizers for computing Stokes parameters.
+    hrc_efficiency: Efficiencies of the ACS/HRC polarizers for computing Stokes parameters.
 
-        self.wfc_efficiency = Table(self.table_data['efficiency']['wfc'],
-                                    names=('filter', 'pol0', 'pol60', 'pol120'))
+    .. note::
+        The default table contained within the acstools package uses average transmission leak correction terms
+        for a source with a spectrum flat in wavelength space.
 
-        self.hrc_efficiency = Table(self.table_data['efficiency']['hrc'],
-                                    names=('filter', 'pol0', 'pol60', 'pol120'))
+    Polarizer calibration information can be read from the default YAML file contained in the
+    acstools package, or from a user-supplied YAML file using the class methods .from_yaml() and
+    .from_package_data(). The YAML file format is:
 
+        transmission:
+            detector:
+                filter: list of ACS filters
+                t_para: list of parallel transmissions for each filter
+                t_perp: list of perpendicular transmissions for each filter
+                correction: list of transmission leak correction factors for each filter
+        efficiency:
+            detector:
+                filter: list of ACS filters
+                pol0: list of POL0 coefficients matching each filter
+                pol60: list of POL60 coefficients matching each filter
+                pol120: list of POL120 coefficients matching each filter
 
-class Polarization:
-    """
-    Class for handling ACS polarization data.
+    Multiple detectors can be contained in a single YAML file. An example is shown
+    below:
+
+        transmission:
+            wfc:
+                filter: ['F475W', 'F606W']
+                t_para: [0.42, 0.51]
+                t_perp: [0.0, 0.0]
+                correction: [1.0, 1.0]
+            hrc:
+                filter: ['F330W']
+                t_para: [0.48]
+                t_perp: [0.05]
+                correction: [1.21]
+        efficiency:
+            wfc:
+                filter: ['F475W', 'F606W']
+                pol0: [1.43, 1.33]
+                pol60: [1.47, 1.36]
+                pol120: [1.42, 1.30]
+            hrc:
+                filter: ['F330W']
+                pol0: [1.73]
+                pol60: [1.53]
+                pol120: [1.64]
+
+    Parameters
+    ----------
+    input_dict : dict
 
     Examples
     --------
 
+    To use the default values supplied in the acstools package (which come from the ACS
+    Data Handbook section 5.3):
+
+    >>> from acstools.polarization_tools import PolarizerTables
+    >>> tables = PolarizerTables.from_package_data()
+    >>> print(tables.wfc_efficiency)
+    filter  pol0  pol60  pol120
+    ------ ------ ------ ------
+     F475W 1.4303 1.4717 1.4269
+     F606W 1.3314 1.3607 1.3094
+     F775W 0.9965 1.0255 1.0071
+
+    To supply your own YAML file of the appropriate format:
+
+    >>> from acstools.polarization_tools import PolarizerTables
+    >>> tables = PolarizerTables.from_yaml('data/polarizer_tables.yaml')
+    >>> print(tables.wfc_transmission)
+    filter       t_para               t_perp             correction
+    ------ ------------------ ---------------------- ------------------
+    F475W 0.4239276798513098 0.00015240583841551956  1.000719276691027
+    F606W 0.5156734594049419 5.5908749369641956e-05  1.000216861312415
+    F775W 0.6040891283746557    0.07367364117759412 1.2777959654493372
+    """
+    def __init__(self, input_dict):
+
+        self.data = input_dict
+
+        self.wfc_transmission = Table(self.data['transmission']['wfc'],
+                                      names=('filter', 't_para', 't_perp', 'correction'))
+
+        self.hrc_transmission = Table(self.data['transmission']['hrc'],
+                                      names=('filter', 't_para', 't_perp', 'correction'))
+
+        self.wfc_efficiency = Table(self.data['efficiency']['wfc'], names=('filter', 'pol0', 'pol60', 'pol120'))
+
+        self.hrc_efficiency = Table(self.data['efficiency']['hrc'], names=('filter', 'pol0', 'pol60', 'pol120'))
+
+    @classmethod
+    def from_yaml(cls, yaml_file):
+        """
+        Read in a YAML file containing polarizer calibration data.
+
+        Parameters
+        ----------
+        yaml_file : str
+            Path to the YAML file containing the polarizer calibration information.
+
+        Returns
+        -------
+        acstools.polarizer_tools.PolarizerTables object
+        """
+        with open(yaml_file, 'r') as yf:
+            input_dict = yaml.safe_load(yf)
+        return cls(input_dict)
+
+    @classmethod
+    def from_package_data(cls):
+        """
+        Use the YAML file contained within the acstools package to retrieve the polarizer
+        calibration data.
+
+        Returns
+        -------
+        acstools.polarizer_tools.PolarizerTables object
+        """
+        filename = get_pkg_data_filename(os.path.join('data', 'polarizer_tables.yaml'))
+        return cls.from_yaml(filename)
+
+
+class Polarization:
+    """
+    Class for handling ACS polarization data. Input data for this class come from
+    photometry of ACS polarization images. The methods associated with this class
+    will transform the photometry into Stokes parameters and polarization properties,
+    i.e., the polarization fraction and position angle.
+
+    Parameters
+    ----------
+    pol0 : float
+        Photometric measurement in POL0 filter. Units: electrons or electrons/second.
+    pol60 : float
+        Photometric measurement in POL60 filter. Units: electrons or electrons/second.
+    pol120 : float
+        Photometric measurement in POL120 filter. Units: electrons or electrons/second.
+    filter_name : str
+        Name of the filter crossed with the polarization filter, e.g., F606W.
+    detector : ['wfc', 'hrc']
+        Name of the ACS detector used for the observation. Must be either WFC or HRC.
+    pav3 : float
+        Position angle of the HST V3 axis. This is stored in the ACS primary header under
+        keyword PA_V3. Units: degrees.
+    tables : acstools.polarization_tools.PolarizerTables
+        Object containing the polarization lookup tables containing the efficiency and
+        transmission leak correction factors for the detectors and filters.
+
+    Examples
+    --------
+    From an ACS/WFC F606W observation of Vela 1-81 (the polarized calibration standard
+    star), we have count rates of 63684, 67420, and 63752 electrons/second in POL0V,
+    POL60V, and POL120V, respectively. The PA_V3 keyword value in the image header is
+    348.084 degrees. (Reference: Table 6; Cracraft & Sparks, 2007 (ACS ISR 2007-10)).
+    In this simple case, we will use the polarization reference information contained
+    in the acstools package for the calibration of the polarizers. We can use the
+    Polarization class to determine the Stokes parameters and polarization properties
+    as follows:
     >>> from acstools.polarization_tools import Polarization
     >>> vela_181 = Polarization(63684, 67420, 63752, 'F606W', 'WFC', 348.084)
     >>> vela_181.calc_stokes()
     >>> vela_181.calc_polarization()
     >>> print(f'I = {vela_181.stokes_i:.2f}, Q = {vela_181.stokes_q:.2f}, U = {vela_181.stokes_u:.2f}')
-    >>> print(f'Polarization: {vela_181.polarization * 100:.2f} %, Angle: {vela_181.angle:.2f} deg')
+    I = 173336.09, Q = -3758.34, U = 9539.59
+    >>> print(f'Polarization: {vela_181.polarization:.2%}, Angle: {vela_181.angle:.2f}')
+    Polarization: 5.92%, Angle: 5.64 deg
+
+    If we need to adjust the polarization calibration, we can do so by providing a
+    different set of polarization tables using the acstools.polarization_tools.PolarizerTables
+    class. See the help text for that class for more information about input format.
+    For the same source as above, we can explicitly provide the calibration tables
+    (using the default tables in this example) as:
+    >>> from acstools.polarization_tools import Polarization, PolarizerTables
+    >>> vela_181 = Polarization(63684, 67420, 63752, 'F606W', 'WFC', 348.084,
+    >>>                         tables=PolarizerTables.from_yaml('data/polarizer_tables.yaml'))
+    >>> vela_181.calc_stokes()
+    >>> vela_181.calc_polarization()
+    >>> print(f'I = {vela_181.stokes_i:.2f}, Q = {vela_181.stokes_q:.2f}, U = {vela_181.stokes_u:.2f}')
+    I = 173336.09, Q = -3758.34, U = 9539.59
+    >>> print(f'Polarization: {vela_181.polarization:.2%}, Angle: {vela_181.angle:.2f}')
+    Polarization: 5.92%, Angle: 5.64 deg
     """
 
-    def __init__(self, pol0, pol60, pol120, filter_name, detector, pav3):
-        """
-        Parameters
-        ----------
-        pol0 : float
-            Photometric measurement in POL0 filter. Units: electrons or electrons/second.
-        pol60 : float
-            Photometric measurement in POL60 filter. Units: electrons or electrons/second.
-        pol120 : float
-            Photometric measurement in POL120 filter. Units: electrons or electrons/second.
-        filter_name : str
-            Name of the filter crossed with the polarization filter, e.g., F606W.
-        detector : str
-            Name of the ACS detector used for the observation. Must be either WFC or HRC.
-        pav3 : float
-            Position angle of the HST V3 axis. This is stored in the ACS primary header under
-            keyword PA_V3. Units: degrees.
-        """
+    def __init__(self, pol0, pol60, pol120, filter_name, detector, pav3, tables=None):
 
         self.pol0 = pol0
         self.pol60 = pol60
         self.pol120 = pol120
 
-        self.filter_name = filter_name
-        self.detector = detector
+        self.filter_name = filter_name.upper()
+        self.detector = detector.lower()
         self.pav3 = pav3
 
         # Check if detector is a valid value.
-        if self.detector.lower() not in ['wfc', 'hrc']:
+        if self.detector not in ['wfc', 'hrc']:
             raise ValueError('Detector must be either WFC or HRC')
 
         self.stokes_i = None
@@ -90,52 +333,41 @@ class Polarization:
         self.angle = None
 
         # Get correction terms that we need from the polarization tables.
-        tables = PolarizerTables()
-        leak_tab = Table(tables.table_data['transmission'][detector.lower()])
-        self.transmission_correction = leak_tab[np.where(leak_tab['filter'] == filter_name.upper())]['correction'][0]
+        tables = tables.data if tables else PolarizerTables.from_package_data().data
 
-        eff_tab = Table(tables.table_data['efficiency'][detector.lower()])
-        self.c0 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol0'][0]
-        self.c60 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol60'][0]
-        self.c120 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol120'][0]
+        if 'transmission' not in tables:
+            raise KeyError('Missing polarization reference transmission table.')
+        if 'efficiency' not in tables:
+            raise KeyError('Missing polarization reference efficiency table.')
+
+        try:
+            leak_tab = Table(tables['transmission'][self.detector])
+            eff_tab = Table(tables['efficiency'][self.detector])
+        except KeyError:
+            raise KeyError(f'Polarization reference tables may be missing information for detector '
+                           f'{self.detector.upper()}.')
+
+        try:
+            self.transmission_correction = leak_tab[np.where(leak_tab['filter'] == self.filter_name)]['correction'][0]
+        except IndexError:
+            raise IndexError(f'No match found in input transmission leak correction table for detector '
+                             f'{self.detector.upper()} and filter {self.filter_name}.')
+
+        try:
+            self.c0 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol0'][0]
+            self.c60 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol60'][0]
+            self.c120 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol120'][0]
+        except IndexError:
+            raise IndexError(f'No match found in input efficiency correction table for detector {self.detector.upper()} '
+                             f'and filter {self.filter_name}.')
 
     def calc_stokes(self):
         """
         Calculate Stokes parameters using attributes set at initialization.
         """
 
-        self.stokes_i, self.stokes_q, self.stokes_u = self._calc_stokes([self.pol0, self.pol60, self.pol120],
-                                                                        [self.c0, self.c60, self.c120])
-
-    def _calc_stokes(self, pol_measurements, correction_terms):
-        """
-        Method for determining Stokes parameters for ACS observations.
-
-        Parameters
-        ----------
-        pol_measurements : list or tuple
-            Measurements in each of the three ACS polarization filters. Must be in order
-            of [POL0, POL60, POL120]. Units: electrons or electrons/second.
-        correction_terms : list or tuple
-            Polarizer efficiency correction values. Must be in order of [POL0, POL60, POL120].
-            These can be found in the tables provided by `acstools.acstools.polarization_tools.PolarizerTables()`
-            or in Table 5.6 in Section 5.3 of the ACS Data Handbook.
-
-        Returns
-        -------
-        i, q, u : tuple of floats
-            Stokes I, Q, and U parameters.
-        """
-
-        r0 = pol_measurements[0] * correction_terms[0]
-        r60 = pol_measurements[1] * correction_terms[1]
-        r120 = pol_measurements[2] * correction_terms[2]
-
-        i = (2 / 3) * (r0 + r60 + r120)
-        q = (2 / 3) * ((2 * r0) - r60 - r120)
-        u = (2 / np.sqrt(3)) * (r60 - r120)
-
-        return i, q, u
+        self.stokes_i, self.stokes_q, self.stokes_u = calc_stokes(self.pol0, self.pol60, self.pol120,
+                                                                  c0=self.c0, c60=self.c60, c120=self.c120)
 
     def calc_polarization(self):
         """
@@ -143,63 +375,7 @@ class Polarization:
         using attributes set at initialization.
         """
 
-        self.polarization = self._calc_fraction(self.stokes_i, self.stokes_q, self.stokes_u,
-                                                transmission_correction=self.transmission_correction)
+        self.polarization = calc_fraction(self.stokes_i, self.stokes_q, self.stokes_u,
+                                          transmission_correction=self.transmission_correction)
 
-        self.angle = self._calc_theta(self.stokes_q, self.stokes_u, self.pav3)
-
-    def _calc_fraction(self, i, q, u, transmission_correction=1):
-        """
-        Method for determining the fractional polarization.
-
-        Parameters
-        ----------
-        i : float
-            Stokes I parameter.
-        q : float
-            Stokes Q parameter.
-        u : float
-            Stokes U parameter.
-        transmission_correction : float (Default = 1)
-            Correction factor to account for the leak of photons with
-            non-parallel electric field position angles. See Section 5.3.4
-            of the ACS Data Handbook.
-
-        Returns
-        -------
-        pol_fraction : float
-            Polarization fraction.
-        """
-
-        pol_fraction = np.sqrt(q**2 + u**2) / i
-        pol_fraction *= transmission_correction
-
-        return pol_fraction
-
-    def _calc_theta(self, q, u, pav3):
-        """
-        Calculate the position angle of the electric field vector given Stokes Q and U.
-        For ACS, it is also necessary to supply the position angle of the V3 axis of the
-        telescope (PA_V3 in the primary header) and the name of the ACS detector used.
-
-        Parameters
-        ----------
-        q : float
-            Stokes Q parameter.
-        u : float
-            Stokes U parameter.
-        pav3 : float
-            Position angle of the V3 axis in units of degrees. Found in ACS primary headers
-            with keyword PA_V3.
-
-        Returns
-        -------
-        theta : float
-            Position angle of the electric field vector in degrees.
-        """
-
-        chi = -38.2 if self.detector.lower() == 'wfc' else -69.4
-        theta = 0.5 * np.degrees(np.arctan2(u, q)) + pav3 + chi
-        theta -= 360 if theta > 360 else 0
-
-        return theta
+        self.angle = calc_theta(self.stokes_q, self.stokes_u, self.detector, self.pav3) * units.degree
