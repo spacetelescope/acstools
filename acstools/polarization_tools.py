@@ -20,8 +20,8 @@ class PolarizerTables:
     """
     def __init__(self):
         with open(os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir, 'data',
-                                                'polarizer_tables.yaml'))) as yf:
-            self.table_data = yaml.load(yf, Loader=yaml.FullLoader)
+                                                'polarizer_tables.yaml')), 'r') as yf:
+            self.table_data = yaml.safe_load(yf)
 
         self.wfc_transmission = Table(self.table_data['transmission']['wfc'],
                                       names=('filter', 't_para', 't_perp', 'correction'))
@@ -34,6 +34,7 @@ class PolarizerTables:
 
         self.hrc_efficiency = Table(self.table_data['efficiency']['hrc'],
                                     names=('filter', 'pol0', 'pol60', 'pol120'))
+
 
 class Polarization:
     """
