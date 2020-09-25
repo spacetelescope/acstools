@@ -270,7 +270,7 @@ class PolarizerTables:
 
         Returns
         -------
-        acstools.polarizer_tools.PolarizerTables object
+        `~acstools.polarizer_tools.PolarizerTables` object
         """
         filename = get_pkg_data_filename(os.path.join('data', 'polarizer_tables.yaml'))
         return cls.from_yaml(filename)
