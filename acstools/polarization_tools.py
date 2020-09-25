@@ -404,7 +404,7 @@ class Polarization:
 
     def calc_polarization(self):
         """
-        Calculate the polarization parameters (fractional polarization and position angle) for
+        Calculate the polarization parameters (fractional polarization and position angle)
         using attributes set at initialization.
         """
 
