@@ -225,6 +225,7 @@ class PolarizerTables:
     F475W 0.4239276798513098 0.00015240583841551956  1.000719276691027
     F606W 0.5156734594049419 5.5908749369641956e-05  1.000216861312415
     F775W 0.6040891283746557    0.07367364117759412 1.2777959654493372
+
     >>> print(tables.wfc_transmission.meta['description'])
     WFC filters use MJD corresponding to 2020-01-01. HRC filters use MJD corresponding to 2007-01-01.
     """
@@ -314,12 +315,14 @@ class Polarization:
     in the acstools package for the calibration of the polarizers. We can use the
     Polarization class to determine the Stokes parameters and polarization properties
     as follows:
+
     >>> from acstools.polarization_tools import Polarization
     >>> vela_181 = Polarization(63684, 67420, 63752, 'F606W', 'WFC', 348.084)
     >>> vela_181.calc_stokes()
     >>> vela_181.calc_polarization()
     >>> print(f'I = {vela_181.stokes_i:.2f}, Q = {vela_181.stokes_q:.2f}, U = {vela_181.stokes_u:.2f}')
     I = 173336.09, Q = -3758.34, U = 9539.59
+
     >>> print(f'Polarization: {vela_181.polarization:.2%}, Angle: {vela_181.angle:.2f}')
     Polarization: 5.92%, Angle: 5.64 deg
 
@@ -328,6 +331,7 @@ class Polarization:
     class. See the help text for that class for more information about input format.
     For the same source as above, we can explicitly provide the calibration tables
     (using the default tables in this example) as:
+
     >>> from acstools.polarization_tools import Polarization, PolarizerTables
     >>> vela_181 = Polarization(63684, 67420, 63752, 'F606W', 'WFC', 348.084,
     >>>                         tables=PolarizerTables.from_yaml('data/polarizer_tables.yaml'))
@@ -335,6 +339,7 @@ class Polarization:
     >>> vela_181.calc_polarization()
     >>> print(f'I = {vela_181.stokes_i:.2f}, Q = {vela_181.stokes_q:.2f}, U = {vela_181.stokes_u:.2f}')
     I = 173336.09, Q = -3758.34, U = 9539.59
+
     >>> print(f'Polarization: {vela_181.polarization:.2%}, Angle: {vela_181.angle:.2f}')
     Polarization: 5.92%, Angle: 5.64 deg
     """
