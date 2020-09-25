@@ -13,6 +13,8 @@ from astropy import units
 from astropy.table import Table
 from astropy.utils.data import get_pkg_data_filename
 
+__all__ = ['calc_theta', 'calc_fraction', 'calc_stokes', 'PolarizerTables', 'Polarization']
+
 
 def calc_stokes(pol0, pol60, pol120, c0=1, c60=1, c120=1):
     """
