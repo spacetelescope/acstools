@@ -145,20 +145,20 @@ class PolarizerTables:
     acstools package, or from a user-supplied YAML file using the class methods .from_yaml() and
     .from_package_data(). The YAML file format is:
 
-        transmission:
-            meta: dict
-            detector:
-                filter: list of ACS filters
-                t_para: list of parallel transmissions for each filter
-                t_perp: list of perpendicular transmissions for each filter
-                correction: list of transmission leak correction factors for each filter
-        efficiency:
-            meta: dict
-            detector:
-                filter: list of ACS filters
-                pol0: list of POL0 coefficients matching each filter
-                pol60: list of POL60 coefficients matching each filter
-                pol120: list of POL120 coefficients matching each filter
+    transmission:
+        meta: dictionary of metadata
+        detector:
+            filter: list of ACS filters
+            t_para: list of parallel transmissions for each filter
+            t_perp: list of perpendicular transmissions for each filter
+            correction: list of transmission leak correction factors for each filter
+    efficiency:
+        meta: dictionary of metadata
+        detector:
+            filter: list of ACS filters
+            pol0: list of POL0 coefficients matching each filter
+            pol60: list of POL60 coefficients matching each filter
+            pol120: list of POL120 coefficients matching each filter
 
     The meta elements will pass a dictionary of metadata to the output tables. Any metadata
     can be included, but at minimum a description of the origin of the table values should
