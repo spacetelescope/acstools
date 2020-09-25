@@ -165,30 +165,30 @@ class PolarizerTables:
     be provided. Multiple detectors can be contained in a single YAML file. An example is
     shown below:
 
-        transmission:
-            meta: {'description': 'Descriptive message.'}
-            wfc:
-                filter: ['F475W', 'F606W']
-                t_para: [0.42, 0.51]
-                t_perp: [0.0, 0.0]
-                correction: [1.0, 1.0]
-            hrc:
-                filter: ['F330W']
-                t_para: [0.48]
-                t_perp: [0.05]
-                correction: [1.21]
-        efficiency:
-            meta: {'description': 'Descriptive message.'}
-            wfc:
-                filter: ['F475W', 'F606W']
-                pol0: [1.43, 1.33]
-                pol60: [1.47, 1.36]
-                pol120: [1.42, 1.30]
-            hrc:
-                filter: ['F330W']
-                pol0: [1.73]
-                pol60: [1.53]
-                pol120: [1.64]
+    transmission:
+        meta: {'description': 'Descriptive message.'}
+        wfc:
+            filter: ['F475W', 'F606W']
+            t_para: [0.42, 0.51]
+            t_perp: [0.0, 0.0]
+            correction: [1.0, 1.0]
+        hrc:
+            filter: ['F330W']
+            t_para: [0.48]
+            t_perp: [0.05]
+            correction: [1.21]
+    efficiency:
+        meta: {'description': 'Descriptive message.'}
+        wfc:
+            filter: ['F475W', 'F606W']
+            pol0: [1.43, 1.33]
+            pol60: [1.47, 1.36]
+            pol120: [1.42, 1.30]
+        hrc:
+            filter: ['F330W']
+            pol0: [1.73]
+            pol60: [1.53]
+            pol120: [1.64]
 
     Parameters
     ----------
