@@ -13,7 +13,7 @@ def test_tables():
     assert hasattr(tables, 'hrc_efficiency')
 
     # Check if we can load the tables by specifying the path to a YAML file.
-    tables_from_yaml = polarization_tools.PolarizerTables.from_yaml('acstools/data/polarizer_tables.yaml')
+    _ = polarization_tools.PolarizerTables.from_yaml('acstools/data/polarizer_tables.yaml')
 
 
 def test_theta():
@@ -51,7 +51,7 @@ def test_pol_class():
     but let's test that we get expected exceptions."""
 
     with pytest.raises(IndexError):
-        class_test = polarization_tools.Polarization(1, 1, 1, 'F607W', 'WFC', 1)
+        _ = polarization_tools.Polarization(1, 1, 1, 'F607W', 'WFC', 1)
 
     with pytest.raises(ValueError):
-        class_test = polarization_tools.Polarization(1, 1, 1, 'F606W', 'WFB', 1)
+        _ = polarization_tools.Polarization(1, 1, 1, 'F606W', 'WFB', 1)
