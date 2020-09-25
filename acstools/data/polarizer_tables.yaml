@@ -1,6 +1,7 @@
 transmission:
+  meta: {'description': 'WFC filters use MJD corresponding to 2020-01-01.
+                        HRC filters use MJD corresponding to 2007-01-01.'}
   wfc:
-    # WFC filters use MJD corresponding to 2020-01-01
     correction:
       - 1.000719276691027
       - 1.000216861312415
@@ -18,7 +19,6 @@ transmission:
       - 5.5908749369641956e-05
       - 0.07367364117759412
   hrc:
-    # HRC filters use MJD corresponding to 2007-01-01
     correction:
       - 1.2166920134568413
       - 1.172426477662003
@@ -51,10 +51,8 @@ transmission:
       - 2.8737842034805894e-05
       - 2.3554802083333333e-05
       - 0.07322759822602161
-# Efficiencies come from the ACS Data Handbook Table 5.6.
-# These need to be updated both here and in the handbook
-# after new calibrations are determined.
 efficiency:
+  meta: {'description': 'Efficiencies come from the ACS Data Handbook Table 5.6.'}
   wfc:
     filter:
       - F475W

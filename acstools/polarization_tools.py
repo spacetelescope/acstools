@@ -94,7 +94,7 @@ def calc_theta(q, u, detector, pav3):
         Stokes Q parameter.
     u : float
         Stokes U parameter.
-    detector : ['wfc', 'hrc']
+    detector : {'wfc', 'hrc'}
         Name of the ACS detector used for the observation. Must be either WFC or HRC.
     pav3 : float
         Position angle of the V3 axis in units of degrees. Found in ACS primary headers
@@ -102,18 +102,28 @@ def calc_theta(q, u, detector, pav3):
 
     Returns
     -------
-    theta : float
+    theta : astropy.units.quantity.Quantity
         Position angle of the electric field vector in degrees.
     """
+
+    # If the user supplied an astropy Quantity object, strip off the units.
+    # This will make subsequent math easier without attaching units to
+    # everything. Make sure it's in degrees first.
+    if type(pav3) is units.quantity.Quantity:
+        pav3 = pav3.to(units.degree).value
 
     if detector.lower() not in ['wfc', 'hrc']:
         raise ValueError('Detector must be either WFC or HRC.')
 
     chi = -38.2 if detector.lower() == 'wfc' else -69.4
     theta = 0.5 * np.degrees(np.arctan2(u, q)) + pav3 + chi
-    theta -= 360 if theta > 360 else 0
 
-    return theta
+    # Force the angle to be between 0 and 360 degrees. This result of
+    # the above equation may not always fall in this range because of
+    # the roll angle of the telescope and the camera geometry.
+    theta = np.mod(theta, 360)
+
+    return theta * units.degree
 
 
 class PolarizerTables:
@@ -136,22 +146,27 @@ class PolarizerTables:
     .from_package_data(). The YAML file format is:
 
         transmission:
+            meta: dict
             detector:
                 filter: list of ACS filters
                 t_para: list of parallel transmissions for each filter
                 t_perp: list of perpendicular transmissions for each filter
                 correction: list of transmission leak correction factors for each filter
         efficiency:
+            meta: dict
             detector:
                 filter: list of ACS filters
                 pol0: list of POL0 coefficients matching each filter
                 pol60: list of POL60 coefficients matching each filter
                 pol120: list of POL120 coefficients matching each filter
 
-    Multiple detectors can be contained in a single YAML file. An example is shown
-    below:
+    The meta elements will pass a dictionary of metadata to the output tables. Any metadata
+    can be included, but at minimum a description of the origin of the table values should
+    be provided. Multiple detectors can be contained in a single YAML file. An example is
+    shown below:
 
         transmission:
+            meta: {'description': 'Descriptive message.'}
             wfc:
                 filter: ['F475W', 'F606W']
                 t_para: [0.42, 0.51]
@@ -163,6 +178,7 @@ class PolarizerTables:
                 t_perp: [0.05]
                 correction: [1.21]
         efficiency:
+            meta: {'description': 'Descriptive message.'}
             wfc:
                 filter: ['F475W', 'F606W']
                 pol0: [1.43, 1.33]
@@ -203,20 +219,26 @@ class PolarizerTables:
     F475W 0.4239276798513098 0.00015240583841551956  1.000719276691027
     F606W 0.5156734594049419 5.5908749369641956e-05  1.000216861312415
     F775W 0.6040891283746557    0.07367364117759412 1.2777959654493372
+    >>> print(tables.wfc_transmission.meta['description'])
+    WFC filters use MJD corresponding to 2020-01-01. HRC filters use MJD corresponding to 2007-01-01.
     """
     def __init__(self, input_dict):
 
         self.data = input_dict
 
         self.wfc_transmission = Table(self.data['transmission']['wfc'],
-                                      names=('filter', 't_para', 't_perp', 'correction'))
+                                      names=('filter', 't_para', 't_perp', 'correction'),
+                                      meta=self.data['transmission']['meta'])
 
         self.hrc_transmission = Table(self.data['transmission']['hrc'],
-                                      names=('filter', 't_para', 't_perp', 'correction'))
+                                      names=('filter', 't_para', 't_perp', 'correction'),
+                                      meta=self.data['transmission']['meta'])
 
-        self.wfc_efficiency = Table(self.data['efficiency']['wfc'], names=('filter', 'pol0', 'pol60', 'pol120'))
+        self.wfc_efficiency = Table(self.data['efficiency']['wfc'], names=('filter', 'pol0', 'pol60', 'pol120'),
+                                    meta=self.data['efficiency']['meta'])
 
-        self.hrc_efficiency = Table(self.data['efficiency']['hrc'], names=('filter', 'pol0', 'pol60', 'pol120'))
+        self.hrc_efficiency = Table(self.data['efficiency']['hrc'], names=('filter', 'pol0', 'pol60', 'pol120'),
+                                    meta=self.data['efficiency']['meta'])
 
     @classmethod
     def from_yaml(cls, yaml_file):
@@ -230,7 +252,7 @@ class PolarizerTables:
 
         Returns
         -------
-        acstools.polarizer_tools.PolarizerTables object
+        `~acstools.polarizer_tools.PolarizerTables` object
         """
         with open(yaml_file, 'r') as yf:
             input_dict = yaml.safe_load(yf)
@@ -267,12 +289,12 @@ class Polarization:
         Photometric measurement in POL120 filter. Units: electrons or electrons/second.
     filter_name : str
         Name of the filter crossed with the polarization filter, e.g., F606W.
-    detector : ['wfc', 'hrc']
+    detector : {'wfc', 'hrc'}
         Name of the ACS detector used for the observation. Must be either WFC or HRC.
     pav3 : float
         Position angle of the HST V3 axis. This is stored in the ACS primary header under
         keyword PA_V3. Units: degrees.
-    tables : acstools.polarization_tools.PolarizerTables
+    tables : `~acstools.polarization_tools.PolarizerTables`
         Object containing the polarization lookup tables containing the efficiency and
         transmission leak correction factors for the detectors and filters.
 
@@ -296,7 +318,7 @@ class Polarization:
     Polarization: 5.92%, Angle: 5.64 deg
 
     If we need to adjust the polarization calibration, we can do so by providing a
-    different set of polarization tables using the acstools.polarization_tools.PolarizerTables
+    different set of polarization tables using the `~acstools.polarization_tools.PolarizerTables`
     class. See the help text for that class for more information about input format.
     For the same source as above, we can explicitly provide the calibration tables
     (using the default tables in this example) as:
@@ -358,8 +380,8 @@ class Polarization:
             self.c60 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol60'][0]
             self.c120 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol120'][0]
         except IndexError:
-            raise IndexError(f'No match found in input efficiency correction table for detector {self.detector.upper()} '
-                             f'and filter {self.filter_name}.')
+            raise IndexError(f'No match found in input efficiency correction table for detector '
+                             f'{self.detector.upper()} and filter {self.filter_name}.')
 
     def calc_stokes(self):
         """
@@ -378,4 +400,4 @@ class Polarization:
         self.polarization = calc_fraction(self.stokes_i, self.stokes_q, self.stokes_u,
                                           transmission_correction=self.transmission_correction)
 
-        self.angle = calc_theta(self.stokes_q, self.stokes_u, self.detector, self.pav3) * units.degree
+        self.angle = calc_theta(self.stokes_q, self.stokes_u, self.detector, self.pav3)
