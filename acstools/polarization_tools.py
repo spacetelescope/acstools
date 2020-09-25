@@ -145,50 +145,54 @@ class PolarizerTables:
     acstools package, or from a user-supplied YAML file using the class methods .from_yaml() and
     .from_package_data(). The YAML file format is:
 
-    transmission:
-        meta: dictionary of metadata
-        detector:
-            filter: list of ACS filters
-            t_para: list of parallel transmissions for each filter
-            t_perp: list of perpendicular transmissions for each filter
-            correction: list of transmission leak correction factors for each filter
-    efficiency:
-        meta: dictionary of metadata
-        detector:
-            filter: list of ACS filters
-            pol0: list of POL0 coefficients matching each filter
-            pol60: list of POL60 coefficients matching each filter
-            pol120: list of POL120 coefficients matching each filter
+    .. code-block:: yaml
+
+        transmission:
+            meta: dictionary of metadata
+            detector:
+                filter: list of ACS filters
+                t_para: list of parallel transmissions for each filter
+                t_perp: list of perpendicular transmissions for each filter
+                correction: list of transmission leak correction factors for each filter
+        efficiency:
+            meta: dictionary of metadata
+            detector:
+                filter: list of ACS filters
+                pol0: list of POL0 coefficients matching each filter
+                pol60: list of POL60 coefficients matching each filter
+                pol120: list of POL120 coefficients matching each filter
 
     The meta elements will pass a dictionary of metadata to the output tables. Any metadata
     can be included, but at minimum a description of the origin of the table values should
     be provided. Multiple detectors can be contained in a single YAML file. An example is
     shown below:
 
-    transmission:
-        meta: {'description': 'Descriptive message.'}
-        wfc:
-            filter: ['F475W', 'F606W']
-            t_para: [0.42, 0.51]
-            t_perp: [0.0, 0.0]
-            correction: [1.0, 1.0]
-        hrc:
-            filter: ['F330W']
-            t_para: [0.48]
-            t_perp: [0.05]
-            correction: [1.21]
-    efficiency:
-        meta: {'description': 'Descriptive message.'}
-        wfc:
-            filter: ['F475W', 'F606W']
-            pol0: [1.43, 1.33]
-            pol60: [1.47, 1.36]
-            pol120: [1.42, 1.30]
-        hrc:
-            filter: ['F330W']
-            pol0: [1.73]
-            pol60: [1.53]
-            pol120: [1.64]
+    .. code-block:: yaml
+
+        transmission:
+            meta: {'description': 'Descriptive message.'}
+            wfc:
+                filter: ['F475W', 'F606W']
+                t_para: [0.42, 0.51]
+                t_perp: [0.0, 0.0]
+                correction: [1.0, 1.0]
+            hrc:
+                filter: ['F330W']
+                t_para: [0.48]
+                t_perp: [0.05]
+                correction: [1.21]
+        efficiency:
+            meta: {'description': 'Descriptive message.'}
+            wfc:
+                filter: ['F475W', 'F606W']
+                pol0: [1.43, 1.33]
+                pol60: [1.47, 1.36]
+                pol120: [1.42, 1.30]
+            hrc:
+                filter: ['F330W']
+                pol0: [1.73]
+                pol60: [1.53]
+                pol120: [1.64]
 
     Parameters
     ----------
