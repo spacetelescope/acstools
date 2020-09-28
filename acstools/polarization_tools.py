@@ -98,25 +98,27 @@ def calc_theta(q, u, detector, pav3):
         Stokes U parameter.
     detector : {'wfc', 'hrc'}
         Name of the ACS detector used for the observation. Must be either WFC or HRC.
-    pav3 : float
+    pav3 : float or `~astropy.units.Quantity`
         Position angle of the V3 axis in units of degrees. Found in ACS primary headers
         with keyword PA_V3.
 
     Returns
     -------
-    theta : astropy.units.quantity.Quantity
+    theta : `~astropy.units.Quantity`
         Position angle of the electric field vector in degrees.
     """
 
     # If the user supplied an astropy Quantity object, strip off the units.
     # This will make subsequent math easier without attaching units to
     # everything. Make sure it's in degrees first.
-    if type(pav3) is units.quantity.Quantity:
-        pav3 = pav3.to(units.degree).value
+    if isinstance(pav3, units.quantity.Quantity):
+        pav3 = pav3.to_value(units.degree)
 
     if detector.lower() not in ['wfc', 'hrc']:
         raise ValueError('Detector must be either WFC or HRC.')
 
+    # Add detector-dependent geometry correction from the ACS Data Handbook.
+    # This is -38.2 degrees for WFC and -69.4 degrees for HRC.
     chi = -38.2 if detector.lower() == 'wfc' else -69.4
     theta = 0.5 * np.degrees(np.arctan2(u, q)) + pav3 + chi
 
@@ -136,7 +138,7 @@ class PolarizerTables:
     wfc_transmission: Transmission and leak correction factors for computing ACS/WFC fractional polarization.
     hrc_transmission: Transmission and leak correction factors for computing ACS/HRC fractional polarization.
 
-    wfc_efficiency : Efficiencies of the ACS/WFC polarizers for computing Stokes parameters.
+    wfc_efficiency: Efficiencies of the ACS/WFC polarizers for computing Stokes parameters.
     hrc_efficiency: Efficiencies of the ACS/HRC polarizers for computing Stokes parameters.
 
     .. note::
@@ -144,8 +146,8 @@ class PolarizerTables:
         for a source with a spectrum flat in wavelength space.
 
     Polarizer calibration information can be read from the default YAML file contained in the
-    acstools package, or from a user-supplied YAML file using the class methods .from_yaml() and
-    .from_package_data(). The YAML file format is:
+    acstools package, or from a user-supplied YAML file using the class methods :meth:`from_yaml` and
+    :meth:`from_package_data`. The YAML file format is:
 
     .. code-block:: yaml
 
@@ -259,7 +261,7 @@ class PolarizerTables:
 
         Returns
         -------
-        `~acstools.polarizer_tools.PolarizerTables` object
+        pol_tables : `~acstools.polarizer_tools.PolarizerTables`
         """
         with open(yaml_file, 'r') as yf:
             input_dict = yaml.safe_load(yf)
@@ -273,7 +275,7 @@ class PolarizerTables:
 
         Returns
         -------
-        `~acstools.polarizer_tools.PolarizerTables` object
+        pol_tables : `~acstools.polarizer_tools.PolarizerTables`
         """
         filename = get_pkg_data_filename(os.path.join('data', 'polarizer_tables.yaml'))
         return cls.from_yaml(filename)
@@ -298,7 +300,7 @@ class Polarization:
         Name of the filter crossed with the polarization filter, e.g., F606W.
     detector : {'wfc', 'hrc'}
         Name of the ACS detector used for the observation. Must be either WFC or HRC.
-    pav3 : float
+    pav3 : float or `~astropy.units.Quantity`
         Position angle of the HST V3 axis. This is stored in the ACS primary header under
         keyword PA_V3. Units: degrees.
     tables : `~acstools.polarization_tools.PolarizerTables`
