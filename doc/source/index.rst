@@ -30,6 +30,7 @@ Software tools for
    acszpt
    acsphotcte
    satdet
+   polarization_tools
    utils_calib
 
 ******************
