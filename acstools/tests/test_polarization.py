@@ -40,7 +40,7 @@ def test_stokes():
     i, q, u = polarization_tools.calc_stokes(1, 1, 1, c0=1, c60=0.5, c120=1.5)
     assert i == 2.0
     assert q == 0.0
-    np.testing.assert_allclose(q, -1.1547005383792517)
+    np.testing.assert_allclose(u, -1.1547005383792517)
 
 
 def test_pol_class():
