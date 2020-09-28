@@ -135,11 +135,10 @@ class PolarizerTables:
     A class for holding all of the polarization tables (as astropy tables) in attributes.
     These attributes are:
 
-    wfc_transmission: Transmission and leak correction factors for computing ACS/WFC fractional polarization.
-    hrc_transmission: Transmission and leak correction factors for computing ACS/HRC fractional polarization.
-
-    wfc_efficiency: Efficiencies of the ACS/WFC polarizers for computing Stokes parameters.
-    hrc_efficiency: Efficiencies of the ACS/HRC polarizers for computing Stokes parameters.
+    * wfc_transmission: Transmission and leak correction factors for computing ACS/WFC fractional polarization.
+    * hrc_transmission: Transmission and leak correction factors for computing ACS/HRC fractional polarization.
+    * wfc_efficiency: Efficiencies of the ACS/WFC polarizers for computing Stokes parameters.
+    * hrc_efficiency: Efficiencies of the ACS/HRC polarizers for computing Stokes parameters.
 
     .. note::
         The default table contained within the acstools package uses average transmission leak correction terms
