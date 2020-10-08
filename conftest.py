@@ -25,7 +25,7 @@ PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
 PYTEST_HEADER_MODULES['beautifulsoup4'] = 'bs4'
 PYTEST_HEADER_MODULES['requests'] = 'requests'
 PYTEST_HEADER_MODULES['stsci.tools'] = 'stsci.tools'
-PYTEST_HEADER_MODULES.pop('Pandas')
-PYTEST_HEADER_MODULES.pop('h5py')
+PYTEST_HEADER_MODULES.pop('Pandas', None)
+PYTEST_HEADER_MODULES.pop('h5py', None)
 
 TESTED_VERSIONS['acstools'] = version
