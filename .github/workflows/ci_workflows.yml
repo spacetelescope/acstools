@@ -46,7 +46,7 @@ jobs:
         python-version: '3.x'
     - name: Install and build
       run: |
-        python -m pip install --upgrade pip setuptools
+        python -m pip install --upgrade pip setuptools wheel
         python -m pip install -e .[docs]
     - name: Docs link check
       run: |
