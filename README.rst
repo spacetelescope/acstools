@@ -9,9 +9,9 @@ ACSTOOLS
     :alt: Documentation Status
     :target: https://acstools.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://dev.azure.com/spacetelescope/acstools/_apis/build/status/spacetelescope.acstools?branchName=master
-    :alt: Azure CI Status
-    :target: https://dev.azure.com/spacetelescope/acstools/_build/latest?definitionId=12&branchName=master
+.. image:: https://github.com/spacetelescope/acstools/workflows/CI/badge.svg
+    :target: https://github.com/spacetelescope/acstools/actions?query=workflow%3ACI
+    :alt: Github Actions CI Status
 
 .. image:: https://ssbjenkins.stsci.edu/job/STScI/job/acstools/job/master/badge/icon
     :alt: Jenkins CI Status
