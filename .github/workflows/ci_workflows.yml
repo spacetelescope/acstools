@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Weekly Tuesday 6 AM build
+    # * is a special character in YAML so you have to quote this string
+    - cron: '0 6 * * 2'
+
+jobs:
+  pep_and_audit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Fetch tags
+      run: git fetch --prune --unshallow --tags
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Lint with flake8
+      run: |
+        python -m pip install --upgrade pip flake8
+        flake8 acstools --count
+    # Make sure that packaging will work
+    - name: pep517 build
+      run: |
+        python -m pip install --upgrade setuptools build twine
+        python -m build --sdist .
+        twine check dist/*
+    - name: Security audit
+      run: |
+        python -m pip install --upgrade bandit
+        bandit -r . -c .bandit.yaml
+
+  link_check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Install and build
+      run: |
+        python -m pip install --upgrade pip setuptools
+        python -m pip install -e .[docs]
+    - name: Docs link check
+      run: |
+        cd doc
+        make linkcheck
+      shell: bash
