@@ -49,7 +49,7 @@ Retrieve the zeropoint information for the F435W filter on 2016-04-01 for WFC:
 >>> date = '2016-04-01'
 >>> detector = 'WFC'
 >>> filt = 'F435W'
->>> q = acszpt.Query(date=date, detector=detector, filter=filt)
+>>> q = acszpt.Query(date=date, detector=detector, filt=filt)
 >>> zpt_table = q.fetch()
 >>> print(zpt_table)
 FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
