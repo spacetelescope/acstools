@@ -153,7 +153,7 @@ class Query:
                     'F140LP', 'F150LP', 'F165LP']
         }
         self._zpt_table = None
-        self._warnings = None
+        self._warnings = []
 
         # Set the private attributes
         if filt is None:
