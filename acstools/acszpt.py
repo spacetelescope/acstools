@@ -375,8 +375,8 @@ class Query:
 
             LOG.info('Parsing the response and formatting the results...')
             self._parse_and_format()
-            if self._warnings:
-                _ = [LOG.warning(w) for w in self._warnings]
+            for w in self._warnings:
+                LOG.warning(w)
 
             return self.zpt_table
 
