@@ -49,7 +49,7 @@ Retrieve the zeropoint information for the F435W filter on 2016-04-01 for WFC:
 >>> date = '2016-04-01'
 >>> detector = 'WFC'
 >>> filt = 'F435W'
->>> q = acszpt.Query(date=date, detector=detector, filter=filt)
+>>> q = acszpt.Query(date=date, detector=detector, filt=filt)
 >>> zpt_table = q.fetch()
 >>> print(zpt_table)
 FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
@@ -153,6 +153,7 @@ class Query:
                     'F140LP', 'F150LP', 'F165LP']
         }
         self._zpt_table = None
+        self._warnings = []
 
         # Set the private attributes
         if filt is None:
@@ -165,9 +166,6 @@ class Query:
                          f'&{self.detector}_filter={self.filt}')
         # ACS Launch Date
         self._acs_installation_date = dt.datetime(2002, 3, 7)
-        # The farthest date in future that the component and throughput files
-        # are valid for. If input date is larger, extrapolation is not valid.
-        self._extrapolation_date = dt.datetime(2021, 12, 31)
         self._msg_div = '-' * 79
         self._valid_detectors = ['HRC', 'SBC', 'WFC']
         self._response = None
@@ -270,13 +268,6 @@ class Query:
                 result = ('The observation date cannot occur '
                           'before ACS was installed '
                           f'({self._acs_installation_date.strftime(fmt)})')
-            elif dt_obj > self._extrapolation_date:
-                result = ('The observation date cannot occur after the '
-                          'maximum allowable date, '
-                          f'{self._extrapolation_date.strftime(fmt)}. '
-                          'Extrapolations of the '
-                          'instrument throughput after this date lead to '
-                          'high uncertainties and are therefore invalid.')
         finally:
             return result
 
@@ -318,6 +309,15 @@ class Query:
 
         # Remove the units attached to PHOTFLAM and PHOTPLAM column names.
         td = [val.text.split(' ')[0] for val in td]
+
+        # Grab warnings returned by the ZPT calc as marked by stylized h4 tag
+        warnings = soup.find_all('h4', {'style': "color:red;"})
+
+        # Remove tags and 'Warnings: ' label attached to warnings
+        str_warnings = [w.get_text().replace('Warnings: ', '') for w in warnings]
+
+        # Add non-empty strings to _warnings attribute
+        self._warnings = [w for w in str_warnings if w.strip()]
 
         # Turn the single list into a 2-D numpy array
         data = np.reshape(td,
@@ -375,6 +375,9 @@ class Query:
 
             LOG.info('Parsing the response and formatting the results...')
             self._parse_and_format()
+            for w in self._warnings:
+                LOG.warning(w)
+
             return self.zpt_table
 
         LOG.error('Please fix the incorrect input(s)')
