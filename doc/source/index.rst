@@ -7,6 +7,18 @@ ACSTOOLS
 Software tools for
 `Advanced Camera for Surveys (ACS) <http://www.stsci.edu/hst/acs/>`_.
 
+Different ways to install the latest release of this package::
+
+    pip install acstools
+
+    conda install acstools -c conda-forge
+
+    conda install acstools -c http://ssb.stsci.edu/astroconda
+
+To install the development version of this package::
+
+    pip install git+https://github.com/spacetelescope/acstools
+
 .. note::
 
     The information here reflect the *latest* software info and might not
