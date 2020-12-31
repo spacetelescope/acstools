@@ -1,0 +1,43 @@
+docs:
+  - .github/**/*.md
+  - .readthedocs.yml
+  - doc/**/*
+  - '*.md'
+  - any: ['*.rst', '!CHANGES.rst']
+
+testing:
+  - .bandit.yaml
+  - .github/**/*.yml
+  - conftest.py
+  - acstools/tests/**/*
+  - Jenkinsfile
+  - JenkinsfileRT
+
+CALACS:
+  - acstools/acs2d.py
+  - acstools/acsccd.py
+  - acstools/acscteforwardmodel.py
+  - acstools/acscte.py
+  - acstools/acsrej.py
+  - acstools/acssum.py
+  - acstools/calacs.py
+  - acstools/utils_calib.py
+
+CTE:
+  - acstools/acscteforwardmodel.py
+  - acstools/acscte.py
+  - acstools/acsphotcte.py
+
+Destripe:
+  - acstools/acs_destripe_plus.py
+  - acstools/acs_destripe.py
+
+Polarization:
+  - acstools/polarization_tools.py
+  - acstools/data/polarizer_tables.yaml
+
+Satellite Detection:
+  - acstools/satdet.py
+
+Zeropoints:
+  - acstools/acszpt.py
