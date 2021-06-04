@@ -17,10 +17,6 @@ ACSTOOLS
     :target: https://github.com/spacetelescope/acstools/actions?query=workflow%3ACI
     :alt: Github Actions CI Status
 
-.. image:: https://ssbjenkins.stsci.edu/job/STScI/job/acstools/job/master/badge/icon
-    :alt: Jenkins CI Status
-    :target: https://ssbjenkins.stsci.edu/job/STScI/job/acstools/job/master/
-
 Nightly regression test results are available only from within the STScI
 network at this time.
 https://plwishmaster.stsci.edu:8081/job/RT/job/acstools/test_results_analyzer/
