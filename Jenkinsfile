@@ -8,7 +8,7 @@ bc1.name = "release"
 // Would be nice if Jenkins can access /grp/hst/cdbs/xxxx directly.
 bc1.env_vars = ['TEST_BIGDATA=https://bytesalad.stsci.edu/artifactory']
 bc1.conda_channels = ['http://ssb.stsci.edu/astroconda']
-bc1.conda_packages = ['python=3.6']
+bc1.conda_packages = ['python=3.7']
 bc1.build_cmds = ["pip install -e .[test,all]"]
 bc1.test_cmds = ["pytest --basetemp=tests_output --junitxml results.xml --bigdata -v"]
 bc1.failedUnstableThresh = 1
