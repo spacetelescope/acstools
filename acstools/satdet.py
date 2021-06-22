@@ -838,7 +838,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
             f'{image.shape}', AstropyUserWarning)
 
     # Change to boolean mask
-    mask = mask.astype(np.bool)
+    mask = mask.astype(bool)
 
     if plot and plt is not None:
         # debugging array

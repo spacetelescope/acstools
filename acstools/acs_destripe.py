@@ -643,13 +643,13 @@ def clean_streak(image, stat="pmode1", maxiter=15, sigrej=2.0,
 
     # array to hold cumulative stripe amplitudes and latest row npix:
     cumcorr = np.zeros(image.science.shape[0], dtype=np.float64)
-    cnpix = np.zeros(image.science.shape[0], dtype=np.int)
+    cnpix = np.zeros(image.science.shape[0], dtype=int)
 
     # other arrays
     corr_scale = np.empty(image.science.shape[0], dtype=np.float64)
-    npix = np.empty(image.science.shape[0], dtype=np.int)
+    npix = np.empty(image.science.shape[0], dtype=int)
     sigcorr2 = np.zeros(image.science.shape[0], dtype=np.float64)
-    updrows = np.zeros(image.science.shape[0], dtype=np.int)
+    updrows = np.zeros(image.science.shape[0], dtype=int)
 
     # for speed-up and to reduce rounding errors in ERR computations,
     # keep a copy of the squared error array:
@@ -989,7 +989,7 @@ def djs_iterstat(InputArr, MaxIter=10, SigRej=3.0,
         else:
             break
 
-    logical_mask = SaveMask.astype(np.bool)
+    logical_mask = SaveMask.astype(bool)
 
     if NLast > 1:
         FMedian = np.median(InputArr[logical_mask])
