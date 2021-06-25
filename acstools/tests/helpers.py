@@ -1,13 +1,14 @@
 """ACSTOOLS regression test helpers."""
 
 import os
+import shutil
 
 import pytest
-from ci_watson.artifactory_helpers import get_bigdata
-from ci_watson.hst_helpers import raw_from_asn, ref_from_image, download_crds
+from ci_watson.hst_helpers import ref_from_image, download_crds
 
 from astropy.io import fits
 from astropy.io.fits import FITSDiff
+from astropy.utils.data import get_pkg_data_filename
 
 __all__ = ['calref_from_image', 'BaseACSTOOLS']
 
@@ -66,12 +67,10 @@ def calref_from_image(input_image):
 
 # Base class for actual tests.
 # NOTE: Named in a way so pytest will not pick them up here.
-# NOTE: bigdata marker requires TEST_BIGDATA environment variable to
-#       point to a valid big data directory, whether locally or on Artifactory.
-# NOTE: envopt would point tests to "dev" or "stable".
+# NOTE: remote_data because reference files need internet connection
 # NOTE: _jail fixture ensures each test runs in a clean tmpdir.
-@pytest.mark.bigdata
-@pytest.mark.usefixtures('_jail', 'envopt')
+@pytest.mark.remote_data
+@pytest.mark.usefixtures('_jail')
 class BaseACSTOOLS:
     # Timeout in seconds for file downloads.
     timeout = 30
@@ -83,89 +82,52 @@ class BaseACSTOOLS:
     # To be defined by test class in actual test modules.
     detector = ''
 
-    @pytest.fixture(autouse=True)
-    def setup_class(self, envopt):
-        """
-        Class-level setup that is done at the beginning of the test.
-
-        Parameters
-        ----------
-        envopt : {'dev', 'stable'}
-            This is a ``pytest`` fixture that defines the test
-            environment in which input and truth files reside.
-
-        """
-        self.env = envopt
-
-    def get_input_file(self, filename):
-        """
-        Copy input file (ASN, RAW, etc) into the working directory.
-        If ASN is given, RAW files in the ASN table is also copied.
+    def get_input_file(self, filename, skip_ref=False):
+        """Copy input file into the working directory.
         The associated CRDS reference files are also copied or
-        downloaded, if necessary.
+        downloaded, if desired.
 
-        Data directory layout for CALCOS::
-
-            detector/
-                input/
-                truth/
+        Input file is from ``git lfs``, while the reference files from CDBS.
 
         Parameters
         ----------
         filename : str
-            Filename of the ASN/RAW/etc to copy over, along with its
-            associated files.
+            Filename to copy over, along with its reference files, if desired.
+
+        skip_ref : bool
+            Skip downloading reference files for the given input.
 
         """
-        # Copy over main input file.
-        dest = get_bigdata('scsb-acstools', self.env, self.detector, 'input',
-                           filename)
+        # Copy over main input file: The way calibration code was written,
+        # it usually assumes input is in the working directory.
+        src = get_pkg_data_filename(
+            os.path.join('data', 'input', filename), package='acstools.tests',
+            show_progress=False, remote_timeout=self.timeout)
+        dst = os.path.join(os.curdir, filename)
+        shutil.copyfile(src, dst)
 
-        # For historical reason, need to remove ".orig" suffix if it exists.
-        if filename.endswith('.orig'):
-            newfilename = filename.rstrip('.orig')
-            os.rename(filename, newfilename)
-            filename = newfilename
+        if skip_ref:
+            return
 
-        if filename.endswith('_asn.fits'):
-            all_raws = raw_from_asn(filename)
-            for raw in all_raws:  # Download RAWs in ASN.
-                get_bigdata('scsb-acstools', self.env, self.detector, 'input',
-                            raw)
-        else:
-            all_raws = [filename]
+        ref_files = calref_from_image(src)
+        for ref_file in ref_files:
+            # Special reference files that live with inputs.
+            if ('$' not in ref_file and
+                    os.path.basename(ref_file) == ref_file):
+                refsrc = get_pkg_data_filename(
+                    os.path.join('data', 'input', ref_file),
+                    package='acstools.tests',
+                    show_progress=False, remote_timeout=self.timeout)
+                refdst = os.path.join(os.curdir, ref_file)
+                shutil.copyfile(refsrc, refdst)
+                continue
 
-        first_pass = ('JENKINS_URL' in os.environ and
-                      'ssbjenkins' in os.environ['JENKINS_URL'])
-
-        for raw in all_raws:
-            ref_files = calref_from_image(raw)
-
-            for ref_file in ref_files:
-                # Special reference files that live with inputs.
-                if ('$' not in ref_file and
-                        os.path.basename(ref_file) == ref_file):
-                    get_bigdata('scsb-acstools', self.env, self.detector,
-                                'input', ref_file)
-                    continue
-
-                # Jenkins cannot see Central Storage on push event,
-                # and somehow setting, say, jref to "." does not work anymore.
-                # So, we need this hack.
-                if '$' in ref_file and first_pass:
-                    first_pass = False
-                    if not os.path.isdir('/grp/hst/cdbs'):
-                        ref_path = os.path.dirname(dest) + os.sep
-                        var = ref_file.split('$')[0]
-                        os.environ[var] = ref_path  # hacky hack hack
-
-                # Download reference files, if needed only.
-                download_crds(ref_file, timeout=self.timeout)
+            # Download reference files, if needed only.
+            download_crds(ref_file, timeout=self.timeout)
 
     def compare_outputs(self, outputs, atol=0, rtol=1e-7, raise_error=True,
                         ignore_keywords_overwrite=None):
-        """
-        Compare ACSTOOLS output with "truth" using ``fitsdiff``.
+        """Compare ACSTOOLS output with "truth" using ``fitsdiff``.
 
         Parameters
         ----------
@@ -203,9 +165,11 @@ class BaseACSTOOLS:
             ignore_keywords = ignore_keywords_overwrite
 
         for actual, desired in outputs:
-            desired = get_bigdata('scsb-acstools', self.env, self.detector,
-                                  'truth', desired)
-            fdiff = FITSDiff(actual, desired, rtol=rtol, atol=atol,
+            desiredpath = get_pkg_data_filename(
+                os.path.join('data', 'truth', desired),
+                package='acstools.tests',
+                show_progress=False, remote_timeout=self.timeout)
+            fdiff = FITSDiff(actual, desiredpath, rtol=rtol, atol=atol,
                              ignore_keywords=ignore_keywords)
             creature_report += fdiff.report()
 

@@ -1,10 +1,9 @@
 """Test standalone ACS destriping for post-SM4 WFC exposures."""
 
 import pytest
-from ci_watson.artifactory_helpers import get_bigdata
 
-from .helpers import BaseACSTOOLS
-from .. import acs_destripe
+from acstools import acs_destripe
+from acstools.tests.helpers import BaseACSTOOLS
 
 
 class TestDestripe(BaseACSTOOLS):
@@ -22,8 +21,7 @@ class TestDestripe(BaseACSTOOLS):
         else:
             # Get extra input masks
             for mfile in masks:
-                get_bigdata('scsb-acstools', self.env, self.detector, 'input',
-                            mfile)
+                self.get_input_file(mfile, skip_ref=True)
             acs_destripe.clean(inputfile, outsuffix,
                                mask1=masks[0], mask2=masks[1])
 
