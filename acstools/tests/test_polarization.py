@@ -1,8 +1,9 @@
+import numpy as np
 import pytest
 from astropy import units
 from astropy.tests.helper import assert_quantity_allclose
-import numpy as np
-from .. import polarization_tools
+
+from acstools import polarization_tools
 
 
 def test_tables():
@@ -48,7 +49,7 @@ def test_pol_class():
     but let's test that we get expected exceptions."""
 
     with pytest.raises(IndexError):
-        _ = polarization_tools.Polarization(1, 1, 1, 'F607W', 'WFC', 1)
+        polarization_tools.Polarization(1, 1, 1, 'F607W', 'WFC', 1)
 
     with pytest.raises(ValueError):
-        _ = polarization_tools.Polarization(1, 1, 1, 'F606W', 'WFB', 1)
+        polarization_tools.Polarization(1, 1, 1, 'F606W', 'WFB', 1)

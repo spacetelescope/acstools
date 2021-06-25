@@ -1,13 +1,10 @@
-"""
-Test satellite trail detection.
+"""Test satellite trail detection.
 
 .. note:: Cannot test ``detsat()`` because PHT results change from run to run!
 
 """
-from ci_watson.artifactory_helpers import get_bigdata
-
-from .helpers import BaseACSTOOLS
-from .. import satdet
+from acstools import satdet
+from acstools.tests.helpers import BaseACSTOOLS
 
 
 class TestSatDet(BaseACSTOOLS):
@@ -21,8 +18,7 @@ class TestSatDet(BaseACSTOOLS):
         truthfile = rootname + '_flc_ref.fits'
 
         # Prepare input file.
-        get_bigdata('scsb-acstools', self.env, self.detector, 'input',
-                    inputfile)
+        self.get_input_file(inputfile, skip_ref=True)
 
         # Satellite trail masking.
         sciext = 4
