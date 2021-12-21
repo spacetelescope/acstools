@@ -10,7 +10,7 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from importlib import metadata
+from acstools import __version__
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -52,7 +52,7 @@ copyright = u'2020, STScI'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = metadata.version('acstools')
+release = __version__
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
 
