@@ -9,7 +9,7 @@ on:
     - cron: '0 6 * * 2'
 
 env:
-  jref: "https://ssb.stsci.edu/cdbs/jref"
+  jref: "https://ssb.stsci.edu/trds_open/jref"
 
 jobs:
   initial_checks:
