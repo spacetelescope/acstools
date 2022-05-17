@@ -123,7 +123,7 @@ class BaseACSTOOLS:
                 continue
 
             # Download reference files, if needed only.
-            download_crds(ref_file, timeout=self.timeout)
+            download_crds(ref_file)
 
     def compare_outputs(self, outputs, atol=0, rtol=1e-7, raise_error=True,
                         ignore_keywords_overwrite=None):

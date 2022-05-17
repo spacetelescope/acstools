@@ -13,8 +13,6 @@ Different ways to install the latest release of this package::
 
     conda install acstools -c conda-forge
 
-    conda install acstools -c http://ssb.stsci.edu/astroconda
-
 To install the development version of this package::
 
     pip install git+https://github.com/spacetelescope/acstools
@@ -32,7 +30,7 @@ To install the development version of this package::
 
 .. note::
 
-    Python 2 is no longer supported. Please use Python 3.6 or later.
+    Python 2 is no longer supported. Please use Python 3.8 or later.
 
 .. toctree::
    :maxdepth: 2
