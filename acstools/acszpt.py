@@ -1,7 +1,7 @@
 """
 This module contains a class, :class:`Query`, that was implemented to provide
 users with means to programmatically query the
-`ACS Zeropoints Calculator <https://acszeropoints.stsci.edu>`_.
+`ACS Zeropoints Calculator <https://acszeropointsapi.stsci.edu>`_.
 The API works by submitting requests to the
 ACS Zeropoints Calculator referenced above and hence, it is only valid for ACS
 specific instruments (HRC, SBC, or WFC).
@@ -157,11 +157,11 @@ class Query:
 
         # Set the private attributes
         if filt is None:
-            self._url = ('https://acszeropoints.stsci.edu/results_all/?'
+            self._url = ('https://acszeropointsapi.stsci.edu/results_all/?'
                          f'date={self.date}&detector={self.detector}')
         else:
             self._filt = filt.upper()
-            self._url = ('https://acszeropoints.stsci.edu/results_single/?'
+            self._url = ('https://acszeropointsapi.stsci.edu/results_single/?'
                          f'date1={self.date}&detector={self.detector}'
                          f'&{self.detector}_filter={self.filt}')
         # ACS Launch Date
