@@ -1,9 +1,10 @@
 """
+----------------------------------------------------------------------------------
 This module contains a class, :class:`Query`, that was implemented to provide
 users with means to programmatically query the
-`ACS Zeropoints Calculator <https://acszeropointsapi.stsci.edu>`_.
-The API works by submitting requests to the
-ACS Zeropoints Calculator referenced above and hence, it is only valid for ACS
+`ACS Zeropoints Calculator <https://acszeropoints.stsci.edu>`_ API.
+This class work by submitting requests directly to the AWS API, which also
+handles the requests from the above web address. It is only valid for ACS
 specific instruments (HRC, SBC, or WFC).
 
 The API can be used in two ways by specifying either a
@@ -15,91 +16,102 @@ information for all the filters for the desired detector at the specified date.
 In either case, the result will be an ``astropy.table.QTable`` where each column
 is an ``astropy.units.quantity.Quantity`` object with the appropriate units attached.
 
+----------------------------------------------------------------------------------
+
 Examples
 --------
-Retrieve the zeropoint information for all the filters on 2016-04-01 for WFC:
+
+Example 1) Retrieve the zeropoint information for all the filters
+on 2016-04-01 for WFC:
 
 >>> from acstools import acszpt
->>> date = '2016-04-01'
->>> detector = 'WFC'
->>> q = acszpt.Query(date=date, detector=detector)
+>>> q = acszpt.Query(date = "2016-04-01", detector = "WFC")
 >>> zpt_table = q.fetch()
 >>> print(zpt_table)
-FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
-       Angstrom erg / (Angstrom cm2 s) mag(ST)   mag   mag(AB)
- str6  float64         float64         float64 float64 float64
------- -------- ---------------------- ------- ------- -------
- F435W   4329.2              3.148e-19  25.155  25.763  25.665
- F475W   4746.2              1.827e-19  25.746  26.149  26.056
- F502N   5023.0              5.259e-18  22.098  22.365  22.285
- F550M   5581.5               3.99e-19  24.898  24.825  24.856
- F555W   5360.9              1.963e-19  25.667  25.713  25.713
- F606W   5922.0              7.811e-20  26.668  26.405  26.498
- F625W   6312.0              1.188e-19  26.213  25.735  25.904
- F658N   6584.0               1.97e-18  23.164  22.381  22.763
- F660N   6599.4              5.156e-18  22.119  21.428  21.714
- F775W   7693.2              9.954e-20  26.405  25.272  25.667
- F814W   8045.0              7.046e-20   26.78  25.517  25.944
-F850LP   9033.2               1.52e-19  25.945  24.332  24.858
- F892N   8914.8              1.502e-18  23.458  21.905    22.4
 
-Retrieve the zeropoint information for the F435W filter on 2016-04-01 for WFC:
+Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag 
+       Angstrom erg / (Angstrom cm2 electron) mag(ST)   mag   mag(AB)
+------ -------- ----------------------------- ------- ------- -------
+ F435W   4329.9                    3.1858e-19  25.142  25.767  25.652
+ F475W   4747.0                     1.845e-19  25.735  26.151  26.045
+ F502N   5023.0                    5.2934e-18  22.091  22.367  22.278
+ F550M   5581.5                    4.0186e-19   24.89  24.825  24.848
+ F555W   5361.0                    1.9798e-19  25.658  25.714  25.704
+ F606W   5921.9                    7.8774e-20  26.659  26.402  26.489
+ F625W   6311.8                     1.198e-19  26.204  25.728  25.895
+ F658N   6584.0                    1.9976e-18  23.149  22.378  22.748
+ F660N   6599.4                    5.2219e-18  22.105  21.414    21.7
+ F775W   7693.5                    1.0033e-19  26.396   25.26  25.658
+ F814W   8045.5                     7.092e-20  26.773  25.506  25.937
+F850LP   9031.5                    1.5313e-19  25.937  24.323  24.851
+ F892N   8914.8                    1.5105e-18  23.452  21.892  22.394
+
+----------------------------------------------------------------------------------
+
+Example 2) Retrieve the zeropoint information for the F435W filter
+on 2016-04-01 for WFC:
 
 >>> from acstools import acszpt
->>> date = '2016-04-01'
->>> detector = 'WFC'
->>> filt = 'F435W'
->>> q = acszpt.Query(date=date, detector=detector, filt=filt)
+>>> q = acszpt.Query(date = "2016-04-01", detector = "WFC", filt = "F435W")
 >>> zpt_table = q.fetch()
 >>> print(zpt_table)
-FILTER PHOTPLAM        PHOTFLAM         STmag  VEGAmag  ABmag
-       Angstrom erg / (Angstrom cm2 s) mag(ST)   mag   mag(AB)
------- -------- ---------------------- ------- ------- -------
- F435W   4329.2              3.148e-19  25.155  25.763  25.665
 
+Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag 
+       Angstrom erg / (Angstrom cm2 electron) mag(ST)   mag   mag(AB)
+------ -------- ----------------------------- ------- ------- -------
+ F435W   4329.9                    3.1858e-19  25.142  25.767  25.652
 
-Retrieve the zeropoint information for the F435W filter for WFC at multiple dates:
+----------------------------------------------------------------------------------
+
+Example 3) Retrieve the zeropoint information for the F435W filter
+for WFC at multiple dates:
 
 >>> from acstools import acszpt
 >>> dates = ['2004-10-13', '2011-04-01', '2014-01-17', '2018-05-23']
 >>> queries = []
->>> for date in dates:
-...     q = acszpt.Query(date=date, detector='WFC', filt='F435W')
-...     zpt_table = q.fetch()
-...     # Each object has a zpt_table attribute, so we save the instance
-...     queries.append(q)
->>> for q in queries:
-...     print(q.date, q.zpt_table['PHOTFLAM'][0], q.zpt_table['STmag'][0])
-2004-10-13 3.074e-19 erg / (Angstrom cm2 s) 25.181 mag(ST)
-2011-04-01 3.138e-19 erg / (Angstrom cm2 s) 25.158 mag(ST)
-2014-01-17 3.144e-19 erg / (Angstrom cm2 s) 25.156 mag(ST)
-2018-05-23 3.152e-19 erg / (Angstrom cm2 s) 25.154 mag(ST)
->>> type(queries[0].zpt_table['PHOTFLAM'])
-astropy.units.quantity.Quantity
-"""
-import datetime as dt
-import logging
-import os
-from urllib.request import urlopen
-from urllib.error import URLError
 
+>>> for date in dates:
+...    q = acszpt.Query(date=date, detector='WFC', filt='F435W')
+...    zpt_table = q.fetch()
+...    # Each object has a zpt_table attribute, so we save the instance
+...    queries.append(q)
+
+>>> for q in queries:
+...    print(q.date, q.zpt_table['PHOTFLAM'][0], q.zpt_table['STmag'][0])
+
+2004-10-13 3.1111e-19 erg / (Angstrom cm2 electron) 25.168 mag(ST)
+2011-04-01 3.1766e-19 erg / (Angstrom cm2 electron) 25.145 mag(ST)
+2014-01-17 3.1817e-19 erg / (Angstrom cm2 electron) 25.143 mag(ST)
+2018-05-23 3.1897e-19 erg / (Angstrom cm2 electron) 25.141 mag(ST)
+
+>>> type(queries[0].zpt_table['PHOTFLAM'])
+
+astropy.units.quantity.Quantity
+
+----------------------------------------------------------------------------------
+
+"""
 import astropy.units as u
-from astropy.table import QTable
-from bs4 import BeautifulSoup
+import datetime as dt
+import json
+import logging
 import numpy as np
+import os
+import requests
+import sys
+
+from astropy.table import QTable
 
 __taskname__ = "acszpt"
-__author__ = "Nathan Miles"
-__version__ = "1.0"
-__vdate__ = "22-Jan-2019"
-
-__all__ = ['Query']
+__author__   = "Gagandeep Anand, Jenna Ryon, Nathan Miles"
+__version__  = "1.1"
+__vdate__    = "10-Aug-2022"
+__all__      = ['Query']
 
 # Initialize the logger
 logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}.Query')
 LOG.setLevel(logging.INFO)
-
 
 class Query:
     """Class used to interface with the ACS Zeropoints Calculator API.
@@ -138,7 +150,9 @@ class Query:
         self._date = date
         self._detector = detector.upper()
         self._filt = filt
-
+        
+        #define valid detectors and filter combinations
+        self._valid_detectors = ['HRC', 'SBC', 'WFC']
         self.valid_filters = {
             'WFC': ['F435W', 'F475W', 'F502N', 'F550M',
                     'F555W', 'F606W', 'F625W', 'F658N',
@@ -152,33 +166,17 @@ class Query:
             'SBC': ['F115LP', 'F122M', 'F125LP',
                     'F140LP', 'F150LP', 'F165LP']
         }
+
         self._zpt_table = None
         self._warnings = []
 
-        # Set the private attributes
-        if filt is None:
-            self._url = ('https://acszeropointsapi.stsci.edu/results_all/?'
-                         f'date={self.date}&detector={self.detector}')
-        else:
-            self._filt = filt.upper()
-            self._url = ('https://acszeropointsapi.stsci.edu/results_single/?'
-                         f'date1={self.date}&detector={self.detector}'
-                         f'&{self.detector}_filter={self.filt}')
         # ACS Launch Date
         self._acs_installation_date = dt.datetime(2002, 3, 7)
+        # end of data table in AWS S3 bucket
+        self._end_table_date = dt.datetime(2029, 12, 31)
         self._msg_div = '-' * 79
-        self._valid_detectors = ['HRC', 'SBC', 'WFC']
         self._response = None
         self._failed = False
-        self._data_units = {
-            'FILTER': u.dimensionless_unscaled,
-            'PHOTPLAM': u.angstrom,
-            'PHOTFLAM': u.erg / u.cm ** 2 / u.second / u.angstrom,
-            'STmag': u.STmag,
-            'VEGAmag': u.mag,
-            'ABmag': u.ABmag
-        }
-        self._block_size = len(self._data_units)
 
     @property
     def date(self):
@@ -200,18 +198,18 @@ class Query:
         """The results returned by the ACS Zeropoint Calculator. (`astropy.table.QTable`)"""
         return self._zpt_table
 
+
     def _check_inputs(self):
         """Check the inputs to ensure they are valid.
-
         Returns
         -------
         status : bool
             True if all inputs are valid, False if one is not.
-
         """
         valid_detector = True
         valid_filter = True
         valid_date = True
+
         # Determine the submitted detector is valid
         if self.detector not in self._valid_detectors:
             msg = (f'{self.detector} is not a valid detector option.\n'
@@ -242,21 +240,19 @@ class Query:
 
         return True
 
-    def _check_date(self, fmt='%Y-%m-%d'):
-        """Convenience method for determining if the input date is valid.
 
+    def _check_date(self, fmt='%Y-%m-%d'):
+        """For determining if the input date is valid.
         Parameters
         ----------
         fmt : str
             The format of the date string. The default is ``%Y-%m-%d``, which
             corresponds to ``YYYY-MM-DD``.
-
         Returns
         -------
         status : str or `None`
             If the date is valid, returns `None`. If the date is invalid,
             returns a message explaining the issue.
-
         """
         result = None
         try:
@@ -268,116 +264,97 @@ class Query:
                 result = ('The observation date cannot occur '
                           'before ACS was installed '
                           f'({self._acs_installation_date.strftime(fmt)})')
+            if dt_obj > self._end_table_date:
+                result = ('The observation date cannot be '
+                          'after 2029 '
+                          f'({self._end_table_date.strftime(fmt)})')
         finally:
             return result
 
-    def _submit_request(self):
-        """Submit a request to the ACS Zeropoint Calculator.
-
-        If an exception is raised during the request, an error message is
-        given. Otherwise, the response is saved in the corresponding
-        attribute.
-
-        """
-        if not self._url.startswith('http'):
-            raise ValueError(f'Invalid URL {self._url}')
-        try:
-            self._response = urlopen(self._url)  # nosec
-        except URLError as e:
-            msg = (f'{repr(e)}\n{self._msg_div}\nThe query failed! '
-                   'Please check your inputs. '
-                   'If the error persists, submit a ticket to the '
-                   'ACS Help Desk at hsthelp.stsci.edu with the error message '
-                   'displayed above.')
-            LOG.error(msg)
-            self._failed = True
-        else:
-            self._failed = False
-
-    def _parse_and_format(self):
-        """ Parse and format the results returned by the ACS Zeropoint Calculator.
-
-        Using ``beautifulsoup4``, find all the ``<tb> </tb>`` tags present in
-        the response. Format the results into an astropy.table.QTable with
-        corresponding units and assign it to the zpt_table attribute.
-        """
-
-        soup = BeautifulSoup(self._response.read(), 'html.parser')
-
-        # Grab all elements in the table returned by the ZPT calc.
-        td = soup.find_all('td')
-
-        # Remove the units attached to PHOTFLAM and PHOTPLAM column names.
-        td = [val.text.split(' ')[0] for val in td]
-
-        # Grab warnings returned by the ZPT calc as marked by stylized h4 tag
-        warnings = soup.find_all('h4', {'style': "color:red;"})
-
-        # Remove tags and 'Warnings: ' label attached to warnings
-        str_warnings = [w.get_text().replace('Warnings: ', '') for w in warnings]
-
-        # Add non-empty strings to _warnings attribute
-        self._warnings = [w for w in str_warnings if w.strip()]
-
-        # Turn the single list into a 2-D numpy array
-        data = np.reshape(td,
-                          (int(len(td) / self._block_size), self._block_size))
-        # Create the QTable, note that sometimes self._response will be empty
-        # even though the return was successful; hence the try/except to catch
-        # any potential index errors. Provide the user with a message and
-        # set the zpt_table to None.
-        try:
-            tab = QTable(data[1:, :],
-                         names=data[0],
-                         dtype=[str, float, float, float, float, float])
-        except IndexError as e:
-            msg = (f'{repr(e)}\n{self._msg_div}\n'
-                   'There was an issue parsing the request. '
-                   'Try resubmitting the query. If this issue persists, please '
-                   'submit a ticket to the Help Desk at'
-                   'https://stsci.service-now.com/hst')
-            LOG.info(msg)
-            self._zpt_table = None
-        else:
-            # If and only if no exception was raised, attach the units to each
-            # column of the QTable. Note we skip the FILTER column because
-            # Quantity objects in astropy must be numerical (i.e. not str)
-            for col in tab.colnames:
-                if col.lower() == 'filter':
-                    continue
-                tab[col].unit = self._data_units[col]
-
-            self._zpt_table = tab
 
     def fetch(self):
-        """Submit the request to the ACS Zeropoints Calculator.
-
-        This method will:
-
-        * submit the request
-        * parse the response
-        * format the results into a table with the correct units
+        """Function to query API on AWS APIGateway for zeropoints for single or all
+        filters of a given ACS detector (HRC, SBC, or WFC) on a specified date.
 
         Returns
         -------
-        tab : `astropy.table.QTable` or `None`
-            If the request was successful, returns a table; otherwise, `None`.
+        table : astropy.table.table.QTable
+            If the request was successful, returns an astropy Qtable; otherwise, `None`.
 
         """
-        LOG.info('Checking inputs...')
-        valid_inputs = self._check_inputs()
+        #check user input date, detector, and filter
+        bool_inputs = self._check_inputs()
 
-        if valid_inputs:
-            LOG.info(f'Submitting request to {self._url}')
-            self._submit_request()
-            if self._failed:
-                return
+        if bool_inputs:
 
-            LOG.info('Parsing the response and formatting the results...')
-            self._parse_and_format()
-            for w in self._warnings:
-                LOG.warning(w)
+        #select between all filters or a single filter depending on if user has
+        #specified a filter, and then generate a request body to send the API
+            if self.filt is None:
+                #URL to invoke all_filter API on AWS APIGateway
+                invokeURL = "https://vtbopx9sf3.execute-api.us-east-1." \
+                                "amazonaws.com/main/all-filter-resource"
+                #Generate a request body to send the API
+                body = '{"date": "%s", "detector": "%s"}' %(self.date, self.detector)
+            else:
+                #URL to invoke single_filter API on AWS APIGateway
+                invokeURL = "https://vtbopx9sf3.execute-api.us-east-1." \
+                                "amazonaws.com/main/single-filter-resource"
+                #Generate a request body to send the API
+                body = '{"date": "%s", "detector": "%s", "filter": "%s"}' %(self.date, self.detector, self.filt)
 
-            return self.zpt_table
+            #send request to APIGateway with try/except clauses
+            help_desk_string = "\nIf this error persists, please contact the HST Help Desk at \n" \
+            "https://stsci.service-now.com/hst"
 
-        LOG.error('Please fix the incorrect input(s)')
+            request_exception = True
+
+            try:
+                response = requests.post(invokeURL, data = body)
+                response.raise_for_status()
+
+            except requests.exceptions.HTTPError:
+                err_string = "HTTP Error to AWS API Gateway:" + help_desk_string
+                print(err_string)
+            except requests.exceptions.ConnectionError:
+                err_string = "Error Connecting to AWS API Gateway:" + help_desk_string
+                print(err_string)
+            except requests.exceptions.Timeout:
+                print("Timeout Error to AWS API Gateway:" + help_desk_string)
+            except requests.exceptions.RequestException:
+                print("Request Exception Error to AWS API Gateway:" + help_desk_string)
+            else: 
+                request_exception = False
+
+            if request_exception:
+                sys.exit()
+
+            #and store the results
+            APIoutput = json.loads(response.text)
+
+            #define appropriate headers for the table
+            headers = ['Detector', 'Filter', 'PHOTLAM', 'PHOTFLAM', 'STmag', 'VEGAmag', 'ABmag']
+
+            #store each row of the results
+            rows = APIoutput["rows"]
+
+            #generate an astropy QTable from the results
+            table = QTable(names = headers,
+                dtype = ('S', 'S', 'float64', 'float64', 'float64', 'float64', 'float64'))
+
+            for i in range(len(rows)):
+                table.add_row(rows[i])
+
+            #remove detector column (to match output of previous API version)
+            table.remove_column('Detector')
+
+            #set the appropriate units for each column
+            table['Filter'].unit = u.dimensionless_unscaled
+            table['PHOTLAM'].unit = u.angstrom
+            table['PHOTFLAM'].unit = u.erg/(u.cm * u.cm * u.angstrom * u.electron)
+            table['STmag'].unit = u.STmag
+            table['VEGAmag'].unit = u.mag
+            table['ABmag'].unit = u.ABmag
+
+            self._zpt_table = table
+
+        return self._zpt_table
