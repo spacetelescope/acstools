@@ -81,15 +81,14 @@ Retrieve the zeropoint information for the F435W filter for WFC at multiple date
 astropy.units.quantity.Quantity
 
 """
-import astropy.units as u
 import datetime as dt
 import json
 import logging
-import numpy as np
 import os
 import requests
 import sys
 
+import astropy.units as u
 from astropy.table import QTable
 
 __taskname__ = "acszpt"
@@ -102,6 +101,7 @@ __all__      = ['Query']
 logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}.Query')
 LOG.setLevel(logging.INFO)
+
 
 class Query:
     """Class used to interface with the ACS Zeropoints Calculator API.
@@ -134,6 +134,7 @@ class Query:
                  F140LP, F150LP, F165LP
 
     """
+
     def __init__(self, date, detector, filt=None):
 
         # Set the attributes
@@ -190,11 +191,13 @@ class Query:
 
     def _check_inputs(self):
         """Check the inputs to ensure they are valid.
+
         Returns
         -------
         status : bool
             True if all inputs are valid, False if one is not.
         """
+
         valid_detector = True
         valid_filter = True
         valid_date = True
@@ -232,17 +235,20 @@ class Query:
 
     def _check_date(self, fmt='%Y-%m-%d'):
         """For determining if the input date is valid.
+
         Parameters
         ----------
         fmt : str
             The format of the date string. The default is ``%Y-%m-%d``, which
             corresponds to ``YYYY-MM-DD``.
+
         Returns
         -------
         status : str or `None`
             If the date is valid, returns `None`. If the date is invalid,
             returns a message explaining the issue.
         """
+
         result = None
         try:
             dt_obj = dt.datetime.strptime(self.date, fmt)
@@ -269,8 +275,8 @@ class Query:
         -------
         table : `astropy.table.QTable` or `None`
             If the request was successful, returns an astropy Qtable; otherwise, `None`.
-
         """
+
         # check user input date, detector, and filter
         bool_inputs = self._check_inputs()
 
@@ -325,11 +331,8 @@ class Query:
             rows = APIoutput["rows"]
 
             # generate an astropy QTable from the results
-            table = QTable(names=headers,
+            table = QTable(rows = rows, names=headers,
                            dtype=('S', 'S', 'float64', 'float64', 'float64', 'float64', 'float64'))
-
-            for i in range(len(rows)):
-                table.add_row(rows[i])
 
             #remove detector column (to match output of previous API version)
             table.remove_column('Detector')
