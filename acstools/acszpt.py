@@ -279,21 +279,19 @@ class Query:
             # select between all filters or a single filter depending on if user has
             # specified a filter, and then generate a request body to send the API
             if self.filt is None:
-                #URL to invoke all_filter API on AWS APIGateway
-                invokeURL = "https://vtbopx9sf3.execute-api.us-east-1." \
-                                "amazonaws.com/main/all-filter-resource"
-                #Generate a request body to send the API
-                body = '{"date": "%s", "detector": "%s"}' %(self.date, self.detector)
+                # URL to invoke all_filter API on AWS APIGateway
+                invokeURL = "https://vtbopx9sf3.execute-api.us-east-1.amazonaws.com/main/all-filter-resource"  # noqa
+                # Generate a request body to send the API
+                body = '{"date": "%s", "detector": "%s"}' % (self.date, self.detector)
             else:
-                #URL to invoke single_filter API on AWS APIGateway
-                invokeURL = "https://vtbopx9sf3.execute-api.us-east-1." \
-                                "amazonaws.com/main/single-filter-resource"
-                #Generate a request body to send the API
-                body = '{"date": "%s", "detector": "%s", "filter": "%s"}' %(self.date, self.detector, self.filt)
+                # URL to invoke single_filter API on AWS APIGateway
+                invokeURL = "https://vtbopx9sf3.execute-api.us-east-1.amazonaws.com/main/single-filter-resource"  # noqa
+                # Generate a request body to send the API
+                body = '{"date": "%s", "detector": "%s", "filter": "%s"}' % (self.date, self.detector, self.filt)
 
             # send request to APIGateway with try/except clauses
-            help_desk_string = "\nIf this error persists, please contact the HST Help Desk at \n" \
-            "https://stsci.service-now.com/hst"
+            help_desk_string = ("\nIf this error persists, please contact the HST Help Desk at \n"
+                                "https://stsci.service-now.com/hst")
 
             request_exception = True
 
@@ -339,7 +337,7 @@ class Query:
             # set the appropriate units for each column
             table['Filter'].unit = u.dimensionless_unscaled
             table['PHOTLAM'].unit = u.angstrom
-            table['PHOTFLAM'].unit = u.erg/(u.cm * u.cm * u.angstrom * u.electron)
+            table['PHOTFLAM'].unit = u.erg / (u.cm * u.cm * u.angstrom * u.electron)
             table['STmag'].unit = u.STmag
             table['VEGAmag'].unit = u.mag
             table['ABmag'].unit = u.ABmag
