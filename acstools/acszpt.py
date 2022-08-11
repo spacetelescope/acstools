@@ -3,7 +3,7 @@
 This module contains a class, :class:`Query`, that was implemented to provide
 users with means to programmatically query the
 `ACS Zeropoints Calculator <https://acszeropoints.stsci.edu>`_ API.
-This class work by submitting requests directly to the AWS API, which also
+This class works by submitting requests directly to the AWS API, which also
 handles the requests from the above web address. It is only valid for ACS
 specific instruments (HRC, SBC, or WFC).
 
