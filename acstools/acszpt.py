@@ -310,16 +310,16 @@ class Query:
             try:
                 response = requests.post(invokeURL, data=body)
 
-            except requests.exceptions.HTTPError as err:
+            except requests.exceptions.HTTPError:
                 raise ACSZeropointQueryError(f"HTTP Error to AWS API Gateway:{help_desk_string}") from None
 
-            except requests.exceptions.ConnectionError as err:
+            except requests.exceptions.ConnectionError:
                 raise ACSZeropointQueryError(f"Error Connecting to AWS API Gateway:{help_desk_string}") from None
 
-            except requests.exceptions.Timeout as err:
+            except requests.exceptions.Timeout:
                 raise ACSZeropointQueryError(f"Timeout Error to AWS API Gateway:{help_desk_string}") from None
 
-            except requests.exceptions.RequestException as err:
+            except requests.exceptions.RequestException:
                 raise ACSZeropointQueryError(f"Request Exception Error to AWS API Gateway:{help_desk_string}") from None
 
             # and store the results
