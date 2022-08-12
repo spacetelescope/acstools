@@ -26,7 +26,7 @@ Retrieve the zeropoint information for all the filters on 2016-04-01 for WFC:
 >>> q = acszpt.Query(date="2016-04-01", detector="WFC")
 >>> zpt_table = q.fetch()
 >>> print(zpt_table)
-Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag 
+Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag
        Angstrom erg / (Angstrom cm2 electron) mag(ST)   mag   mag(AB)
 ------ -------- ----------------------------- ------- ------- -------
  F435W   4329.9                    3.1858e-19  25.142  25.767  25.652
@@ -51,7 +51,7 @@ Retrieve the zeropoint information for the F435W filter on 2016-04-01 for WFC:
 >>> q = acszpt.Query(date="2016-04-01", detector="WFC", filt="F435W")
 >>> zpt_table = q.fetch()
 >>> print(zpt_table)
-Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag 
+Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag
        Angstrom erg / (Angstrom cm2 electron) mag(ST)   mag   mag(AB)
 ------ -------- ----------------------------- ------- ------- -------
  F435W   4329.9                    3.1858e-19  25.142  25.767  25.652
@@ -95,13 +95,22 @@ __taskname__ = "acszpt"
 __author__   = "Gagandeep Anand, Jenna Ryon, Nathan Miles"
 __version__  = "2.0"
 __vdate__    = "10-Aug-2022"
-__all__      = ['Query']
+__all__      = ['ACSZeropointQueryError','Query']
 
 # Initialize the logger
 logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}.Query')
 LOG.setLevel(logging.INFO)
 
+class ACSZeropointQueryError(Exception):
+    """Class used for raising exceptions with API Gateway post requests.
+
+    Parameters
+    ----------
+    Exception: exception
+
+    """
+    pass
 
 class Query:
     """Class used to interface with the ACS Zeropoints Calculator API.
@@ -141,7 +150,7 @@ class Query:
         self._date = date
         self._detector = detector.upper()
         self._filt = filt
-        
+
         # define valid detectors and filter combinations
         self._valid_detectors = ('HRC', 'SBC', 'WFC')
         self.valid_filters = {
@@ -232,7 +241,6 @@ class Query:
 
         return True
 
-
     def _check_date(self, fmt='%Y-%m-%d'):
         """For determining if the input date is valid.
 
@@ -266,7 +274,6 @@ class Query:
         finally:
             return result
 
-
     def fetch(self):
         """Function to query API on AWS APIGateway for zeropoints for single or all
         filters of a given ACS detector (HRC, SBC, or WFC) on a specified date.
@@ -299,27 +306,22 @@ class Query:
             help_desk_string = ("\nIf this error persists, please contact the HST Help Desk at \n"
                                 "https://stsci.service-now.com/hst")
 
-            request_exception = True
-
             try:
                 response = requests.post(invokeURL, data=body)
-                response.raise_for_status()
 
             except requests.exceptions.HTTPError:
                 err_string = "HTTP Error to AWS API Gateway:" + help_desk_string
                 print(err_string)
+
             except requests.exceptions.ConnectionError:
                 err_string = "Error Connecting to AWS API Gateway:" + help_desk_string
                 print(err_string)
+
             except requests.exceptions.Timeout:
                 print("Timeout Error to AWS API Gateway:" + help_desk_string)
+
             except requests.exceptions.RequestException:
                 print("Request Exception Error to AWS API Gateway:" + help_desk_string)
-            else: 
-                request_exception = False
-
-            if request_exception:
-                sys.exit()
 
             # and store the results
             APIoutput = json.loads(response.text)
