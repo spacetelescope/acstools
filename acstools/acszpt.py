@@ -86,7 +86,6 @@ import json
 import logging
 import os
 import requests
-import sys
 
 import astropy.units as u
 from astropy.table import QTable
@@ -95,7 +94,7 @@ __taskname__ = "acszpt"
 __author__   = "Gagandeep Anand, Jenna Ryon, Nathan Miles"
 __version__  = "2.0"
 __vdate__    = "10-Aug-2022"
-__all__      = ['ACSZeropointQueryError','Query']
+__all__      = ['ACSZeropointQueryError', 'Query']
 
 # Initialize the logger
 logging.basicConfig()
@@ -111,6 +110,7 @@ class ACSZeropointQueryError(Exception):
 
     """
     pass
+
 
 class Query:
     """Class used to interface with the ACS Zeropoints Calculator API.
@@ -309,19 +309,17 @@ class Query:
             try:
                 response = requests.post(invokeURL, data=body)
 
-            except requests.exceptions.HTTPError:
-                err_string = "HTTP Error to AWS API Gateway:" + help_desk_string
-                print(err_string)
+            except requests.exceptions.HTTPError as err:
+                raise ACSZeropointQueryError(f"HTTP Error to AWS API Gateway:{help_desk_string}") from err
 
-            except requests.exceptions.ConnectionError:
-                err_string = "Error Connecting to AWS API Gateway:" + help_desk_string
-                print(err_string)
+            except requests.exceptions.ConnectionError as err:
+                raise ACSZeropointQueryError(f"Error Connecting to AWS API Gateway:{help_desk_string}") from err
 
-            except requests.exceptions.Timeout:
-                print("Timeout Error to AWS API Gateway:" + help_desk_string)
+            except requests.exceptions.Timeout as err:
+                raise ACSZeropointQueryError(f"Timeout Error to AWS API Gateway:{help_desk_string}") from err
 
-            except requests.exceptions.RequestException:
-                print("Request Exception Error to AWS API Gateway:" + help_desk_string)
+            except requests.exceptions.RequestException as err:
+                raise ACSZeropointQueryError(f"Request Exception Error to AWS API Gateway:{help_desk_string}") from err
 
             # and store the results
             APIoutput = json.loads(response.text)
@@ -333,7 +331,7 @@ class Query:
             rows = APIoutput["rows"]
 
             # generate an astropy QTable from the results
-            table = QTable(rows = rows, names=headers,
+            table = QTable(rows=rows, names=headers,
                            dtype=('S', 'S', 'float64', 'float64', 'float64', 'float64', 'float64'))
 
             #remove detector column (to match output of previous API version)
