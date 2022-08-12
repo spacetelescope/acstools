@@ -101,6 +101,7 @@ logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}.Query')
 LOG.setLevel(logging.INFO)
 
+
 class ACSZeropointQueryError(Exception):
     """Class used for raising exceptions with API Gateway post requests.
 
