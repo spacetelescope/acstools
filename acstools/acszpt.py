@@ -18,8 +18,6 @@ is an ``astropy.units.quantity.Quantity`` object with the appropriate units atta
 Examples
 --------
 
-Example 1
-^^^^^^^^^
 Retrieve the zeropoint information for all the filters on 2016-04-01 for WFC:
 
 >>> from acstools import acszpt
@@ -43,8 +41,6 @@ Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag
 F850LP   9031.5                    1.5313e-19  25.937  24.323  24.851
  F892N   8914.8                    1.5105e-18  23.452  21.892  22.394
 
-Example 2
-^^^^^^^^^
 Retrieve the zeropoint information for the F435W filter on 2016-04-01 for WFC:
 
 >>> from acstools import acszpt
@@ -56,8 +52,6 @@ Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag
 ------ -------- ----------------------------- ------- ------- -------
  F435W   4329.9                    3.1858e-19  25.142  25.767  25.652
 
-Example 3
-^^^^^^^^^
 Retrieve the zeropoint information for the F435W filter for WFC at multiple dates:
 
 >>> from acstools import acszpt
@@ -104,11 +98,6 @@ LOG.setLevel(logging.INFO)
 
 class ACSZeropointQueryError(Exception):
     """Class used for raising exceptions with API Gateway post requests.
-
-    Parameters
-    ----------
-    Exception: exception
-
     """
     pass
 
@@ -335,7 +324,7 @@ class Query:
             table = QTable(rows=rows, names=headers,
                            dtype=('S', 'S', 'float64', 'float64', 'float64', 'float64', 'float64'))
 
-            #remove detector column (to match output of previous API version)
+            # remove detector column (to match output of previous API version)
             table.remove_column('Detector')
 
             # set the appropriate units for each column
