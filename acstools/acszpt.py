@@ -139,7 +139,10 @@ class Query:
         # Set the attributes
         self._date = date
         self._detector = detector.upper()
-        self._filt = filt.upper()
+        if filt is None:
+            self._filt = filt
+        else:
+            self._filt = filt.upper()
 
         # define valid detectors and filter combinations
         self._valid_detectors = ('HRC', 'SBC', 'WFC')
