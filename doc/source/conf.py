@@ -210,6 +210,6 @@ intersphinx_mapping = {
 
 # -- Options for linkcheck output ---------------------------------------------
 linkcheck_retry = 5
-linkcheck_ignore = ['https://hsthelp.stsci.edu']
+linkcheck_ignore = ['https://hsthelp.stsci.edu', 'https://acszeropoints.stsci.edu']
 linkcheck_timeout = 180
 linkcheck_anchors = False
