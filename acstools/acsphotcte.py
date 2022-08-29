@@ -4,12 +4,11 @@ The ACS Photometric CTE API is a programmatic interface for the
 `ACS Photometric CTE Webtool <https://acsphotometriccte.stsci.edu>`_.
 The API is a cloud-based service that employs a serverless approach on AWS
 with API Gateway and Lambda to compute the photometric CTE corrections
-using the model described in ACS ISR 2012-05.
+using the model described in `ACS ISR 2012-05 <https://ui.adsabs.harvard.edu/abs/2012acs..rept....5C/abstract>`_.
 The model corrects ACS/WFC aperture photometry extracted from FLT images for
-CTE losses using the most recent formula described in Chiaberge's ISR 2012-05. It is
-only calibrated for photometry obtained after SM4 in May 2009. For pre-SM4
-data, please see Chiaberge et al. 2009 (ISR 2009-01), or use pixel-based
-CTE-corrected files obtained from MAST. Currently,  only 3 and 5
+CTE losses. It is only calibrated for photometry obtained after SM4 in May
+2009. For pre-SM4 data, please see `ACS ISR 2009-01 <https://ui.adsabs.harvard.edu/abs/2009acs..rept....1C/abstract>`_, or use
+pixel-based CTE-corrected files obtained from MAST. Currently, only 3 and 5
 pixel aperture radii are supported. The model is designed to compute the
 CTE losses as a function of the number of Y transfers, sky background,
 source flux, and observation date.
@@ -29,7 +28,7 @@ Examples
 --------
 In this example, we get the CTE corrected FLT photometry for a list of 1000
 sources. For each parameter, we generate 1000 random values in the interval [0, 1) and
-then scale each value to be in the typical range. We use arbitray values for
+then scale each value to be in the typical range. We use arbitrary values for
 the fluxes, local sky backgrounds, and MJD. We assume a radius of 3 pixels was
 used to compute the aperture photometry. For the ACS/WFC CCD chips, the maximum
 number of Y transfers is 2048 and so we scale by 2048.

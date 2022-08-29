@@ -3,11 +3,11 @@
 Remove horizontal stripes from ACS WFC post-SM4 data.
 
 For more information, see
-`Removal of Bias Striping Noise from Post-SM4 ACS WFC Images <http://www.stsci.edu/hst/acs/software/destripe/>`_.
+`ACS ISR 2011-05 <https://ui.adsabs.harvard.edu/abs/2011acs..rept....5G/abstract>`_.
 
 .. note::
 
-    * Does not work on RAW image.
+    * Does not work on RAW images.
 
     * Uses the flatfield specified by the image header keyword PFLTFILE.
       If keyword value is 'N/A', as is the case with biases and darks,

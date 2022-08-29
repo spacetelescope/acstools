@@ -1,8 +1,7 @@
 """
 Toolkit for analyzing HST/ACS WFC and HRC polarization data. For more information
-about ACS polarization data analysis, see section 5.3 of the ACS Data Handbook:
+about ACS polarization data analysis, see `Section 5.3 of the ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb/chapter-5-acs-data-analysis/5-3-polarimetry>`_.
 
-https://hst-docs.stsci.edu/acsdhb/chapter-5-acs-data-analysis/5-3-polarimetry
 """
 
 import os
