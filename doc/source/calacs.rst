@@ -63,6 +63,18 @@ readout of the WFC detectors. It is not part of the standard CALACS pipeline.
     :headings: =-
     :no-inheritance-diagram:
 
+PIXVALUE in FITS File
+=====================
+
+CALACS uses HSTIO that utilizes ``PIXVALUE`` keyword to represent a data
+extension with constant value. However, this is not a standard FITS behavior
+and is not recognized by ``astropy.io.fits``. While you should not encounter errors or warnings, constant value data extensions may exhibit unexpected behavior when reading, writing, or manipulating them with ``astropy.io.fits``. Therefore, if issues such as these arise, we recommend use of
+``stsci.tools.stpyfits``, which is distributed as part of ``stsci_python``,
+instead of `astropy.io.fits` when working with CALACS products.
+To use ``stpyfits`` in Python::
+
+    from stsci.tools import stpyfits as fits
+
 calacs.e (C Program)
 ====================
 
