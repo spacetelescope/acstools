@@ -136,7 +136,7 @@ CALACS supports several command line options:
 
     * Specify which generation CTE correction to use, the default is 2. Gen 1 (officially deprecated) refers to
       the correction algorithm used in calacs version pre 9.2.0 in relation to
-      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the new CTE correction algorithm implemented in calacs version 9.2.0 (HSTCAL 1.3.0) in relation to `ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract`_.
+      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the new CTE correction algorithm implemented in calacs version 9.2.0 (HSTCAL 1.3.0) in relation to `ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_.
 
 * --pctetab <filename>
 
