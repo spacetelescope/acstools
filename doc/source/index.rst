@@ -21,7 +21,7 @@ To install the development version of this package::
 
     The information here reflect the *latest* software info and might not
     be in-sync with the
-    `ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_.
+    `ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb>`_.
 
 .. note::
 

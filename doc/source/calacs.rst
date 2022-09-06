@@ -55,7 +55,8 @@ ACSSUM Python Wrapper
 CTE Forward Model
 =================
 
-This functionality is provided but not run as part of the pipeline.
+This functionality is provided to simulate the CTE effects associated with
+readout of the WFC detectors. It is not part of the standard CALACS pipeline.
 
 .. automodapi:: acstools.acscteforwardmodel
     :no-heading:
@@ -67,7 +68,7 @@ PIXVALUE in FITS File
 
 CALACS uses HSTIO that utilizes ``PIXVALUE`` keyword to represent a data
 extension with constant value. However, this is not a standard FITS behavior
-and is not recognized by ``astropy.io.fits``. Therefore, one should use
+and is not recognized by ``astropy.io.fits``. While you should not encounter errors or warnings, constant value data extensions may exhibit unexpected behavior when reading, writing, or manipulating them with ``astropy.io.fits``. Therefore, if issues such as these arise, we recommend use of
 ``stsci.tools.stpyfits``, which is distributed as part of ``stsci_python``,
 instead of `astropy.io.fits` when working with CALACS products.
 To use ``stpyfits`` in Python::
@@ -77,15 +78,15 @@ To use ``stpyfits`` in Python::
 calacs.e (C Program)
 ====================
 
-A detailed description of this new and improved CALACS is available in
-`ACS Data Handbook v7.0 or later <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_.
+A detailed description of CALACS is available in the
+`ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb>`_.
 If you have questions not answered in the documentation, please contact
 `STScI Help Desk <https://hsthelp.stsci.edu>`_.
 
 Where to Find CALACS
 --------------------
 
-CALACS is now part of
+CALACS is part of the
 `HSTCAL package <https://github.com/spacetelescope/hstcal>`_.
 
 Usage
@@ -134,9 +135,8 @@ CALACS supports several command line options:
 * --ctegen <1|2>
 
     * Specify which generation CTE correction to use, the default is 2. Gen 1 (officially deprecated) refers to
-      the correction algorithm used in calacs version pre 9.2.0 in relation to the following ISRs
-      ACS ISR 2010-03 and 2012-03. Gen 2 refers to the new CTE correction algorithm implemented in calacs
-      version 9.2.0 (HSTCAL 1.3.0) in relation to the ISR (to be updated).
+      the correction algorithm used in calacs version pre 9.2.0 in relation to
+      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the new CTE correction algorithm implemented in calacs version 9.2.0 (HSTCAL 1.3.0) in relation to `ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_.
 
 * --pctetab <filename>
 
@@ -175,33 +175,35 @@ For example::
 CALACS Processing Steps
 =======================
 
-BIASCORR
---------
+Please see
+`Chapter 3 of the ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb/chapter-3-acs-calibration-pipeline/3-4-calacs-processing-steps>`_
+for a more thorough description of the steps within CALACS.
 
-BIASCORR is now performed before BLEVCORR. This should not significantly affect
-science results. This change was necessary to accomodate BIASFILE subtraction in
-DN with the rest of the calculations done in ELECTRONS.
+Bias Image Subtraction (BIASCORR)
+---------------------------------
+
+Bias correction is done by subtracting the BIASFILE in units of DN, removing the
+low-order quasi-static structure of the bias, including the bias gradient (post-SM4).
 
 Unit Conversion to Electrons
 ----------------------------
 
-The image is multiplied by gain right after BIASCORR, converting it to
-ELECTRONS. This step is no longer embedded within FLATCORR.
+The image is multiplied by the gain, converting it to ELECTRONS.
 
-BLEVCORR
---------
+Bias Level Correction (BLEVCORR)
+--------------------------------
 
-BLEVCORR is now performed after BIASCORR. Calculations are done in ELECTRONS.
+BLEVCORR is performed after BIASCORR. Calculations are done in ELECTRONS.
 
 For post-SM4 full-frame WFC exposures, it also includes:
 
 * de-striping to remove stripes introduced by new hardware installed during
-  SM-4 (J. Anderson; ACS ISR 2011-05); and
+  SM-4 (`ACS ISR 2011-05 <https://ui.adsabs.harvard.edu/abs/2011acs..rept....5G/abstract>`_)
 * if JWROTYPE=DS_int and CCDGAIN=2, also correct for bias shift
-  (ACS ISR 2012-02) and cross-talk (N. Grogin; ACS ISR 2010-02).
+  (`ACS ISR 2012-02 <https://ui.adsabs.harvard.edu/abs/2012acs..rept....2G/abstract>`_) and cross-talk (`ACS ISR 2010-02 <https://ui.adsabs.harvard.edu/abs/2010acs..rept....2S/abstract>`_).
 
-SINKCORR
---------
+Sink Pixel Flagging (SINKCORR)
+------------------------------
 
 SINKCORR flags sink pixels and the adjacent affected pixels with the value
 1024 in the DQ array of WFC images using the SNKCFILE. Only performed on images
@@ -210,13 +212,11 @@ taken after January 2015.
 Pixel-Based CTE Correction (PCTECORR)
 -------------------------------------
 
-For all full-frame WFC exposures, pixel-based CTE correction (ACS ISR to be updated)
-is applied in ACSCTE that occurs after the ACSCCD series;
-i.e., after BLEVCORR.
+For all full-frame WFC exposures, pixel-based CTE correction (`ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_)
+is applied during ACSCTE that occurs after ACSCCD, specifically, after BLEVCORR.
 
 Because the CTE correction is applied before DARKCORR and FLSHCORR, it is
-necessary to use a CTE-corrected dark (DRKCFILE) if
-the PCTECORR step is enabled.
+necessary to use a CTE-corrected dark (DRKCFILE) if the PCTECORR step is enabled.
 
 Parameters characterizing the CTE correction are stored in a reference table,
 PCTETAB.
@@ -252,8 +252,8 @@ Optional Keywords
 
 You may adjust some CTE correction algorithm parameters by changing the
 following keywords in the RAW image header. The default values are picked for
-optimal results in a typical WFC full-frame exposure. Changing these values is
-not recommended unless you know what you are doing.
+optimal results in a typical WFC full-frame exposure. **Changing these values is
+not recommended unless you know what you are doing.**
 
 * FIXROCR
 
@@ -289,45 +289,47 @@ not recommended unless you know what you are doing.
 Dark Current Subtraction (DARKCORR)
 -----------------------------------
 
-It uses DARKFILE if PCTECORR=OMIT, otherwise it uses DRKCFILE (CTE-corrected
+Dark correction uses DARKFILE if PCTECORR=OMIT, otherwise it uses DRKCFILE (CTE-corrected
 dark reference file).
 
-Dark image is now scaled by EXPTIME and FLASHDUR. For post-SM4 non-BIAS
-WFC images, extra 3 seconds are also added to account for idle time before
-readout. Any image with non-zero EXPTIME is considered not a BIAS.
+The dark image is scaled by DARKTIME, which is the sum of EXPTIME, FLASHDUR,
+and for WFC, a commanding overhead based on the observing mode, which is listed
+in the CCDTAB. Any image with non-zero EXPTIME is assumed to not be a BIAS.
 
 Post-Flash Correction (FLSHCORR)
 --------------------------------
 
-Post-flash correction is now performed after DARKCORR in the ACS2D step.
-When FLSHCORR=PERFORM, it uses FLSHFILE.
+Post-flash correction is performed after DARKCORR in the ACS2D step.
+When FLSHCORR=PERFORM, it scales FLSHFILE by FLASHDUR for correction.
 
-FLATCORR
---------
+Flat-Field Correction (FLATCORR)
+--------------------------------
 
-Conversion from DN to ELECTRONS no longer depends on FLATCORR=PERFORM. Unit
-conversion is done for all exposures after BIASCORR.
+PFLTFILE is used for flat-field correction, which is a combination of the
+pixel-to-pixel flats and low-order flats. This corrects for pixel-to-pixel and
+large-scale sensitivity gradients across the detector by dividing the data with
+the flat-field image.
 
 Photometry Keywords (PHOTCORR)
 ------------------------------
 
-The PHOTCORR step is now performed using tables of precomputed values instead
-of calls  to SYNPHOT. The correct table for a given image must be specified
+The PHOTCORR step is performed using tables of precomputed values (IMPHTTAB).
+The correct table for a given image must be specified
 in the IMPHTTAB header keyword in order for CALACS to perform the PHOTCORR step.
 By default, it should be in the ``jref`` directory and have the suffix
 ``_imp.fits``. Each DETECTOR uses a different table.
-
-If you do not wish to use this feature, set PHOTCORR to OMIT.
 
 CALACS Output
 =============
 
 Using RAW as input:
 
-* flt.fits: Same as existing FLT.
+* flt.fits: Also called FLT.
 * flc.fits: Similar to FLT, except with pixel-based CTE correction applied.
+* Temporary files: blv_tmp.fits (BLV_TMP), blc_tmp.fits (BLC_TMP)
 
 Using ASN as input with ACSREJ:
 
-* crj.fits: Same as existing CRJ.
+* crj.fits: Also called CRJ.
 * crc.fits: Similar to CRJ, except with pixel-based CTE correction applied.
+* Temporary files: crj_tmp.fits (CRJ_TMP), crc_tmp.fits (CRC_TMP)

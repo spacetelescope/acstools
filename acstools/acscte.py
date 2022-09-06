@@ -3,7 +3,7 @@ The acscte module contains a function `acscte` that calls the ACSCTE executable.
 Use this function to facilitate batch runs of ACSCTE.
 
 Only WFC full-frame and some 2K subarrays are currently supported. See
-`ACS Data Handbook <http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/>`_
+`ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb>`_
 for more details.
 
 .. note:: Calibration flags are controlled by primary header.

@@ -9,11 +9,11 @@ on ACS/WFC images. Input files must be RAW full-frame or supported subarray
 ACS/WFC exposures taken after SM4. Resultant outputs are science-ready
 FLT and FLC (if applicable) files.
 
-This script is useful for when built-in CALACS destriping algorithm
+This script is useful for when the built-in CALACS destriping algorithm
 using overscans is insufficient or unavailable.
 
 For more information, see
-`Removal of Bias Striping Noise from Post-SM4 ACS WFC Images <http://www.stsci.edu/hst/acs/software/destripe/>`_.
+`ACS ISR 2011-05 <https://ui.adsabs.harvard.edu/abs/2011acs..rept....5G/abstract>`_.
 
 Examples
 --------
