@@ -90,10 +90,10 @@ class PhotCTEAPI:
                          'run-photcte-correction')
 
         # Public API ID for the ACS Photometric CTE API
-        self._api_id = 'lveyv0du1h'
+        self._api_id = 'hdtenv1tu1'
 
         # Public API key for the ACS Photometric CTE API
-        self._api_key = 'A4O8KVTJeM3EcJJL5AaOE8vXqwzqQ2k6KA8v1vE4'
+        self._api_key = 'rwPplgrNMMa9duXXhL1tA39sOPviMiTd4vsKXXQh'
 
         # API credentials to pass in header of POST request
         self._api_credentials = {
