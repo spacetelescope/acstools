@@ -1,6 +1,6 @@
 docs:
   - .github/**/*.md
-  - .readthedocs.yml
+  - .readthedocs.yaml
   - doc/**/*
   - '*.md'
   - any: ['*.rst', '!CHANGES.rst']

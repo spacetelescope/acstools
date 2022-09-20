@@ -213,3 +213,6 @@ linkcheck_retry = 5
 linkcheck_ignore = ['https://hsthelp.stsci.edu', 'https://acszeropoints.stsci.edu']
 linkcheck_timeout = 180
 linkcheck_anchors = False
+
+# Enable nitpicky mode - which ensures that all references in the docs resolve.
+nitpicky = True
