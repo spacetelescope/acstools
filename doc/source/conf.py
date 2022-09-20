@@ -215,4 +215,4 @@ linkcheck_timeout = 180
 linkcheck_anchors = False
 
 # Enable nitpicky mode - which ensures that all references in the docs resolve.
-nitpicky = True
+nitpicky = False
