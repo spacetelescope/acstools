@@ -51,7 +51,7 @@ jobs:
     - name: Install and build
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install astropy=5.2rc1 --upgrade --no-deps
+        pip install astropy==5.2rc1 --upgrade --no-deps
         pip install git+https://github.com/spacetelescope/ci_watson.git --upgrade --no-deps
         python -m pip install -e .[test,all]
     - name: Test
