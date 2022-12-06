@@ -19,3 +19,5 @@ from . import acszpt  # noqa
 from . import acsphotcte  # noqa
 from . import satdet  # noqa
 from . import utils_calib  # noqa
+from . import findsat_mrt #noqa
+from . import utils_findsat_mrt #noqa
