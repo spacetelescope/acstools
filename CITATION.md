@@ -4,4 +4,4 @@ If you use acstools, please cite as:
 
 #### Other forms of citation
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3728240.svg)](https://doi.org/10.5281/zenodo.3728240)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7406933.svg)](https://doi.org/10.5281/zenodo.7406933)

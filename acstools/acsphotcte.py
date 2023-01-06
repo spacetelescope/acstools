@@ -4,7 +4,7 @@ The ACS Photometric CTE API is a programmatic interface for the
 `ACS Photometric CTE Webtool <https://acsphotometriccte.stsci.edu>`_.
 The API is a cloud-based service that employs a serverless approach on AWS
 with API Gateway and Lambda to compute the photometric CTE corrections
-using the model described in `ACS ISR 2012-05 <https://ui.adsabs.harvard.edu/abs/2012acs..rept....5C/abstract>`_.
+using the model described in `ACS ISR 2022-06 <https://ui.adsabs.harvard.edu/abs/2022acs..rept....6C/abstract>`_.
 The model corrects ACS/WFC aperture photometry extracted from FLT images for
 CTE losses. It is only calibrated for photometry obtained after SM4 in May
 2009. For pre-SM4 data, please see `ACS ISR 2009-01 <https://ui.adsabs.harvard.edu/abs/2009acs..rept....1C/abstract>`_, or use
