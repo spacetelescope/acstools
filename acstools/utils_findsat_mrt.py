@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.modeling import models, fitting
 from astropy.table import Table, vstack
-from skimage import transform #this is my own version, need to make this point to a unique path
+from skimage import transform  # this is my own version, need to make this point to a unique path
 from astropy.stats import sigma_clip
 import pdb
 import logging
@@ -19,13 +19,13 @@ from multiprocessing import Pool
 import time
 
 __taskname__ = "utils_findsat_mrt"
-__author__   = "David V. Stark"
-__version__  = "1.0"
-__vdate__    = "06-Dec-2022"
-__all__      = ['_round_up_to_odd','merge_tables','good_indices',
-                '_fit_streak_profile','_rotate_image_trail','filter_sources',
-                'create_mask','rotate','streak_endpoints','_streak_persistence',
-                'add_streak','_rot_sum','_rot_med','radon']
+__author__ = "David V. Stark"
+__version__ = "1.0"
+__vdate__ = "06-Dec-2022"
+__all__ = ['_round_up_to_odd', 'merge_tables', 'good_indices',
+           '_fit_streak_profile', '_rotate_image_trail', 'filter_sources',
+           'create_mask', 'rotate', 'streak_endpoints', '_streak_persistence',
+           'add_streak', '_rot_sum', '_rot_med','radon']
 
 # Initialize the logger
 logging.basicConfig()
@@ -50,7 +50,7 @@ def _round_up_to_odd(f):
     '''
     return np.ceil(f) // 2 * 2 + 1
 
-def merge_tables(tbls,theta_sep=10,rho_sep=10):
+def merge_tables(tbls, theta_sep=10, rho_sep=10):
     '''
     Routine to merge multiple trail tables together while removing duplicates
 
@@ -73,25 +73,24 @@ def merge_tables(tbls,theta_sep=10,rho_sep=10):
     
     counter=1
     for t in tbls:
-        if counter==1:
+        if counter == 1:
             src = t
             counter += 1
         else:
-            #check that added sources are not recreations of already detected ones
+            # check that added sources are not recreations of already detected ones
             keep = (np.zeros(len(t))+1).astype(bool)
             for s in src:
                 dtheta = np.abs(t['xcentroid']-s['xcentroid'])
                 drho = np.abs(t['ycentroid']-s['ycentroid'])
-                sel=(dtheta < theta_sep) | (drho < rho_sep)
-                keep[sel]=False
-            src=vstack([src,t[keep]])
-    return src  
+                sel = (dtheta < theta_sep) | (drho < rho_sep)
+                keep[sel] = False
+            src=vstack([src, t[keep]])
+    return src
 
-def good_indices(inds,shape):
+def good_indices(inds, shape):
     '''
     Program to make sure indices are within bounds of array. Occasionally 
     useful for various tasks
-                                                                                                    )
 
     Parameters
     ----------
@@ -110,19 +109,19 @@ def good_indices(inds,shape):
         inds = [inds]
     if type(shape) == int:
         shape = [shape]
-    shape=list(shape) #covers other sizes of shape
+    shape=list(shape)  # covers other sizes of shape
     
     
     good_inds = []
-    for ind,sz in zip(inds,shape):
-        ind1,ind2 = ind
-        new_inds = (np.max([0,ind1]),np.min([sz-1,ind2]))
+    for ind, sz in zip(inds, shape):
+        ind1, ind2 = ind
+        new_inds = (np.max([0, ind1]), np.min([sz-1, ind2]))
         good_inds.append(new_inds)
     
     return good_inds
         
 
-def _fit_streak_profile(yarr,p0,fit_background=True,plot=False,max_width=None,ax=None,bounds=None):
+def _fit_streak_profile(yarr, p0, fit_background=True, plot=False, max_width=None, ax=None, bounds=None):
     '''
     Fits a Gaussian function to a 1D cross-section of a trail identified in an image.
 
@@ -158,111 +157,102 @@ def _fit_streak_profile(yarr,p0,fit_background=True,plot=False,max_width=None,ax
     '''
     
     
-    amp0, mean0, stdev0 = p0 #initial guesses for amplitude, mean, stddev. Can be "None"
+    amp0, mean0, stdev0 = p0  # initial guesses for amplitude, mean, stddev. Can be "None"
     
-    #update mean0 if necessary; other will be updated below
+    # update mean0 if necessary; other will be updated below
     if mean0 == None:
         mean0 = np.len(yarr)/2-0.5
  
-    xarr = np.arange(len(yarr)) #x pixel array
+    xarr = np.arange(len(yarr))  # x pixel array
     
-    ###################################
-    ##subtract background##############
-    ###################################
+    # subtract background
     
-    if fit_background==True:
+    if fit_background is True:
         
-        #try gitting a polynomial to background. Keep to low order to avoid weirdness occuring. E.g., line
+        # try gitting a polynomial to background. Keep to low order to avoid weirdness occuring. E.g., line
         fit=fitting.LinearLSQFitter()
-        or_fit = fitting.FittingWithOutlierRemoval(fit,sigma_clip,niter=3,sigma=3) #rejects outliers
+        or_fit = fitting.FittingWithOutlierRemoval(fit, sigma_clip, niter=3, sigma=3)  # rejects outliers
         
-        #make sure there are regions to fit on either side of the initial position. If not, lower order
+        # make sure there are regions to fit on either side of the initial position. If not, lower order
         sel_low = np.where(np.isfinite(yarr) & (xarr < (mean0-max_width/2)))[0]
         sel_high = np.where(np.isfinite(yarr) & (xarr > (mean0+max_width/2)))[0]
         if (len(sel_high) == 0) or (len(sel_low) == 0):
-            order=1
+            order = 1
         else:
-            order=3
-        sel=np.concatenate([sel_low,sel_high])
+            order = 3
+        sel = np.concatenate([sel_low, sel_high])
         
-        #now run fitting
-        line_init = models.Polynomial1D(degree=order)
-        fitted_line,data_mask = or_fit(line_init,xarr[sel],yarr[sel])
+        # now run fitting
+        line_init = models.Polynomial1D(degree = order)
+        fitted_line, data_mask = or_fit(line_init, xarr[sel], yarr[sel])
             
-        #subtract the fitted background    
+        # subtract the fitted background    
         yarr = yarr - fitted_line(xarr)
-    
     else:    
-        #if not fitting, subtract median using outer 50% of data
-        ind = int(len(yarr)/4) #use to select outer quarter of data
-        mean=np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:]) #estimate of baseline level using outer 50% of channels
+        # if not fitting, subtract median using outer 50% of data
+        ind = int(len(yarr)/4)  # use to select outer quarter of data
+        mean = np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])  # estimate of baseline level using outer 50% of channels
         yarr = yarr - mean
         
-    #####################################
-    #####fit profile now#################
-    #####################################
-    
-    #update initial guesses if necessary
+    # fit cross-sectional profile
+
+    # update initial guesses if necessary
     if amp0 is None:
         amp0 = np.nanmax(yarr)
     if stdev0 is None:
         stdev0 = 5.
         
-    if bounds==None:
-        bounds = {'amplitude':(0,None)}
-    g_init = models.Gaussian1D(amplitude=amp0,mean=mean0,stddev=stdev0,
+    if bounds is None:
+        bounds = {'amplitude': (0, None)}
+    g_init = models.Gaussian1D(amplitude=amp0, mean=mean0, stddev=stdev0,
                                bounds=bounds)
     fit_g = fitting.DogBoxLSQFitter()
-    sel=np.isfinite(yarr)
-    g = fit_g(g_init, xarr[sel],yarr[sel])
-    if (plot==True) and (ax is not None):
+    sel = np.isfinite(yarr)
+    g = fit_g(g_init, xarr[sel], yarr[sel])
+    if (plot is True) and (ax is not None):
         ax.plot(xarr,yarr)
-        ax.plot(xarr[sel],g(xarr[sel]),color='red',label='Fit',lw=3,alpha=0.3)
-
-    #need to add error handling here
+        ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3, alpha=0.3)
     
-    ####################################
-    ##characterize fit##################
-    ####################################
-    
-    #measure peak flux directly -- sometimes gaussian not the best fit and can poorly represent
-    #the true amplitude
-    sel=(xarr > (g.mean - 3*g.stddev)) & (xarr < (g.mean + 3*g.stddev))
+    # characterize the fit
+ 
+    # measure peak flux directly -- sometimes gaussian not the best fit and can poorly represent
+    # the true amplitude
+    sel = (xarr > (g.mean - 3*g.stddev)) & (xarr < (g.mean + 3*g.stddev))
     if np.sum(sel) == 0:
-        peak=0
+        peak = 0
     else:
         peak = np.nanmax(yarr[sel])
     
-    #measure mean flux within the standard deviation
-    sel=(xarr > (g.mean - g.stddev)) & (xarr < (g.mean + g.stddev))
-    if np.sum(sel) ==0:
+    # measure mean flux within the standard deviation
+    sel = (xarr > (g.mean - g.stddev)) & (xarr < (g.mean + g.stddev))
+    if np.sum(sel) == 0:
         mean_flux = 0
     else:
         mean_flux = np.nanmean(yarr[sel])
     
-    #measure noise outside the profile region                                    
-    sel=(xarr < (g.mean - 3*g.stddev)) | (xarr > (g.mean + 3*g.stddev))
+    # measure noise outside the profile region                                    
+    sel = (xarr < (g.mean - 3*g.stddev)) | (xarr > (g.mean + 3*g.stddev))
     if np.sum(sel) == 0:
         noise = 0
     else:   
-        noise = np.nanmedian(np.abs(yarr[sel] - np.nanmedian(yarr[sel])))/0.67449#np.nanstd(yarr[sel])
+        noise = np.nanmedian(np.abs(yarr[sel] - np.nanmedian(yarr[sel])))/0.67449
     
-    #use amplitude and noise to estimate snr
-    snr=(peak-noise)/noise
+    # use amplitude and noise to estimate snr
+    snr = (peak-noise)/noise
     
     LOG.info('amplitude of feature: {}'.format(peak))
     LOG.info('baseline noise: {}'.format(noise))
     LOG.info('snr of feature = {}'.format(snr))
     
-    #use fit paramters to determine the 3-sigma width 
-    upper,lower = (g.mean + 3*g.stddev,g.mean-3*g.stddev)
-    width=upper-lower
+    # use fit paramters to determine the 3-sigma width 
+    upper,lower = (g.mean + 3*g.stddev, g.mean-3*g.stddev)
+    width = upper-lower
     LOG.info('width of feature = {}'.format(width))
     
-    #return all this
-    return g,snr,width,mean_flux
+    # return all this
+    return g, snr, width, mean_flux
 
-def _rotate_image_trail(image,endpoints):
+def _rotate_image_trail(image, endpoints):
     '''    
     Rotates an image so a given trail runs in the horizontal direction
 
@@ -284,39 +274,39 @@ def _rotate_image_trail(image,endpoints):
 
     '''
 
-    #extract endpoints
-    x1,y1 = endpoints[0]
-    x2,y2 = endpoints[1]
+    # extract endpoints
+    x1, y1 = endpoints[0]
+    x2, y2 = endpoints[1]
     
-    #calculate trail angle
-    dy=y2-y1
-    dx=x2-x1
+    # calculate trail angle
+    dy = y2-y1
+    dx = x2-x1
     
-    theta = np.arctan2(dy,dx)
+    theta = np.arctan2(dy, dx)
 
-    #rotate image so trail is horizontal
-    rotated = transform.rotate(image, np.degrees(theta), cval=np.nan, resize=True,order=3)
+    # rotate image so trail is horizontal
+    rotated = transform.rotate(image, np.degrees(theta), cval=np.nan, resize=True, order=3)
     
-    #now recalculate the new streak endpoints. Need to account for change in image size after rotating
+    # now recalculate the new streak endpoints. Need to account for change in image size after rotating
     
-    #get new image center
+    # get new image center
     xshift = (rotated.shape[1] - image.shape[1])/2
     yshift = (rotated.shape[0] - image.shape[0])/2
     
     #rotate streak endpoints
-    rx1,ry1 = rotate(((image.shape[1]-1)/2,(image.shape[0]-1)/2), (x1,y1), -theta)
-    rx1,ry1 = (rx1 + xshift,ry1 + yshift)
-    rx2,ry2 = rotate(((image.shape[1]-1)/2,(image.shape[0]-1)/2), (x2,y2), -theta)
-    rx2,ry2 = (rx2 + xshift,ry2 + yshift)
+    rx1, ry1 = rotate(((image.shape[1]-1)/2, (image.shape[0]-1)/2), (x1, y1), -theta)
+    rx1, ry1 = (rx1 + xshift,ry1 + yshift)
+    rx2, ry2 = rotate(((image.shape[1]-1)/2, (image.shape[0]-1)/2), (x2, y2), -theta)
+    rx2, ry2 = (rx2 + xshift,ry2 + yshift)
     
-    newendpoints = [[rx1,ry1],[rx2,ry2]]
+    newendpoints = [[rx1, ry1], [rx2, ry2]]
     
-    return rotated,newendpoints,theta
+    return rotated, newendpoints, theta
 
 
-def filter_sources(image,streak_positions,plot=False,buffer=100,minsnr=5,
-                   max_width=75,fit_background=True,
-                   min_length=50,check_persistence=True,min_persistence=0.5,
+def filter_sources(image, streak_positions, plot=False, buffer=100, minsnr=5,
+                   max_width=75, fit_background=True,
+                   min_length=50, check_persistence=True, min_persistence=0.5,
                    persistence_chunk=100, min_persistence_snr=3):
     '''
     Routine to filter a trail catalog of likely spurious sources based on S/N, 
@@ -377,83 +367,83 @@ def filter_sources(image,streak_positions,plot=False,buffer=100,minsnr=5,
     mean_fluxes = np.zeros(len(streak_positions))
 
 
-    #cycle through lines and add them to the mask
-    for ii,p in enumerate(streak_positions):
+    # cycle through lines and add them to the mask
+    for ii, p in enumerate(streak_positions):
         
-        rotated,[[rx1,ry1],[rx2,ry2]],theta = _rotate_image_trail(image,p)
+        rotated, [[rx1, ry1], [rx2, ry2]], theta = _rotate_image_trail(image, p)
         
-        #update ry1/2 to include buffer region
-        ry1_new = np.min([ry1,ry2])-buffer
-        ry2_new = np.max([ry1,ry2])+buffer #making sure ry1 lower than ry2
-        streak_y_rot = (ry1 + ry2)/2 #streak position, possible slight difference in ry1/ry2 due to finite angle sampling
+        # update ry1/2 to include buffer region
+        ry1_new = np.min([ry1, ry2])-buffer
+        ry2_new = np.max([ry1, ry2])+buffer  # making sure ry1 lower than ry2
+        streak_y_rot = (ry1 + ry2)/2  # streak position, possible slight difference in ry1/ry2 due to finite angle sampling
         
-        #buffer region could extend off edge of chip. Truncate ry1/ry2 if so 
-        fixed_inds = good_indices([(ry1_new,ry2_new),(rx1,rx2)],rotated.shape)
-        ry1_trim,ry2_trim = fixed_inds[0]
-        rx1_trim,rx2_trim = fixed_inds[1]
+        # buffer region could extend off edge of chip. Truncate ry1/ry2 if so 
+        fixed_inds = good_indices([(ry1_new, ry2_new), (rx1, rx2)], rotated.shape)
+        ry1_trim, ry2_trim = fixed_inds[0]
+        rx1_trim, rx2_trim = fixed_inds[1]
         
-        #find distance of streak from current bottom of the cutout
+        # find distance of streak from current bottom of the cutout
         dy_streak = streak_y_rot - ry1_trim
         
-        #extract final cutout
-        subregion = rotated[int(ry1_trim):int(ry2_trim),int(rx1_trim):int(rx2_trim)]
+        # extract final cutout
+        subregion = rotated[int(ry1_trim):int(ry2_trim), int(rx1_trim):int(rx2_trim)]
 
-        #make 1D profile of trail (looking down its axis) by taking a median of all pixels in each row
-        medarr = np.nanmedian(subregion,axis=1)
+        # make 1D profile of trail (looking down its axis) by taking a median of all pixels in each row
+        medarr = np.nanmedian(subregion, axis=1)
         
-        #get number of pixels being considered at each point; remove those that are too small such that median unreliable
-        narr = np.sum(np.isfinite(subregion),axis=1)
-        medarr[narr < min_length]=np.nan
+        # get number of pixels being considered at each point; remove those that are too small such that median unreliable
+        narr = np.sum(np.isfinite(subregion), axis=1)
+        medarr[narr < min_length] = np.nan
         
-        #set up plot
-        use_ax=None
+        # set up plot
+        use_ax = None
         
-        if plot==True:
-            fig,[ax1,ax2] = plt.subplots(1,2)
+        if plot is True:
+            fig, [ax1, ax2] = plt.subplots(1, 2)
             mad = np.nanmedian(np.abs(subregion))
-            ax2.imshow(subregion,vmin=-mad,vmax=5*mad,origin='lower')
-            ax2.plot([0,subregion.shape[1]-1],[dy_streak,dy_streak],'--',lw=2,color='magenta',alpha=0.4)
+            ax2.imshow(subregion, vmin=-mad, vmax=5*mad, origin='lower')
+            ax2.plot([0, subregion.shape[1]-1], [dy_streak,dy_streak], '--', lw=2, color='magenta', alpha=0.4)
             use_ax = ax1
             
-        g,snr,width,mean_flux = _fit_streak_profile(medarr,(None,dy_streak,5),ax=use_ax,max_width=max_width,plot=plot)
+        g, snr, width, mean_flux = _fit_streak_profile(medarr, (None, dy_streak, 5), ax=use_ax, max_width=max_width, plot=plot)
         snrs[ii] = snr
         widths[ii] = width
-        mean_fluxes[ii]=mean_flux
+        mean_fluxes[ii] = mean_flux
      
-        if plot == True:
-            ax1.set_title('snr={}, width={}'.format(snr,width))
+        if plot is True:
+            ax1.set_title('snr={}, width={}'.format(snr, width))
             ax1.set_xlabel('position')
             ax1.set_ylabel('brightness')
             fig.tight_layout()
 
-        #update status as needed
+        # update status as needed
         if (snr > minsnr) & ((width) < max_width):
-            status[ii]=1
+            status[ii] = 1
 
-            #new step; track persistence (if toggled)
-            persistence[ii]=-1
-            if check_persistence==True:
-                maxchunk = np.floor(snr*snr/min_persistence_snr**2) #approximate maximum number of sections and still have sn>3 per section (assuming uniform streak)
+            # new step; track persistence (if toggled)
+            persistence[ii] = -1
+            if check_persistence is True:
+                maxchunk = np.floor(snr*snr/min_persistence_snr**2)  # approximate maximum number of sections and still have sn>3 per section (assuming uniform streak)
     
-                dx=persistence_chunk #starting dx value
+                dx = persistence_chunk  # starting dx value
                 nchunk = np.floor(subregion.shape[1]/dx)
                 
-                #make sure estimated snr per section is >3
+                # make sure estimated snr per section is >3
                 if nchunk > maxchunk:
-                    nchunk=maxchunk
+                    nchunk = maxchunk
                     dx = np.floor(subregion.shape[1]/nchunk)
                 
                 if nchunk < 2:
-                    #want at least two chunks
+                    # want at least two chunks
                     dx = np.floor(subregion.shape[1]/2.)
-                    nchunk=2
+                    nchunk = 2
                 
                 LOG.info('breaking into {} sections for persistence check'.format(nchunk))
                 LOG.info('Section size for persistence check: {}'.format(dx))
                 
-                persistence[ii] = _streak_persistence(subregion,int(dx),g.mean.value,g.stddev.value,max_width=max_width)
+                persistence[ii] = _streak_persistence(subregion, int(dx), g.mean.value, g.stddev.value, max_width=max_width)
                 if persistence[ii] > min_persistence:
-                    status[ii]=2
+                    status[ii] = 2
         
     properties = Table()
     properties['mean flux'] = mean_fluxes
@@ -464,7 +454,7 @@ def filter_sources(image,streak_positions,plot=False,buffer=100,minsnr=5,
 
     return properties       
 
-def create_mask(image,trail_id,endpoints,widths):
+def create_mask(image, trail_id, endpoints, widths):
     '''
     Creates an image mask given a set of trail endpoints and widths.
 
@@ -493,35 +483,35 @@ def create_mask(image,trail_id,endpoints,widths):
     
     segment = np.zeros_like(image).astype(int)
     
-    #cycle through trail endpoints/widths
-    for t,e,w in zip(trail_id,endpoints,widths):
+    # cycle through trail endpoints/widths
+    for t, e, w in zip(trail_id, endpoints, widths):
         
-        rotated,[[rx1,ry1],[rx2,ry2]],theta = _rotate_image_trail(image,e)
+        rotated, [[rx1, ry1],[ rx2 ,ry2]], theta = _rotate_image_trail(image, e)
         
-        #create submask using known width and 
-        ry = (ry1 + ry2)/2. #take average, although they should be about the same
-        mask_y1 = np.maximum(0,np.floor(ry - w/2)).astype(int)  #max function used to ensure it stays within bounds
-        mask_y2 = np.minimum(rotated.shape[0]-1,np.ceil(ry+w/2)).astype(int) #min function used to ensure it stays within bounds
+        # create submask using known width and 
+        ry = (ry1 + ry2)/2.  # take average, although they should be about the same
+        mask_y1 = np.maximum(0,np.floor(ry - w/2)).astype(int)   # max function used to ensure it stays within bounds
+        mask_y2 = np.minimum(rotated.shape[0]-1,np.ceil(ry+w/2)).astype(int)  # min function used to ensure it stays within bounds
         
         mask_x1 = np.maximum(0,np.floor(rx1)).astype(int)
-        mask_x2 = np.minimum(rotated.shape[1]-1,np.ceil(rx2)).astype(int)
+        mask_x2 = np.minimum(rotated.shape[1]-1, np.ceil(rx2)).astype(int)
         
-        #use these indices to make submask
+        # use these indices to make submask
         submask_rot = np.zeros_like(rotated)
-        submask_rot[mask_y1:mask_y2,mask_x1:mask_x2]=t
+        submask_rot[mask_y1:mask_y2,mask_x1:mask_x2] = t
 
-        #unrotate
+        # unrotate
         submask_unrot = transform.rotate(submask_rot, -np.degrees(theta), resize=True, order=1)
-        submask_unrot[submask_unrot > 0]=t
+        submask_unrot[submask_unrot > 0] = t
         ix0 = (submask_unrot.shape[1] - image.shape[1]) / 2
         ix1 = image.shape[1]+ix0
         iy0 = (submask_unrot.shape[0] - image.shape[0]) / 2
         iy1 = image.shape[0]+iy0
-        ix0,ix1,iy0,iy1 = list(map(int, [ix0, ix1, iy0, iy1]))
+        ix0, ix1, iy0, iy1 = list(map(int, [ix0, ix1, iy0, iy1]))
         subsegment = submask_unrot[iy0:iy1, ix0:ix1]
         
-        #add this to the existing segentation map
-        segment = np.maximum(segment,subsegment)
+        # add this to the existing segentation map
+        segment = np.maximum(segment, subsegment)
         
     mask = segment > 0
     
@@ -558,7 +548,7 @@ def rotate(origin, point, angle):
     qy = oy + np.sin(angle) * (px - ox) + np.cos(angle) * (py - oy)
     return qx, qy
  
-def streak_endpoints(rho,theta,sz,plot=False):
+def streak_endpoints(rho, theta, sz, plot=False):
     '''
     Calculates the endpoints of a streak parameterized by rho, theta assuming an
     image of size sz
@@ -583,70 +573,68 @@ def streak_endpoints(rho,theta,sz,plot=False):
     x0 = sz[1]/2-0.5
     y0 = sz[0]/2-0.5
 
-    dy=rho*np.sin(np.radians(theta))
-    dx=rho*np.cos(np.radians(theta))
+    dy = rho*np.sin(np.radians(theta))
+    dx = rho*np.cos(np.radians(theta))
     
-    slope=np.sin(np.radians(theta))/np.cos(np.radians(theta))
-    intercept = y0-slope*x0
+    slope = np.sin(np.radians(theta))/np.cos(np.radians(theta))
+    intercept = y0 - slope*x0
     
-    #get perpendicular slope/intercept (this is the line that represents what
-    #the streak looks like)
+    # get perpendicular slope/intercept (this is the line that represents what
+    # the streak looks like)
     slope_int = -1./slope
     b_int = (y0+dy)-slope_int*(x0+dx)
     
     
-    if plot==True:
-        fig,ax = plt.subplots(figsize=(10,10))
-        ax.plot([0,image.shape[0]-1],[image.shape[0]/2-0.5,image.shape[0]/2-0.5],'--',color='gray')
-        ax.plot([image.shape[0]/2-0.5,image.shape[0]/2-0.5],[0,image.shape[0]-1],'--',color='gray')
+    if plot is True:
+        fig, ax = plt.subplots(figsize=(10, 10))
+        ax.plot([0, image.shape[0]-1], [image.shape[0]/2-0.5, image.shape[0]/2-0.5], '--', color='gray')
+        ax.plot([image.shape[0]/2-0.5, image.shape[0]/2-0.5], [0,image.shape[0]-1], '--', color='gray')
     
-        ax.plot([x0,x0+dx],[y0,y0+dy],color='red')
-        ax.set_xlim(0,sz[1]-1)
-        ax.set_ylim(0,sz[0]-1)
+        ax.plot([x0, x0+dx], [y0, y0+dy], color='red')
+        ax.set_xlim(0, sz[1]-1)
+        ax.set_ylim(0, sz[0]-1)
             
         xarr = np.arange(sz[1])
         yarr = slope_int*xarr+b_int
-        ax.plot(xarr,yarr,color='blue')
+        ax.plot(xarr, yarr, color='blue')
 
     
-    #get coordinates of streak. Start with x = 0 and max value
-    xi,xf = (0,sz[1]-1)
-    yi,yf = slope_int*np.array([xi,xf])+b_int
+    # get coordinates of streak. Start with x = 0 and max value
+    xi, xf = (0, sz[1]-1)
+    yi, yf = slope_int*np.array([xi, xf])+b_int
 
 
-    #update coordinates if y goes out of bounds    
+    # update coordinates if y goes out of bounds    
     if yi < 0:
         yi = 0
     elif yi >= sz[0]:
-        yi=sz[0]-1
+        yi = sz[0]-1
     xi = (yi-b_int)/slope_int
 
 
-    #same things for yf
+    # same things for yf
     if yf < 0:
         yf = 0
     elif yf >= sz[0]:
-        yf=sz[0]-1
+        yf = sz[0]-1
     xf = (yf-b_int)/slope_int    
     
-    #update this is the slope is infinity
-    if np.isfinite(slope_int)==False:
-        yi=0
-        yf=sz[1]-1
-        xi=x0+rho
-        xf=x0+rho
+    # update this is the slope is infinity
+    if np.isfinite(slope_int) == False:
+        yi = 0
+        yf = sz[1]-1
+        xi = x0+rho
+        xf = x0+rho
         
-    if plot==True:
-        ax.scatter([xi,xf],[yi,yf],s=100,color='magenta')
-        
-    p0 = (xi,yi)
-    p1 = (xf,yf)
+    if plot is True:
+        ax.scatter([xi, xf], [yi, yf], s=100, color='magenta')
+
+    p0 = (xi, yi)
+    p1 = (xf, yf)
     
-    return [p0,p1]
-    #ax.scatter(xarr[0],yarr[0],s=100,color='magenta')
-    #ax.scatter(xarr[-1],yarr[-1],s=100,color='magenta')
+    return [p0, p1]
     
-def _streak_persistence(cutout,dx,streak_y0,streak_stdev,max_width=None,plot=False):
+def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None, plot=False):
     '''
     Routine to measure a sreak's persistence score. It does this by breaking 
     the trail into even chunks and trying to fit a Gaussian to a 1D cross-section 
@@ -677,34 +665,34 @@ def _streak_persistence(cutout,dx,streak_y0,streak_stdev,max_width=None,plot=Fal
 
     '''
     
-    guess = (None,streak_y0,streak_stdev) #starting guess
-    bounds= {'amplitude':(0,None),'mean':(streak_y0,streak_y0+ 25)}
+    guess = (None, streak_y0, streak_stdev)  # starting guess
+    bounds= {'amplitude':(0,None), 'mean':(streak_y0,streak_y0+ 25)}
     
     snr_arr = []
     width_arr = []
     mean_arr = []
     persist = []
 
-    #step through and fit as a function of x
+    # step through and fit as a function of x
     nsteps = int(np.floor(cutout.shape[1]/dx))
     for ii in range(nsteps):
         
-        LOG.info('Checking persistence, step {} of {}'.format(ii+1,nsteps))
+        LOG.info('Checking persistence, step {} of {}'.format(ii+1, nsteps))
         
         ind0 = ii*dx
         ind1 = (ii+1)*dx
-        chunk = np.nanmedian(cutout[:,ind0:ind1],axis=1)
-        if plot == True:
-            fig,ax = plt.subplots()
+        chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
+        if plot is True:
+            fig, ax = plt.subplots()
         else:
-            ax=None
+            ax = None
 
-        g,snr,width,mean_flux = _fit_streak_profile(chunk,guess,ax=ax,max_width=max_width,plot=plot,bounds=bounds)#,bounds={'amplitude':(0,None),'mean':{streak_y0-100,streak_y0+100}})
-        if plot == True:
-            ax.set_title('{}-snr={},width={},mean={}'.format(ii,snr,width,g.mean.value))
+        g, snr, width, mean_flux = _fit_streak_profile(chunk, guess, ax=ax, max_width=max_width, plot=plot, bounds=bounds)
+        if plot is True:
+            ax.set_title('{}-snr={},width={},mean={}'.format(ii, snr, width, g.mean.value))
 
         
-        LOG.info('Chunk snr, width ,mean: {}, {}, {}'.format(snr,width,g.mean.value))
+        LOG.info('Chunk snr, width ,mean: {}, {}, {}'.format(snr, width, g.mean.value))
         snr_arr.append(snr)
         width_arr.append(width)
         mean_arr.append(g.mean.value)
@@ -720,19 +708,18 @@ def _streak_persistence(cutout,dx,streak_y0,streak_stdev,max_width=None,plot=Fal
             persist.append(False)
         
         if success == True:    
-            #update guess
-            guess = (g.amplitude.value,g.mean.value,g.stddev.value)
-            bounds = {'amplitude':(0,None),'mean':(g.mean.value-width,g.mean.value + width)}
+            # update guess
+            guess = (g.amplitude.value, g.mean.value, g.stddev.value)
+            bounds = {'amplitude':(0, None),'mean':(g.mean.value-width, g.mean.value + width)}
         else:
             LOG.info('fit failed, will not update guesses')
     pscore = np.sum(persist)/len(persist)
     
     LOG.info('persistance: {}'.format(pscore))
 
-    
     return pscore
         
-def add_streak(image,width,value,rho=None,theta=None,endpoints=None,psf_sigma=None):
+def add_streak(image, width, value, rho=None, theta=None, endpoints=None, psf_sigma=None):
     '''
     Generates a model streak and adds it to an input image. The code optionally 
     convolves the trail image with a psf.
@@ -764,56 +751,56 @@ def add_streak(image,width,value,rho=None,theta=None,endpoints=None,psf_sigma=No
     '''
     
     #make sure either rho,theta or endpoints are set
-    if ((rho != None) | (theta != None)) & (endpoints != None):
+    if ((rho is not None) | (theta is not None)) & (endpoints is not None):
         LOG.warning('rho/theta and endpoints set, defaulting to using endpoints')
-        use_rhotheta=False
-        use_endpoints=True
+        use_rhotheta = False
+        use_endpoints = True
     
-    elif (rho != None) & (theta == None) & (endpoints == None):
+    elif (rho is not None) & (theta is None) & (endpoints is None):
         LOG.error('rho set but not theta')
         return image
     
-    elif (rho == None) & (theta != None) & (endpoints == None):
+    elif (rho is None) & (theta is not None) & (endpoints is None):
         LOG.error('theta set but not rho')
         return image
-    elif (rho != None) & (theta != None) & (endpoints == None):
-        use_rhotheta=True
-        use_endpoints=False
-    elif (rho == None) & (theta == None) & (endpoints != None):
-        use_endpoints=True
-        use_rhotheta=False
+    elif (rho is not None) & (theta is not None) & (endpoints is None):
+        use_rhotheta = True
+        use_endpoints = False
+    elif (rho is None) & (theta is None) & (endpoints is not None):
+        use_endpoints = True
+        use_rhotheta = False
     
-    #calculate endpoints from rho,theta if necessary
+    # calculate endpoints from rho,theta if necessary
     if use_rhotheta:
         endpoints = streak_endpoints(rho,theta,image.shape)
         print('calculated endpoints: {}'.format(endpoints))
         
     #rotate image so trail horizontal
-    rotated, newendpoints, rot_theta = _rotate_image_trail(image,endpoints)
+    rotated, newendpoints, rot_theta = _rotate_image_trail(image, endpoints)
 
     #add trail
-    x1,y1 = newendpoints[0]
-    x2,y2 = newendpoints[1]
+    x1, y1 = newendpoints[0]
+    x2, y2 = newendpoints[1]
     
     trail_y = (y1 + y2)/2
     trail_image_rot = np.zeros_like(rotated)
-    #find edge of trail, avoid going beyond image boundaries
-    max_ind = int(np.minimum(trail_y + width/2+1,rotated.shape[0]))
-    min_ind = int(np.maximum(trail_y - width/2,0))
-    trail_image_rot[min_ind:max_ind,:]=value
+    # find edge of trail, avoid going beyond image boundaries
+    max_ind = int(np.minimum(trail_y + width/2+1, rotated.shape[0]))
+    min_ind = int(np.maximum(trail_y - width/2, 0))
+    trail_image_rot[min_ind:max_ind, :] = value
 
-    #convolve with psf if set
+    # convolve with psf if set
     if psf_sigma is not None:
-        kernel = Gaussian2DKernel(x_stddev=psf_sigma,y_stddev=psf_sigma)
-        trail_image_rot = convolve(trail_image_rot, kernel,boundary='extend')
+        kernel = Gaussian2DKernel(x_stddev=psf_sigma, y_stddev=psf_sigma)
+        trail_image_rot = convolve(trail_image_rot, kernel, boundary='extend')
 
-    #now rotate back
+    # now rotate back
     trail_image = transform.rotate(trail_image_rot, -np.degrees(rot_theta), resize=True, order=1)
     ix0 = (trail_image.shape[1] - image.shape[1]) / 2
     ix1 = image.shape[1]+ix0
     iy0 = (trail_image.shape[0] - image.shape[0]) / 2
     iy1 = image.shape[0]+iy0
-    ix0,ix1,iy0,iy1 = list(map(int, [ix0, ix1, iy0, iy1]))
+    ix0, ix1, iy0, iy1 = list(map(int, [ix0, ix1, iy0, iy1]))
     
     trail_image = trail_image[iy0:iy1, ix0:ix1]
     
@@ -821,7 +808,7 @@ def add_streak(image,width,value,rho=None,theta=None,endpoints=None,psf_sigma=No
 
     return image
 
-def _rot_sum(image,angle,return_length):
+def _rot_sum(image, angle, return_length):
     '''
     Rotates and image by a designated angle and sums the values in each column
 
@@ -849,13 +836,13 @@ def _rot_sum(image,angle,return_length):
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
     rotated = warp(image, R, clip=False,cval=np.nan)
-    medarr = np.nansum(rotated,axis=0)
-    if return_length==True:
-        length = np.sum(np.isfinite(rotated),axis=0)
-        return [medarr,length]
+    medarr = np.nansum(rotated, axis=0)
+    if return_length is True:
+        length = np.sum(np.isfinite(rotated), axis=0)
+        return [medarr, length]
     return medarr
 
-def _rot_med(image,angle,return_length):
+def _rot_med(image, angle, return_length):
     '''
     Rotates and image by a designated angle and take a median of the values in each column
 
@@ -882,15 +869,15 @@ def _rot_med(image,angle,return_length):
     R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
-    rotated = warp(image, R, clip=False,cval=np.nan)
-    medarr=np.nanmedian(rotated,axis=0)
-    if return_length==True:
-        length = np.sum(np.isfinite(rotated),axis=0)
-        return [medarr,length]
+    rotated = warp(image, R, clip=False, cval=np.nan)
+    medarr=np.nanmedian(rotated, axis=0)
+    if return_length is True:
+        length = np.sum(np.isfinite(rotated), axis=0)
+        return [medarr, length]
     else:
-        return medarr#[medarr,rho]
+        return medarr
 
-def radon(image, theta=None, circle=False, *, preserve_range=False, fill_value=np.nan, median=True, threads=1, return_length=False,print_calc_times=False):
+def radon(image, theta=None, circle=False, *, preserve_range=False, fill_value=np.nan, median=True, threads=1, return_length=False, print_calc_times=False):
     """
     Calculates the (median) radon transform of an image given specified
     projection angles.
@@ -1006,11 +993,11 @@ def radon(image, theta=None, circle=False, *, preserve_range=False, fill_value=n
             rotated = warp(padded_image, R, clip=False)
             warp_time_1 = time.time()
             total_warp_time += (warp_time_1 - warp_time_0)
-            if median==False:
-                radon_image[:, i] = np.nansum(rotated,axis=0)#rotated.sum(0)
+            if median is False:
+                radon_image[:, i] = np.nansum(rotated, axis=0)
             else:
                 median_time_0 = time.time()
-                radon_image[:,i] = np.nanmedian(rotated,axis=0)
+                radon_image[:, i] = np.nanmedian(rotated, axis=0)
                 median_time_1 = time.time()
                 total_median_time += (median_time_1 - median_time_0)
 
@@ -1019,18 +1006,18 @@ def radon(image, theta=None, circle=False, *, preserve_range=False, fill_value=n
         angles = np.deg2rad(theta)
         images = [padded_image for i in range(len(angles))]
         return_lengths = [True for i in range(len(angles))]
-        pairs = list(zip(images,angles,return_lengths))
-        if median==False:
-            result = p.starmap(_rot_sum,pairs)
-            result=np.array(result)
-            radon_image = result[:,0,:]
-            lengths=result[:,1,:]
+        pairs = list(zip(images, angles, return_lengths))
+        if median is False:
+            result = p.starmap(_rot_sum, pairs)
+            result = np.array(result)
+            radon_image = result[:, 0, :]
+            lengths=result[:, 1, :]
         else:
-            result = p.starmap(_rot_med,pairs)
-            result=np.array(result)
+            result = p.starmap(_rot_med, pairs)
+            result = np.array(result)
             print(np.shape(result))
-            radon_image = result[:,0,:]
-            lengths=result[:,1,:]
+            radon_image = result[:, 0, :]
+            lengths=result[:, 1, :]
         radon_image = radon_image.T
         lengths = lengths.T
      
@@ -1039,8 +1026,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False, fill_value=n
         LOG.info('Total time to warp images = {} seconds'.format(total_warp_time))
         LOG.info('Total time to calculate medians = {} seconds'.format(total_median_time))
 
-    if return_length==True:
-        return radon_image,lengths
+    if return_length is True:
+        return radon_image, lengths
     else:
         return radon_image
 
