@@ -697,33 +697,6 @@ class trailfinder(object):
         cax.ax.set_ylabel('trail ID')
         ax.set_title('Segmentation Mask')
 
-    def add_streak(self, endpoints, flux, width=3, psf_sigma=None):
-        '''
-        Simple routine to add a streak to an image. Mostly just for testing
-
-        Parameters
-        ----------
-        p : array-like
-            Endpoints of streak in the format [(x1,y1),(x1,y1)].
-        flux : float
-            Brightness per pixel of the streak.
-        width : int, optional
-            Half-width of the streak. The default is 3.
-
-        Returns
-        -------
-        image, ndarray
-            The image with the streak added
-
-        '''
-
-        updated_image = u.add_streak(self.image, width, flux,
-                                     endpoints=endpoints,
-                                     psf_sigma=psf_sigma)
-        self.image = updated_image
-
-        return self.image
-
     def save_output(self, root=None, output_dir=None, save_mrt=None,
                     save_mask=None, save_catalog=None, save_diagnostic=None):
         '''
