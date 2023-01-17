@@ -35,11 +35,11 @@ calculation
 Initialize trailfinder and run steps
 
 >>> s = trailfinder(image=image, threads=8)  # initializes
->>> s.run_mrt()                        # calculates MRT
->>> s.find_mrt_sources()               # finds point sources in MRT
->>> s.filter_sources()#plot=True)      # filters sources from MRT
+>>> s.run_mrt()                       # calculates MRT
+>>> s.find_mrt_sources()              # finds point sources in MRT
+>>> s.filter_sources()                # filters sources from MRT
 >>> s.make_mask()                     # makes a mask from the identified trails
->>> s.save_output(root='test')         # saves the output
+>>> s.save_output(root='test')        # saves the output
 
 Example 2: Quick run to find satellite trails
 
