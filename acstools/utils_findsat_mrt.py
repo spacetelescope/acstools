@@ -627,11 +627,12 @@ def streak_endpoints(rho, theta, sz, plot=False):
 
     if plot is True:
         fig, ax = plt.subplots(figsize=(10, 10))
-        ax.plot([0, image.shape[0]-1], [image.shape[0]/2-0.5,
-                                        image.shape[0]/2-0.5], '--',
+        
+        ax.plot([0, sz[0]-1], [sz/2-0.5,
+                                        sz/2-0.5], '--',
                 color='gray')
-        ax.plot([image.shape[0]/2-0.5, image.shape[0]/2-0.5],
-                [0, image.shape[0]-1], '--', color='gray')
+        ax.plot([sz/2-0.5, sz/2-0.5],
+                [0, sz[0]-1], '--', color='gray')
 
         ax.plot([x0, x0+dx], [y0, y0+dy], color='red')
         ax.set_xlim(0, sz[1]-1)
