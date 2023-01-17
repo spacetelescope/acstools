@@ -490,7 +490,6 @@ class trailfinder(object):
 
         # add the status array and endpoints array. Everything will be zero
         # because no additional checks have been done
-        if self.source_list is not None:
             self.source_list['endpoints'] = \
                 [u.streak_endpoints(t['rho'], -t['theta'], self.image.shape)
                  for t in self.source_list]
