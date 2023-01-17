@@ -464,7 +464,7 @@ class trailfinder(object):
                 tbl = None
             if tbl is not None:
                 tbl = tbl[np.isfinite(tbl['xcentroid'])]
-                LOG.info('{} sources found'.format(len(tbl)))
+                LOG.info('{} sources found using kernel'.format(len(tbl)))
                 if (len(tbls) > 0):
                     if len(tbls[-1]['id']) > 0:
                         tbl['id'] += np.max(tbls[-1]['id'])
@@ -472,9 +472,10 @@ class trailfinder(object):
                         # duplicate ids
                 tbls.append(tbl)
             else:
-                LOG.info('no sources found')
+                LOG.info('no sources found using kernel')
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
+            LOG.info('Removing duplicate sources')
             sources = u.merge_tables(tbls)
             self.source_list = sources
         else:
@@ -501,12 +502,17 @@ class trailfinder(object):
                                                None):
             self._remove_angles()
 
-        # plot if set
-        if (self.plot is True) & (self.source_list is not None):
-            ax = self.plot_mrt()
-            for s in self.source_list:
-                ax.scatter(s['xcentroid'], s['ycentroid'], edgecolor='red',
-                           facecolor='none', s=100, lw=2)
+        #print the total number of sources found
+        if self.source_list is None:
+            LOG.warning('No sources found')
+        else:
+            LOG.info('{} final sources found'.format(len(self.source_list)))
+            # plot sources if set
+            if (self.plot is True):
+                ax = self.plot_mrt()
+                for s in self.source_list:
+                    ax.scatter(s['xcentroid'], s['ycentroid'], edgecolor='red',
+                               facecolor='none', s=100, lw=2)
 
         return self.source_list
 
