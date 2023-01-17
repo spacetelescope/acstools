@@ -7,29 +7,34 @@ accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails. These trails can then be used to create a mask.
 
-Example 1: Identificaation of trails in an ACS/WFC image, j97006j5q_flc.fits
+Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
 (4th extension)
 
 Load data
 
->>> from findsat_mrt import trailfinder
->>> file='j97006j5q_flc.fits'
->>> extension=4
+>>> from acstools.findsat_mrt import trailfinder
+>>> from astropy.io import fits
+>>> import numpy as np
+>>> file = 'j97006j5q_flc.fits'
+>>> extension = 4
 >>> with fits.open(file) as h:
->>>     image = h[extension].dat
->>>     dq=h[extension+2].data
+>>>     image = h[extension].data
+>>>     dq = h[extension+2].data
 
 Mask bad pixels, remove median background, and rebin the data to speed up MRT
 calculation
 
->>> mask = bitmask.bitfield_to_boolean_mask(dq,ignore_flags=[4096,8192,16384])
+>>> from astropy.nddata import bitmask
+>>> import ccdproc
+>>> mask = bitmask.bitfield_to_boolean_mask(dq,
+                                            ignore_flags=[4096, 8192, 16384])
 >>> image[mask == True]=np.nan
 >>> image = image-np.nanmedian(image)
->>> image=ccdproc.block_reduce(image, 4,func=np.nansum)
+>>> image = ccdproc.block_reduce(image, 4, func=np.nansum)
 
 Initialize trailfinder and run steps
 
->>> s=trailfinder(image=image,threads=8)  # initializes
+>>> s = trailfinder(image=image, threads=8)  # initializes
 >>> s.run_mrt()                        # calculates MRT
 >>> s.find_mrt_sources()               # finds point sources in MRT
 >>> s.filter_sources()#plot=True)      # filters sources from MRT
@@ -40,14 +45,14 @@ Example 2: Quick run to find satellite trails
 
 After loading and preprocessing the image (see example above), run
 
->>> s=trailfinder(image=image,threads=8)  # initializes
->>> s.run_all()                           # runs everything else
+>>> s = trailfinder(image=image, threads=8)  # initializes
+>>> s.run_all()                              # runs everything else
 
 Example 3: Plot results
 
 After running trailfinder:
 
->>> s=trailfinder(image=image,threads=8)  # initializes
+>>> s = trailfinder(image=image, threads=8)  # initializes
 >>> s.run_all()                        # runs everything else
 >>> s.plot_mrt(show_sources=True)      # plots MRT with sources overlaid
 >>> s.plot_image(overlay_mask=True)    # plots input image with mask overlaid
