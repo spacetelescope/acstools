@@ -65,21 +65,18 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 from photutils.detection import StarFinder
 import ccdproc
-from astropy.nddata import Cutout2D
 import os
 from astropy.table import Table
 import acstools.utils_findsat_mrt as u
 from astropy.nddata import bitmask
 import logging
-from astropy.modeling import models, fitting
-from scipy import interpolate
 
 
 __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
 __vdate__ = "16-Dec-2022"
-__all__ = ['trailfinder', 'wfc_wrapper', 'create_mrt_line_kernel']
+__all__ = ['trailfinder', 'wfc_wrapper']
 
 plt.rcParams['font.size'] = '18'
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -233,7 +230,7 @@ class trailfinder(object):
         self.save_mask = save_mask
 
         # plot image upon initialization
-        if (np.any(image) is not None) & (self.plot is True):
+        if (image is not None) & (self.plot is True):
             self.plot_image()
 
     def run_mrt(self, theta=None, threads=None):
@@ -308,10 +305,9 @@ class trailfinder(object):
 
         '''
 
-        if np.any(self.image) is None:
-            LOG.error('No image to plot')
-            return
-
+        if self.image is None:
+            raise ValueError('No image to plot')
+            
         if ax is None:
             fig, ax = plt.subplots()
 
@@ -328,7 +324,7 @@ class trailfinder(object):
         ax.set_title('Input Image')
 
         if overlay_mask is True:
-            if np.any(self.mask) is None:
+            if self.mask is None:
                 LOG.error('No mask to overlay')
             else:
                 ax.imshow(self.mask, alpha=0.5, cmap='Reds', origin='lower',
@@ -357,7 +353,7 @@ class trailfinder(object):
 
         '''
 
-        if np.any(self.mrt) is None:
+        if self.mrt is None:
             LOG.error('No MRT to plot')
             return
 
@@ -409,7 +405,7 @@ class trailfinder(object):
 
         '''
 
-        if np.any(self.mrt) is None:
+        if self.mrt is None:
             LOG.error('No MRT to plot')
             return
 
@@ -654,7 +650,7 @@ class trailfinder(object):
         ax, AxesSubplot
             The Matplotlib subplot containing the mask image
         '''
-        if np.any(self.mask) is None:
+        if self.mask is None:
             LOG.error('No mask to show')
 
         fig, ax = plt.subplots()
@@ -673,7 +669,7 @@ class trailfinder(object):
             A matplotlib subplot containing the segmentation map
 
         '''
-        if np.any(self.segment) is None:
+        if self.segment is None:
             LOG.error('No segment map to show')
 
         # get unique values in segment
@@ -1067,130 +1063,3 @@ class wfc_wrapper(trailfinder):
         self.subtract_background()
         self.rebin(**kwargs)
 
-
-def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
-                           plot=False, theta=np.arange(0, 180, 0.5),
-                           threads=1):
-    '''
-    Creates a model signal MRT signal of a line of specified width and blurred
-    by a psf. Used for detection of real linear signals in imaging data.
-
-    Parameters
-    ----------
-    width : int
-        Width of the line. Intensity is constant over this width.
-    sigma : float
-        Gaussian sigma of the PSF. This is NOT FWHM.
-    outfile : string, optional
-        Location to save an output fits file of the kernel. The default is
-        None.
-    sz : tuple/int, optional
-        Size of the image on which to place the line. The default is
-        (1024,2048).
-    plot : bool, optional
-        Flag to plot the original image, MRT, and kernel cutout
-    theta : array, optional
-        Set of angles at which to calculate the MRT, default is
-        np.arange(0,180,0,5)
-    threads: int, optional
-        Number of threads to use when calculating MRT. Default is 1.
-    Returns
-    -------
-    kernel : ndarray
-        The resulting kernel
-
-    '''
-
-    # set up empty image and coordinates
-    image = np.zeros(shape)
-    y0 = image.shape[0]/2-0.5
-    x0 = image.shape[1]/2-0.5
-    xarr = np.arange(image.shape[1])-x0
-    yarr = np.arange(image.shape[0])-y0
-    x, y = np.meshgrid(xarr, yarr)
-
-    # add a simple streak across the image.
-    image = u.add_streak(image, width, 1, rho=0, theta=90, psf_sigma=sigma)
-
-    # plot the image
-    if plot is True:
-        fig, ax = plt.subplots(figsize=(20, 10))
-        ax.imshow(image, origin='lower')
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_title('model image')
-
-    # calculate the RT for this model
-    rt = u.radon(image, circle=False, median=True, fill_value=np.nan,
-                 threads=threads, return_length=False)
-
-    # plot the RT
-    if plot is True:
-        fig2, ax2 = plt.subplots()
-        ax2.imshow(rt, aspect='auto', origin='lower')
-        ax2.set_xlabel('angle pixel')
-        ax2.set_ylabel('offset pixel')
-
-    # find the center of the signal by summing along each direction and finding
-    # the max.
-    rt_rho = np.nansum(rt, axis=1)
-    rt_theta = np.nansum(rt, axis=0)
-    fig, [ax1, ax2] = plt.subplots(1, 2)
-    ax1.plot(rt_theta, '.')
-    ax2.plot(rt_rho, '.')
-
-    rho0 = np.nanargmax(rt_rho)
-    theta0 = np.nanargmax(rt_theta)
-    ax2.plot([rho0, rho0], [0, 1])
-    ax1.plot([theta0, theta0], [0, 8])
-    ax1.set_xlim(theta0-5, theta0+5)
-    ax2.set_xlim(rho0-10, rho0+10)
-
-    # may need to refine center coords. Run a Gaussian fit to see if necessary
-    g_init = models.Gaussian1D(mean=rho0)
-    fit_g = fitting.LevMarLSQFitter()
-    g = fit_g(g_init, np.arange(len(rt_rho)), rt_rho)
-    rho0_gfit = g.mean.value
-
-    g_init = models.Gaussian1D(mean=theta0)
-    fit_g = fitting.LevMarLSQFitter()
-    g = fit_g(g_init, np.arange(len(rt_theta)), rt_theta)
-    theta0_gfit = g.mean.value
-
-    # see if any difference between simple location of max pixel vs. gauss fit
-    theta_shift = theta0_gfit - theta0
-    rho_shift = rho0_gfit - rho0
-
-    # get initial cutout
-    position = (theta0, rho0)
-    dtheta = 3
-    drho = np.ceil(width/2+3*sigma)
-
-    size = (u._round_up_to_odd(2*drho), u._round_up_to_odd(2*dtheta))
-    cutout = Cutout2D(rt, position, size)
-
-    # inteprolate onto new grid if necessary. Need to generate cutout first.
-    # The rt can be too big otherwise
-    do_interp = (np.abs(rho_shift) > 0.1) | (np.abs(theta_shift) > 0.1)
-    if do_interp is True:
-        LOG.info('Inteprolating onto new grid to center kernel')
-        theta_arr = np.arange(cutout.shape[1])
-        rho_arr = np.arange(cutout.shape[0])
-        theta_grid, rho_grid = np.meshgrid(theta_arr, rho_arr)
-
-        new_theta_arr = theta_arr + theta_shift
-        new_rho_arr = rho_arr + rho_shift
-        new_theta_grid, new_rho_grid = np.meshgrid(new_theta_arr, new_rho_arr)
-
-        # inteprolate onto new grid
-        f = interpolate.interp2d(theta_grid, rho_grid, cutout.data,
-                                 kind='cubic')
-        cutout = f(new_theta_arr, new_rho_arr)  # overwrite old cutout
-
-    if plot is True:
-        fig3, ax3 = plt.subplots()
-        ax3.imshow(cutout.data, origin='lower', aspect='auto')
-
-    if outfile is not None:
-        fits.writeto(outfile, cutout.data, overwrite=True)
-    return cutout.data
