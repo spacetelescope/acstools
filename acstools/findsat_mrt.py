@@ -41,6 +41,13 @@ Initialize trailfinder and run steps
 >>> s.make_mask()                     # makes a mask from the identified trails
 >>> s.save_output(root='test')        # saves the output
 
+The input image, mask, and MRT (with sources overlaid) can be plotting during
+this process.
+
+>>> s.plot_mrt(show_sources=True)      # plots MRT with sources overlaid
+>>> s.plot_image(overlay_mask=True)    # plots input image with mask overlaid
+
+
 Example 2: Quick run to find satellite trails
 
 After loading and preprocessing the image (see example above), run
@@ -48,14 +55,26 @@ After loading and preprocessing the image (see example above), run
 >>> s = trailfinder(image=image, threads=8)  # initializes
 >>> s.run_all()                              # runs everything else
 
-Example 3: Plot results
+Example 3: Run with the WFC wrapper
 
-After running trailfinder:
+The WFC wrapper can automatically do the binning, background subtraction, and
+bad pixel flagging:
 
->>> s = trailfinder(image=image, threads=8)  # initializes
->>> s.run_all()                        # runs everything else
->>> s.plot_mrt(show_sources=True)      # plots MRT with sources overlaid
->>> s.plot_image(overlay_mask=True)    # plots input image with mask overlaid
+>>> from acstools.findsat_mrt import wfc_wrapper
+>>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
+
+In all other respects, it behaves just like trailfinder, so to continue the 
+process:
+    
+>>> w.run_mrt()
+>>> w.find_sources()
+>>> w.filter_sources()
+>>> w.make_mask()
+
+Or the entire process can be run in a single line with
+
+>>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
+                execute=True)
 
 """
 
@@ -306,6 +325,9 @@ class trailfinder(object):
         '''
 
         if self.image is None:
+            LOG.error('No image to plot')
+            raise ValueError
+        
             raise ValueError('No image to plot')
             
         if ax is None:
@@ -903,7 +925,8 @@ class wfc_wrapper(trailfinder):
                  **kwargs):
         '''
         Wrapper for trail_finder class designed specifically for ACS/WFC data.
-        Enables quick reading and preprocessing of standard ACS/WFC images.
+        Enables quick reading and preprocessing of standard full-frame 
+        ACS/WFC images. Note it is not designed for use with subarray images.
 
 
         Parameters
@@ -936,7 +959,11 @@ class wfc_wrapper(trailfinder):
 
         # get image type
         h = fits.open(self.image_file)
-
+        
+        #check that image id not subarray
+        if h[0].header['SUBARRAY'] is True:
+            raise ValueError('This program does not yet work on subarrays')
+            
         # get suffix to determine how to process image
         suffix = (self.image_file.split('.')[0]).split('_')[-1]
         self.image_type = suffix
@@ -944,11 +971,11 @@ class wfc_wrapper(trailfinder):
 
         if suffix in ['flc', 'flt']:
             if extension is None:
-                LOG.warn('No extension specified. Defaulting to 1')
+                raise ValueError('flc/flt files must have extension specified')
                 extension = 1
             elif extension not in [1, 4]:
-                LOG.error('Valid extensions are 1 and 4')
-                return
+                raise ValueError('Valid Extensions are 1 or 4 for flc/flt \
+                                 images')
 
             self.image = h[extension].data  # main image
             self.image_mask = h[extension+2].data  # dq array
@@ -1036,7 +1063,7 @@ class wfc_wrapper(trailfinder):
             binsize = self.binsize
 
         if binsize is None:
-            LOG.warn('No bin size defined')
+            LOG.warn('No bin size defined. Will not perform binning')
             return
 
         LOG.info('Rebinning the data by {}'.format(binsize))
