@@ -122,6 +122,7 @@ class trailfinder(object):
              theta=np.arange(0, 180, 0.5),
              kernels=[package_directory+'/data/rt_line_kernel_width{}.fits'.
                       format(k) for k in [15, 7, 3]],
+             mask_include_status=[2],
              plot=False,
              output_dir='.',
              output_root='',
@@ -171,6 +172,9 @@ class trailfinder(object):
             Paths to each kernel to be used for source finding in the MRT.
             The default is to use the 3, 7, and 15 pixel wide kernels included
             with this package.
+        mask_include_status: list, optional
+            List indicating trails with which status should be considered
+            when making the mask. The default is [2]. 
         plot : bool, optional
             Plots all intermediate steps. The default is False. Warning:
                 setting this option generates A LOT of plots. It's essentially
@@ -225,6 +229,7 @@ class trailfinder(object):
         self.buffer = buffer
         self.check_persistence = check_persistence
         self.min_persistence = min_persistence
+        self.mask_include_status = mask_include_status
         self.ignore_theta_range = ignore_theta_range
 
         # outputs
@@ -252,27 +257,36 @@ class trailfinder(object):
         if (image is not None) & (self.plot is True):
             self.plot_image()
 
-    def run_mrt(self, theta=None, threads=None):
+    def run_mrt(self, theta=None, threads=None, plot=None):
         '''
         Runs the median radon transform on the input image
 
         Parameters
         ----------
-        theta : TYPE, optional
-            DESCRIPTION. The default is None.
-        threads : TYPE, optional
-            DESCRIPTION. The default is None.
-
+        theta : array, optional
+            List of angles at which to calculate the MRT. The default is None,
+            which defers to self attribute of same name.
+        threads : int, optional
+            Number of CPU threads used to calculate the MRT. The default is
+            None, which defers to self attribute of same name.
+        plot : bool, optional
+            Flag to plot the resulting MRT. The default is None, which defers
+            to the self attribute of same name.
         Returns
         -------
         None.
 
         '''
 
+        # check inputs, update class attributes if necessary
         if theta is None:
             theta = self.theta
+        else:
+            self.theta=theta
         if threads is None:
             threads = self.threads
+        else:
+            self.threads=threads
 
         rt, length = u.radon(self.image, circle=False, median=True,
                              fill_value=np.nan, threads=threads,
@@ -326,9 +340,7 @@ class trailfinder(object):
 
         if self.image is None:
             LOG.error('No image to plot')
-            raise ValueError
-        
-            raise ValueError('No image to plot')
+            return         
             
         if ax is None:
             fig, ax = plt.subplots()
@@ -442,16 +454,21 @@ class trailfinder(object):
 
         return self.mrt/self.mrt_err
 
-    def find_mrt_sources(self, kernels=None, threshold=None):
+    def find_mrt_sources(self, kernels=None, threshold=None, plot=None):
         '''
         Findings sources in the MRT consistent with satellite trails/streaks
 
         Parameters
         ----------
         kernels : array-like, optional
-            List of kernels to use when finding sources.
+            List of kernels to use when finding sources. Default is None, which
+            defers to self attribute of same name.
         threshold : float, optional
-            Minumum S/N of detected sources in the MRT.
+            Minumum S/N of detected sources in the MRT. Default is None, which
+            defers to self attribute of same name.
+        plot : bool, optional
+            Flag to plot the MRT and overlay the sources found. Default is
+            None, which defers to self attribute of same name.
 
         Returns
         -------
@@ -460,10 +477,15 @@ class trailfinder(object):
 
         '''
 
+        # check input, update class attributes if needed
         if kernels is None:
             kernels = self.kernels
+        else:
+            self.kernels=kernels
         if threshold is None:
             threshold = self.threshold
+        else:
+            self.threshold=threshold
 
         LOG.info('Detection threshold: {}'.format(threshold))
 
@@ -544,26 +566,30 @@ class trailfinder(object):
         Parameters
         ----------
         threshold : float, optional
-            Minimum S/N of trail to be considered robust. The default is None.
+            Minimum S/N of trail to be considered robust. The default is None,
+            which defers to self attribute of same name.
         maxwidth : int, optional
             Maximum width of a trail to be considered robust. The default is
-            None.
+            None, which defers to self attribute of same name.
         trim_catalog : bool, optional
             Flag to remove all filtered trails from the source catalog. The
             default is False.
         min_length : int, optional
-            Minimum allowed length of a satellite trail. The default is None.
+            Minimum allowed length of a satellite trail. The default is None,
+            which defers to self attribute of same name.
         buffer : int, optional
             Size of the cutout region around each trail when analyzing its
-            properties. The default is None.
+            properties. The default is None, which defers to self attribute of
+            same name.
         plot : bool, optional
             Set to plot the MRT with the resulting filtered sources overlaid.
-            The default is None.
+            The default is None, which defers to self attribute of same name.
         check_persistence : bool, optional
-            Set to turn on the persistence check. The default is None.
+            Set to turn on the persistence check. The default is None, which
+            defers to self attribute of same name.
         min_persistence : float, optional
             Minimum persistence for a trail to be considered robust. The
-            default is None.
+            default is None, which defers to self attribute of same name.
 
         Returns
         -------
@@ -573,20 +599,33 @@ class trailfinder(object):
 
         '''
 
+        # check inputs, update class attributes as needed
         if threshold is None:
             threshold = self.threshold
+        else:
+            self.threshold=threshold
         if min_length is None:
             min_length = self.min_length
+        else:
+            self.min_length = min_length
         if maxwidth is None:
             maxwidth = self.max_width
+        else:
+            self.max_width = maxwidth
         if buffer is None:
             buffer = self.buffer
-        if plot is None:
-            plot = self.plot
+        else:
+            self.buffer = buffer
         if check_persistence is None:
             check_persistence = self.check_persistence
+        else:
+            self.check_persistence = check_persistence
         if min_persistence is None:
             min_persistence = self.min_persistence
+        else:
+            self.min_persstence = min_persistence
+        if plot is None:
+            plot = self.plot
 
         # turn rho/theta coordinates into endpoints
         if self.source_list is not None:
@@ -623,7 +662,7 @@ class trailfinder(object):
 
         return self.source_list
 
-    def make_mask(self, include_status=[2], plot=None):
+    def make_mask(self, include_status=None, plot=None):
         '''
         Makes a 1/0 satellite trail mask and a segmentation image with each
         trail numbered based on the identified trails.
@@ -631,17 +670,21 @@ class trailfinder(object):
         Parameters
         ----------
         include_status : list, optional
-            List of status flags to include. The default is [2].
+            List of status flags to include. Default is None, which defers to
+            self attribute of same name.
         plot : bool, optional
             Set to generate a plot images of the mask and segmentation image.
-            The default is None.
+            Default is None, which defers to self attribute of same name.
 
         Returns
         -------
         None.
 
         '''
-
+        if include_status is None:
+            include_status = self.mask_include_status
+        else:
+            self.mask_include_status = include_status
         if plot is None:
             plot = self.plot
 
@@ -674,6 +717,7 @@ class trailfinder(object):
         '''
         if self.mask is None:
             LOG.error('No mask to show')
+            return
 
         fig, ax = plt.subplots()
         ax.imshow(self.mask, origin='lower', aspect='auto')
@@ -693,6 +737,7 @@ class trailfinder(object):
         '''
         if self.segment is None:
             LOG.error('No segment map to show')
+            return
 
         # get unique values in segment
         unique_vals = np.unique(self.segment)
@@ -724,19 +769,23 @@ class trailfinder(object):
         Parameters
         ----------
         root : string, optional
-            String to prepend to all output files. The default is None.
+            String to prepend to all output files. Default is None, which
+            defers to self attribute of same name.
         output_dir : string, optional
-            Directory in which to save output files. The default is None.
+            Directory in which to save output files. Default is None, which
+            defers to self attribute of same name.
         save_mrt : bool, optional
-            Set to save the MRT in a fits file. The default is None.
+            Set to save the MRT in a fits file. Default is None, which
+            defers to self attribute of same name.
         save_mask : bool, optional
-            Set to save the mask and segmentation images in a fits file. The
-            default is None.
+            Set to save the mask and segmentation images in a fits file. Default
+            is None, which defers to self attribute of same name.
         save_catalog : bool, optional
-            Set to save the trail catalog in a fits table. The default is None.
+            Set to save the trail catalog in a fits table. Default is None,
+            which defers to self attribute of same name.
         save_diagnostic : bool, optional
             Set to save a diagnostic plot (png) showing the identified trails.
-            The default is None.
+            Default is None, which defers to self attribute of same name.
 
         Returns
         -------
@@ -744,18 +793,31 @@ class trailfinder(object):
 
         '''
 
+        #check inputs, update class attributes as needed
         if root is None:
             root = self.root
+        else:
+            self.root = root
         if output_dir is None:
             output_dir = self.output_dir
+        else:
+            self.output_dir = output_dir
         if save_mrt is None:
             save_mrt = self.save_mrt
+        else:
+            self.save_mrt = save_mrt
         if save_mask is None:
             save_mask = self.save_mask
+        else:
+            self.save_mask = save_mask
         if save_diagnostic is None:
             save_diagnostic = self.save_diagnostic
+        else:
+            self.save_diagnostic = save_diagnostic
         if save_catalog is None:
             save_catalog = self.save_catalog
+        else:
+            self.save_catalog = save_catalog
 
         if save_mrt is True:
             if self.mrt is not None:
@@ -870,7 +932,7 @@ class trailfinder(object):
         ignore_theta_range : list, optional
             List of angle ranges to avoid.
             Format is [(min angle1,max angle1),(min angle2, max angle2) ... ].
-            The default is None.
+            Default is None, which defers to self attribute of same name.
 
         Returns
         -------
@@ -881,6 +943,8 @@ class trailfinder(object):
 
         if ignore_theta_range is None:
             ignore_theta_range == self.ignore_theta_range
+        else:
+            self.ignore_theta_range = ignore_theta_range
 
         if self.ignore_theta_range is None:
             LOG.error('No angles set to ignore')
@@ -896,10 +960,16 @@ class trailfinder(object):
 
         self.source_list = self.source_list[~remove]
 
-    def run_all(self):
+    def run_all(self, **kwargs):
         '''
         Simple wrapper code to run the entire pipeline to identify, filter, and
-        mask trails
+        mask trails.
+       
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments run_mrt, find_mrt_sources,
+            filter_sources, mask_mask, and save_output
 
         Returns
         -------
@@ -907,11 +977,12 @@ class trailfinder(object):
 
         '''
 
-        self.run_mrt()
-        self.find_mrt_sources()
-        self.filter_sources()
-        self.make_mask()
-        self.save_output()
+
+        self.run_mrt(**kwargs)
+        self.find_mrt_sources(**kwargs)
+        self.filter_sources(**kwargs)
+        self.make_mask(**kwargs)
+        self.save_output(**kwargs)
 
 
 class wfc_wrapper(trailfinder):
@@ -920,6 +991,7 @@ class wfc_wrapper(trailfinder):
                  image_file,
                  extension=None,
                  binsize=None,
+                 ignore_flags=[4096, 8192, 16384],
                  preprocess=True,
                  execute=False,
                  **kwargs):
@@ -938,6 +1010,9 @@ class wfc_wrapper(trailfinder):
         binsize : int, optional
             Amount the input data should be binned by. The default is None
             (no binning).
+        ignore_flags : list
+            DQ flags that lead to a pixel being ignored. Default is [4096,
+            8192, 16384]. Only relevant for flt/flc files.
         preprocess : bool, optional
             Flag to run all the preprocessing steps (bad pixel flagging,
             background subtraction, rebinning. The default is True.
@@ -954,8 +1029,11 @@ class wfc_wrapper(trailfinder):
 
         trailfinder.__init__(self, **kwargs)
         self.image_file = image_file
-        self.binsize = binsize
         self.extension = extension
+        self.binsize = binsize
+        self.ignore_flags = ignore_flags
+        self.preprocess = preprocess
+        self.execute = execute
 
         # get image type
         h = fits.open(self.image_file)
@@ -972,7 +1050,6 @@ class wfc_wrapper(trailfinder):
         if suffix in ['flc', 'flt']:
             if extension is None:
                 raise ValueError('flc/flt files must have extension specified')
-                extension = 1
             elif extension not in [1, 4]:
                 raise ValueError('Valid Extensions are 1 or 4 for flc/flt \
                                  images')
@@ -996,7 +1073,7 @@ class wfc_wrapper(trailfinder):
             LOG.info('Running the trailfinding pipeline')
             self.run_all()
 
-    def mask_bad_pixels(self, ignore_flags=[4096, 8192, 16384]):
+    def mask_bad_pixels(self, ignore_flags=None):
         '''
         Masks bad pixels by replacing them with nan. Uses the bitmask arrays
         for flc/flt images, and weight arrays for drc/drz images
@@ -1005,14 +1082,20 @@ class wfc_wrapper(trailfinder):
         ----------
         ignore_flags : list, optional
             List of DQ bitmasks to ignore when masking. Only relevant for
-            flc/flt files. The default is [4096,8192,16384], which ignores
-            cosmic ray flags
+            flc/flt files. The default is None, which defers to self attribute
+            of the same name.
 
         Returns
         -------
         None.
 
         '''
+
+        # check inputs, update class attributes as needed
+        if ignore_flags is None:
+            ignore_flags = self.ignore_flags
+        else:
+            self.ignore_flags = ignore_flags
 
         LOG.info('masking bad pixels')
 
@@ -1050,7 +1133,8 @@ class wfc_wrapper(trailfinder):
         Parameters
         ----------
         binsize : int, optional
-            Bin size. The default is None.
+            Bin size. The default is None, which defers to the self attribute
+            of the same name.
 
         Returns
         -------
@@ -1058,8 +1142,11 @@ class wfc_wrapper(trailfinder):
 
         '''
 
+        # check onputs, update class attributes as needed
         if binsize is None:
             binsize = self.binsize
+        else:
+            self.binsize=binsize
 
         if binsize is None:
             LOG.warn('No bin size defined. Will not perform binning')
