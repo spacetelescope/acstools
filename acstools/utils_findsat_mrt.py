@@ -127,7 +127,7 @@ def good_indices(inds, shape):
     return good_inds
 
 
-def _fit_streak_profile(yarr, p0, fit_background=True, plot=False,
+def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
                         max_width=None, ax=None, bounds=None):
     '''
     Fits a Gaussian function to a 1D cross-section of a trail identified in an
@@ -327,8 +327,8 @@ def _rotate_image_trail(image, endpoints):
     return rotated, newendpoints, theta
 
 
-def filter_sources(image, streak_positions, plot=False, buffer=100, minsnr=5,
-                   max_width=75, fit_background=True,
+def filter_sources(image, streak_positions, plot_streaks=False, buffer=100,
+                   minsnr=5, max_width=75, fit_background=True,
                    min_length=50, check_persistence=True, min_persistence=0.5,
                    persistence_chunk=100, min_persistence_snr=3):
     '''
@@ -440,7 +440,7 @@ def filter_sources(image, streak_positions, plot=False, buffer=100, minsnr=5,
                                                        (None, dy_streak, 5),
                                                        ax=use_ax,
                                                        max_width=max_width,
-                                                       plot=plot)
+                                                       plot_streak=plot_streak)
         snrs[ii] = snr
         widths[ii] = width
         mean_fluxes[ii] = mean_flux
