@@ -986,8 +986,7 @@ class wfc_wrapper(trailfinder):
             self.image_mask = h[extension+1].data  # weight array
 
         else:
-            LOG.error('Image type not recognized')
-            return
+            raise ValueError('Image type not recognized')
 
         # go ahead and run the proprocessing steps if set to True
         if preprocess is True:
