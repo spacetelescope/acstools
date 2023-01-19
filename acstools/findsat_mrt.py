@@ -80,6 +80,7 @@ Or the entire process can be run in a single line with
 
 
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from photutils.detection import StarFinder
@@ -244,6 +245,7 @@ class trailfinder(object):
         self._medrt = None
         self._image_mad = None
         self._image_stddev = None
+        self._interactive = mpl.is_interactive()
 
         # info for saving output
         self.output_dir = output_dir
@@ -316,7 +318,7 @@ class trailfinder(object):
         rho0 = rt.shape[0]/2-0.5
         self.rho = np.arange(rt.shape[0])-rho0
 
-        if self.plot is True:
+        if plot is True:
             self.plot_mrt()
 
     def plot_image(self, ax=None, scale=[-1, 5], overlay_mask=False):
@@ -363,6 +365,14 @@ class trailfinder(object):
             else:
                 ax.imshow(self.mask, alpha=0.5, cmap='Reds', origin='lower',
                           aspect='auto')
+                
+        if ~self._interactive:
+            file_name = self.output_dir + self.root + '_image'
+            if overlay_mask:
+                file_name = file_name + '_mask'
+            file_name = file_name + '.png'
+            plt.savefig(file_name)
+            
 
     def plot_mrt(self, scale=[-1, 5], ax=None, show_sources=False):
         '''
@@ -417,6 +427,13 @@ class trailfinder(object):
                                label='status={}'.format(s))
             ax.legend(loc='upper center')
 
+        if ~self._interactive:
+            file_name = self.output_dir + self.root + '_mrt'
+            if show_sources:
+                file_name = file_name + '_sources'
+            file_name = file_name + '.png'
+            plt.savefig(file_name)
+
         return ax
 
     def plot_mrt_snr(self, scale=[1, 25], ax=None):
@@ -451,6 +468,11 @@ class trailfinder(object):
         ax.set_title('MRT SNR')
         ax.set_xlabel('angle(theta) pixel')
         ax.set_ylabel('offset(rho) pixel')
+
+        if ~self._interactive:
+            file_name = self.output_dir + self.root + '_mrt_snr'
+            file_name = file_name + '.png'
+            plt.savefig(file_name)
 
         return self.mrt/self.mrt_err
 
@@ -548,12 +570,12 @@ class trailfinder(object):
         else:
             LOG.info('{} final sources found'.format(len(self.source_list)))
             # plot sources if set
-            if (self.plot is True):
-                ax = self.plot_mrt()
-                for s in self.source_list:
-                    ax.scatter(s['xcentroid'], s['ycentroid'], edgecolor='red',
-                               facecolor='none', s=100, lw=2)
-
+            if plot is True:
+                self.plot_mrt(show_sources=True)
+                #for s in self.source_list:
+                #    ax.scatter(s['xcentroid'], s['ycentroid'], edgecolor='red',
+                #               facecolor='none', s=100, lw=2)
+                
         return self.source_list
 
     def filter_sources(self, threshold=None, maxwidth=None, trim_catalog=False,
@@ -706,6 +728,7 @@ class trailfinder(object):
             self.plot_mask()
             self.plot_segment()
 
+
     def plot_mask(self):
         '''
         Generates a plot of the trail mask
@@ -722,6 +745,11 @@ class trailfinder(object):
         fig, ax = plt.subplots()
         ax.imshow(self.mask, origin='lower', aspect='auto')
         ax.set_title('Mask')
+        
+        if ~self._interactive:
+            file_name = self.output_dir + self.root + '_mask'
+            file_name = file_name + '.png'
+            plt.savefig(file_name)
 
         return ax
 
@@ -759,6 +787,11 @@ class trailfinder(object):
                                                [unique_vals[-1]+1]]))
         cax.ax.set_ylabel('trail ID')
         ax.set_title('Segmentation Mask')
+        
+        if ~self._interactive:
+            file_name = self.output_dir + self.root + '_segment'
+            file_name = file_name + '.png'
+            plt.savefig(file_name)
 
     def save_output(self, root=None, output_dir=None, save_mrt=None,
                     save_mask=None, save_catalog=None, save_diagnostic=None):
