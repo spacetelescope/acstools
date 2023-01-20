@@ -141,7 +141,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         Initial guesses for amplitude, mean, and sigma parameters.
     fit_background : bool, optional
         Set to fit a polynomial to the . The default is True.
-    plot : bool, optional
+    plot_streak : bool, optional
         Set to plot the resulting fitteed profile. The default is False.
     max_width : int, optional
         Maximum allowed width of robust satellite trail. Used to define
@@ -224,7 +224,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     fit_g = fitting.DogBoxLSQFitter()
     sel = np.isfinite(yarr)
     g = fit_g(g_init, xarr[sel], yarr[sel])
-    if (plot is True) and (ax is not None):
+    if (plot_streak is True) and (ax is not None):
         ax.plot(xarr, yarr)
         ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3,
                 alpha=0.3)
@@ -327,7 +327,7 @@ def _rotate_image_trail(image, endpoints):
     return rotated, newendpoints, theta
 
 
-def filter_sources(image, streak_positions, plot_streaks=False, buffer=100,
+def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                    minsnr=5, max_width=75, fit_background=True,
                    min_length=50, check_persistence=True, min_persistence=0.5,
                    persistence_chunk=100, min_persistence_snr=3):
@@ -343,9 +343,9 @@ def filter_sources(image, streak_positions, plot_streaks=False, buffer=100,
     streak_positions : array
         And array containing the endpoints of each trail being analyzed. The
         format is [[(x0,y0),(x1,y1)],[(x0_b,y0_b),(x1_b,y1_b)]...]
-    plot : bool, optional
-        Set to turn on plotting (WARNING: THIS CAN GENERATE A LOT OF PLOTS).
-        The default is False.
+    plot_streak : bool, optional
+        Set to turn on plotting for each analyzed trail (WARNING: THIS CAN
+        GENERATE A LOT OF PLOTS). The default is False.
     buffer : int, optional
         Size of cutout region on either side of a trail. The default is 100.
     minsnr : float, optional
@@ -428,7 +428,7 @@ def filter_sources(image, streak_positions, plot_streaks=False, buffer=100,
         # set up plot
         use_ax = None
 
-        if plot is True:
+        if plot_streak is True:
             fig, [ax1, ax2] = plt.subplots(1, 2)
             mad = np.nanmedian(np.abs(subregion))
             ax2.imshow(subregion, vmin=-mad, vmax=5*mad, origin='lower')
@@ -445,7 +445,7 @@ def filter_sources(image, streak_positions, plot_streaks=False, buffer=100,
         widths[ii] = width
         mean_fluxes[ii] = mean_flux
 
-        if plot is True:
+        if plot_streak is True:
             ax1.set_title('snr={}, width={}'.format(snr, width))
             ax1.set_xlabel('position')
             ax1.set_ylabel('brightness')
@@ -682,7 +682,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
 
 
 def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
-                        plot=False):
+                        plot_streak=False):
     '''
     Routine to measure a sreak's persistence score. It does this by breaking
     the trail into even chunks and trying to fit a Gaussian to a 1D
@@ -707,8 +707,10 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         Maximum allowed width for a trail to be considered robust. This
         should be the same as whatever was used in "filter_sources". The
         default is None.
-    plot : bool, optional
-        Set to turn on plotting. The default is False.
+    plot_streak : bool, optional
+        Set to turn on plotting. WARNING: THIS CAN GENERATE MANY PLOTS
+        DEPENDING ON HOW MANY SECTIONS A TRAIL IS BROKEN INTO. The default
+        is False.
 
     Returns
     -------
@@ -734,16 +736,16 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         ind0 = ii*dx
         ind1 = (ii+1)*dx
         chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
-        if plot is True:
+        if plot_streak is True:
             fig, ax = plt.subplots()
         else:
             ax = None
 
         g, snr, width, mean_flux = _fit_streak_profile(chunk, guess, ax=ax,
                                                        max_width=max_width,
-                                                       plot=plot,
+                                                       plot_streak=plot_streak,
                                                        bounds=bounds)
-        if plot is True:
+        if plot_streak is True:
             ax.set_title('{}-snr={},width={},mean={}'.format(ii, snr, width,
                                                              g.mean.value))
 

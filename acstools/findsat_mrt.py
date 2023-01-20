@@ -580,7 +580,8 @@ class trailfinder(object):
 
     def filter_sources(self, threshold=None, maxwidth=None, trim_catalog=False,
                        min_length=None, buffer=None, plot=None,
-                       check_persistence=None, min_persistence=None):
+                       plot_streak=False, check_persistence=None,
+                       min_persistence=None):
         '''
         Filters an input catalog of trails based on their remeasured S/N,
         width, and persistence to determine which are robust.
@@ -606,6 +607,10 @@ class trailfinder(object):
         plot : bool, optional
             Set to plot the MRT with the resulting filtered sources overlaid.
             The default is None, which defers to self attribute of same name.
+        plot_streak : bool, optional
+            Set to plot diagnostics for each trail. Only works in interactive
+            mode. Warning: this can generate a lot of plots depending on how
+            many trails are found. Default is False.
         check_persistence : bool, optional
             Set to turn on the persistence check. The default is None, which
             defers to self attribute of same name.
@@ -622,6 +627,10 @@ class trailfinder(object):
         '''
 
         # check inputs, update class attributes as needed
+        
+        if ~self._interactive:
+            plot_streak=False
+        
         if threshold is None:
             threshold = self.threshold
         else:
@@ -665,7 +674,8 @@ class trailfinder(object):
             properties = u.filter_sources(self.image,
                                           self.source_list['endpoints'],
                                           max_width=maxwidth, buffer=250,
-                                          plot=plot, min_length=min_length,
+                                          plot_streak=plot_streak, 
+                                          min_length=min_length,
                                           minsnr=threshold,
                                           check_persistence=check_persistence,
                                           min_persistence=min_persistence)
