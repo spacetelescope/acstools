@@ -632,9 +632,9 @@ def streak_endpoints(rho, theta, sz, plot=False):
 
     if plot is True:
         fig, ax = plt.subplots(figsize=(10, 10))
-        
+
         ax.plot([0, sz[0]-1], [sz/2-0.5,
-                                        sz/2-0.5], '--',
+                               sz/2-0.5], '--',
                 color='gray')
         ax.plot([sz/2-0.5, sz/2-0.5],
                 [0, sz[0]-1], '--', color='gray')
@@ -1105,6 +1105,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     else:
         return radon_image
 
+
 def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                            plot=False, theta=np.arange(0, 180, 0.5),
                            threads=1):
@@ -1159,7 +1160,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
 
     # calculate the RT for this model
     rt = radon(image, circle=False, median=True, fill_value=np.nan,
-                 threads=threads, return_length=False)
+               threads=threads, return_length=False)
 
     # plot the RT
     if plot is True:

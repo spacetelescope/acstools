@@ -63,9 +63,9 @@ bad pixel flagging:
 >>> from acstools.findsat_mrt import wfc_wrapper
 >>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
 
-In all other respects, it behaves just like trailfinder, so to continue the 
+In all other respects, it behaves just like trailfinder, so to continue the
 process:
-    
+
 >>> w.run_mrt()
 >>> w.find_sources()
 >>> w.filter_sources()
@@ -175,7 +175,7 @@ class trailfinder(object):
             with this package.
         mask_include_status: list, optional
             List indicating trails with which status should be considered
-            when making the mask. The default is [2]. 
+            when making the mask. The default is [2].
         plot : bool, optional
             Plots all intermediate steps. The default is False. Warning:
                 setting this option generates A LOT of plots. It's essentially
@@ -284,11 +284,11 @@ class trailfinder(object):
         if theta is None:
             theta = self.theta
         else:
-            self.theta=theta
+            self.theta = theta
         if threads is None:
             threads = self.threads
         else:
-            self.threads=threads
+            self.threads = threads
 
         rt, length = u.radon(self.image, circle=False, median=True,
                              fill_value=np.nan, threads=threads,
@@ -342,8 +342,8 @@ class trailfinder(object):
 
         if self.image is None:
             LOG.error('No image to plot')
-            return         
-            
+            return
+
         if ax is None:
             fig, ax = plt.subplots()
 
@@ -365,14 +365,13 @@ class trailfinder(object):
             else:
                 ax.imshow(self.mask, alpha=0.5, cmap='Reds', origin='lower',
                           aspect='auto')
-                
+
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_image'
             if overlay_mask:
                 file_name = file_name + '_mask'
             file_name = file_name + '.png'
             plt.savefig(file_name)
-            
 
     def plot_mrt(self, scale=[-1, 5], ax=None, show_sources=False):
         '''
@@ -503,11 +502,11 @@ class trailfinder(object):
         if kernels is None:
             kernels = self.kernels
         else:
-            self.kernels=kernels
+            self.kernels = kernels
         if threshold is None:
             threshold = self.threshold
         else:
-            self.threshold=threshold
+            self.threshold = threshold
 
         LOG.info('Detection threshold: {}'.format(threshold))
 
@@ -564,7 +563,7 @@ class trailfinder(object):
                                                None):
             self._remove_angles()
 
-        #print the total number of sources found
+        # print the total number of sources found
         if self.source_list is None:
             LOG.warning('No sources found')
         else:
@@ -572,10 +571,7 @@ class trailfinder(object):
             # plot sources if set
             if plot is True:
                 self.plot_mrt(show_sources=True)
-                #for s in self.source_list:
-                #    ax.scatter(s['xcentroid'], s['ycentroid'], edgecolor='red',
-                #               facecolor='none', s=100, lw=2)
-                
+
         return self.source_list
 
     def filter_sources(self, threshold=None, maxwidth=None, trim_catalog=False,
@@ -627,14 +623,14 @@ class trailfinder(object):
         '''
 
         # check inputs, update class attributes as needed
-        
+
         if ~self._interactive:
-            plot_streak=False
-        
+            plot_streak = False
+
         if threshold is None:
             threshold = self.threshold
         else:
-            self.threshold=threshold
+            self.threshold = threshold
         if min_length is None:
             min_length = self.min_length
         else:
@@ -674,7 +670,7 @@ class trailfinder(object):
             properties = u.filter_sources(self.image,
                                           self.source_list['endpoints'],
                                           max_width=maxwidth, buffer=250,
-                                          plot_streak=plot_streak, 
+                                          plot_streak=plot_streak,
                                           min_length=min_length,
                                           minsnr=threshold,
                                           check_persistence=check_persistence,
@@ -738,7 +734,6 @@ class trailfinder(object):
             self.plot_mask()
             self.plot_segment()
 
-
     def plot_mask(self):
         '''
         Generates a plot of the trail mask
@@ -755,7 +750,7 @@ class trailfinder(object):
         fig, ax = plt.subplots()
         ax.imshow(self.mask, origin='lower', aspect='auto')
         ax.set_title('Mask')
-        
+
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_mask'
             file_name = file_name + '.png'
@@ -797,7 +792,7 @@ class trailfinder(object):
                                                [unique_vals[-1]+1]]))
         cax.ax.set_ylabel('trail ID')
         ax.set_title('Segmentation Mask')
-        
+
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_segment'
             file_name = file_name + '.png'
@@ -821,8 +816,8 @@ class trailfinder(object):
             Set to save the MRT in a fits file. Default is None, which
             defers to self attribute of same name.
         save_mask : bool, optional
-            Set to save the mask and segmentation images in a fits file. Default
-            is None, which defers to self attribute of same name.
+            Set to save the mask and segmentation images in a fits file.
+            Default is None, which defers to self attribute of same name.
         save_catalog : bool, optional
             Set to save the trail catalog in a fits table. Default is None,
             which defers to self attribute of same name.
@@ -836,7 +831,7 @@ class trailfinder(object):
 
         '''
 
-        #check inputs, update class attributes as needed
+        # check inputs, update class attributes as needed
         if root is None:
             root = self.root
         else:
@@ -1007,7 +1002,7 @@ class trailfinder(object):
         '''
         Simple wrapper code to run the entire pipeline to identify, filter, and
         mask trails.
-       
+
         Parameters
         ----------
         **kwargs : dict, optional
@@ -1019,7 +1014,6 @@ class trailfinder(object):
         None.
 
         '''
-
 
         self.run_mrt(**kwargs)
         self.find_mrt_sources(**kwargs)
@@ -1040,7 +1034,7 @@ class wfc_wrapper(trailfinder):
                  **kwargs):
         '''
         Wrapper for trail_finder class designed specifically for ACS/WFC data.
-        Enables quick reading and preprocessing of standard full-frame 
+        Enables quick reading and preprocessing of standard full-frame
         ACS/WFC images. Note it is not designed for use with subarray images.
 
 
@@ -1080,11 +1074,11 @@ class wfc_wrapper(trailfinder):
 
         # get image type
         h = fits.open(self.image_file)
-        
-        #check that image id not subarray
+
+        # check that image id not subarray
         if h[0].header['SUBARRAY'] is True:
             raise ValueError('This program does not yet work on subarrays')
-            
+
         # get suffix to determine how to process image
         suffix = (self.image_file.split('.')[0]).split('_')[-1]
         self.image_type = suffix
@@ -1189,7 +1183,7 @@ class wfc_wrapper(trailfinder):
         if binsize is None:
             binsize = self.binsize
         else:
-            self.binsize=binsize
+            self.binsize = binsize
 
         if binsize is None:
             LOG.warn('No bin size defined. Will not perform binning')
@@ -1218,4 +1212,3 @@ class wfc_wrapper(trailfinder):
         self.mask_bad_pixels(**kwargs)
         self.subtract_background()
         self.rebin(**kwargs)
-
