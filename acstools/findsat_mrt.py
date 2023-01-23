@@ -80,16 +80,24 @@ Or the entire process can be run in a single line with
 
 
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 from astropy.io import fits
 from photutils.detection import StarFinder
+from astropy.utils.exceptions import AstropyUserWarning
 import ccdproc
 import os
 from astropy.table import Table
 import acstools.utils_findsat_mrt as u
 from astropy.nddata import bitmask
 import logging
+import warnings
+
+try:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt=None    
+    warnings.warn('matplotlib not found, plotting is disabled',
+                  AstropyUserWarning)
 
 
 __taskname__ = "findsat_mrt"
@@ -110,31 +118,30 @@ LOG.setLevel(logging.INFO)
 class trailfinder(object):
 
     def __init__(
-             self,
-             image=None,
-             header=None,
-             image_header=None,
-             save_image_header_keys=[],
-             threads=2,
-             min_length=25,
-             max_width=75,
-             buffer=250,
-             threshold=5,
-             theta=np.arange(0, 180, 0.5),
-             kernels=[package_directory+'/data/rt_line_kernel_width{}.fits'.
-                      format(k) for k in [15, 7, 3]],
-             mask_include_status=[2],
-             plot=False,
-             output_dir='.',
-             output_root='',
-             check_persistence=True,
-             min_persistence=0.5,
-             ignore_theta_range=None,
-             save_catalog=True,
-             save_diagnostic=True,
-             save_mrt=False,
-             save_mask=False
-     ):
+            self,
+            image=None,
+            header=None,
+            image_header=None,
+            save_image_header_keys=[],
+            threads=2,
+            min_length=25,
+            max_width=75,
+            buffer=250,
+            threshold=5,
+            theta=np.arange(0, 180, 0.5),
+            kernels=[package_directory+'/data/rt_line_kernel_width{}.fits'.
+                     format(k) for k in [15, 7, 3]],
+            mask_include_status=[2],
+            plot=False,
+            output_dir='.',
+            output_root='',
+            check_persistence=True,
+            min_persistence=0.5,
+            ignore_theta_range=None,
+            save_catalog=True,
+            save_diagnostic=True,
+            save_mrt=False,
+            save_mask=False):
         '''
         Class to identify satellite trails in image data using the Median
         Radon Transform.
@@ -256,7 +263,7 @@ class trailfinder(object):
         self.save_mask = save_mask
 
         # plot image upon initialization
-        if (image is not None) & (self.plot is True):
+        if (image is not None) & (self.plot is True) & (plt is not None):
             self.plot_image()
 
     def run_mrt(self, theta=None, threads=None, plot=None):
@@ -318,7 +325,7 @@ class trailfinder(object):
         rho0 = rt.shape[0]/2-0.5
         self.rho = np.arange(rt.shape[0])-rho0
 
-        if plot is True:
+        if (plot is True) & (plt is not None):
             self.plot_mrt()
 
     def plot_image(self, ax=None, scale=[-1, 5], overlay_mask=False):
@@ -569,7 +576,7 @@ class trailfinder(object):
         else:
             LOG.info('{} final sources found'.format(len(self.source_list)))
             # plot sources if set
-            if plot is True:
+            if (plot is True) & (plt is not None):
                 self.plot_mrt(show_sources=True)
 
         return self.source_list
@@ -684,7 +691,7 @@ class trailfinder(object):
                 (self.source_list['snr'] > threshold)
             self.source_list = self.source_list[sel]
 
-        if plot is True:
+        if (plot is True) & (plt is not None):
             fig, ax = plt.subplots()
             self.plot_mrt(show_sources=True)
 
@@ -730,7 +737,7 @@ class trailfinder(object):
         self.segment = segment.astype(int)
         self.mask = mask
 
-        if plot is True:
+        if (plot is True) & (plt is not None):
             self.plot_mask()
             self.plot_segment()
 
@@ -906,7 +913,7 @@ class trailfinder(object):
             ax3.set_ylim(ax3_ylim)
             plt.tight_layout()
             plt.savefig('{}/{}_diagnostic.png'.format(output_dir, root))
-            if self.plot is False:
+            if (self.plot is False) & (plt is not None):
                 plt.close()
 
         if save_catalog is True:
