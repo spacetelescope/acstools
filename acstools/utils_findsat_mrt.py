@@ -19,6 +19,7 @@ import time
 from astropy.nddata import Cutout2D
 from scipy import interpolate
 from astropy.io import fits
+import warnings
 
 
 __taskname__ = "utils_findsat_mrt"
@@ -902,7 +903,10 @@ def _rot_sum(image, angle, return_length):
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
     rotated = warp(image, R, clip=False, cval=np.nan)
-    medarr = np.nansum(rotated, axis=0)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action='ignore',
+                                message='All-NaN slice encountered')
+        medarr = np.nansum(rotated, axis=0)
     if return_length is True:
         length = np.sum(np.isfinite(rotated), axis=0)
         return [medarr, length]
@@ -938,7 +942,10 @@ def _rot_med(image, angle, return_length):
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
     rotated = warp(image, R, clip=False, cval=np.nan)
-    medarr = np.nanmedian(rotated, axis=0)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action='ignore',
+                                message='All-NaN slice encountered')
+        medarr = np.nanmedian(rotated, axis=0)
     if return_length is True:
         length = np.sum(np.isfinite(rotated), axis=0)
         return [medarr, length]
@@ -1055,6 +1062,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     center = padded_image.shape[0] // 2
     radon_image = np.zeros((padded_image.shape[0], len(theta)),
                            dtype=image.dtype)+np.nan
+    lengths = np.copy(radon_image)
 
     if threads <= 1:
         for i, angle in enumerate(np.deg2rad(theta)):
@@ -1073,6 +1081,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
                 radon_image[:, i] = np.nanmedian(rotated, axis=0)
                 median_time_1 = time.time()
                 total_median_time += (median_time_1 - median_time_0)
+            lengths[:,i] = np.sum(np.isfinite(rotated), axis=0)
+
 
     else:
         p = Pool(threads)
