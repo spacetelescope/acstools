@@ -10,9 +10,8 @@ import os
 
 #update all this with my code
 
-class test_findsat_mrt(BaseACSTOOLS):
+class TestFindsatMRT(BaseACSTOOLS):
     detector = 'wfc'
-    package_directory = os.path.dirname(os.path.abspath(__file__))
 
     def test_wfc_wrapper(self):
         """Identify and mask trails in WFC extension 4."""
