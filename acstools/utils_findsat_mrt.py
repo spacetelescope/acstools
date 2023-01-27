@@ -1103,6 +1103,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
             lengths = result[:, 1, :]
         radon_image = radon_image.T
         lengths = lengths.T
+        p.close()
 
     if print_calc_times:
         LOG.info('Total time to warp images = {} seconds'.
