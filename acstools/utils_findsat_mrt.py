@@ -202,11 +202,9 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
 
         # now run fitting
         with warnings.catch_warnings():
-            LOG.info('prepare for warning')
             warnings.simplefilter('ignore', AstropyUserWarning)
             line_init = models.Polynomial1D(degree=order)
             fitted_line, data_mask = or_fit(line_init, xarr[sel], yarr[sel])
-            LOG.info('warning??')
 
         # subtract the fitted background
         yarr = yarr - fitted_line(xarr)
