@@ -318,8 +318,11 @@ class trailfinder(object):
         self._image_mad = np.nanmedian(np.abs(self.image))
         # using MAD to avoid influence from outliers
         self._image_stddev = self._image_mad/0.67449
-        # error on median ~ 1.25x error on mean
-        self.mrt_err = 1.25*self._image_stddev/np.sqrt(self.length)
+        # error on median ~ 1.25x error on mean. There are regions with length
+        # equals zero which keeps raising warnings. Suppressing that warning
+        # here
+        with np.errstate(divide='ignore', invalid='ignore'):
+            self.mrt_err = 1.25*self._image_stddev/np.sqrt(self.length)
 
         # calculate rho array
         rho0 = rt.shape[0]/2-0.5
@@ -865,6 +868,7 @@ class trailfinder(object):
             self.save_catalog = save_catalog
 
         if save_mrt is True:
+            LOG.info('writing MRT')
             if self.mrt is not None:
                 fits.writeto('{}/{}_mrt.fits'.format(output_dir, root),
                              self.mrt, overwrite=True)
@@ -872,6 +876,7 @@ class trailfinder(object):
                 LOG.error('No MRT to save')
 
         if save_mask is True:
+            LOG.info('writing mask')
             if self.mask is not None:
                 hdu0 = fits.PrimaryHDU()
                 if self.header is not None:
@@ -885,6 +890,8 @@ class trailfinder(object):
                 LOG.error('No mask to save')
 
         if save_diagnostic is True:
+            LOG.info('writing diagnostic plot')
+
             fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2,
                                                          figsize=(20, 10))
             self.plot_image(ax=ax1)
@@ -917,10 +924,19 @@ class trailfinder(object):
                 plt.close()
 
         if save_catalog is True:
+
             if self.source_list is not None:
-                self.source_list.write('{}/{}_catalog.fits'.format(output_dir,
-                                                                   root),
-                                       overwrite=True)
+                LOG.info('writing catalog')
+                # there's some meta data called "version" that cannot be added
+                # to the fits header (and it is not useful). It always throws
+                # an inconsequential warning so we suppress it here.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore',
+                                            message='Attribute `version` of')
+                    self.source_list.write('{}/{}_catalog.fits'.
+                                           format(output_dir,root),
+                                           overwrite=True)
+                LOG.info('wrote catalog')
             else:
                 # create an empty catalog and write that. It helps to have this
                 # for future analysis purposes even if it's empty
