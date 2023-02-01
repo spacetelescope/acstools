@@ -20,6 +20,8 @@ from astropy.nddata import Cutout2D
 from scipy import interpolate
 from astropy.io import fits
 import warnings
+from astropy.utils.exceptions import AstropyUserWarning
+
 
 
 __taskname__ = "utils_findsat_mrt"
@@ -181,10 +183,11 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
 
         # try gitting a polynomial to background. Keep to low order to avoid
         # weirdness occuring. E.g., line
-        fit = fitting.LinearLSQFitter()
-        or_fit = fitting.FittingWithOutlierRemoval(fit, sigma_clip, niter=3,
-                                                   sigma=3)  # rejects outliers
-
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', AstropyUserWarning)
+            fit = fitting.LinearLSQFitter()
+            or_fit = fitting.FittingWithOutlierRemoval(fit, sigma_clip,
+                                                       niter=3, sigma=3) 
         # make sure there are regions to fit on either side of the initial
         # position. If not, lower order
         sel_low = np.where(np.isfinite(yarr) &
@@ -198,8 +201,12 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         sel = np.concatenate([sel_low, sel_high])
 
         # now run fitting
-        line_init = models.Polynomial1D(degree=order)
-        fitted_line, data_mask = or_fit(line_init, xarr[sel], yarr[sel])
+        with warnings.catch_warnings():
+            LOG.info('prepare for warning')
+            warnings.simplefilter('ignore', AstropyUserWarning)
+            line_init = models.Polynomial1D(degree=order)
+            fitted_line, data_mask = or_fit(line_init, xarr[sel], yarr[sel])
+            LOG.info('warning??')
 
         # subtract the fitted background
         yarr = yarr - fitted_line(xarr)
@@ -220,11 +227,17 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
 
     if bounds is None:
         bounds = {'amplitude': (0, None)}
-    g_init = models.Gaussian1D(amplitude=amp0, mean=mean0, stddev=stdev0,
-                               bounds=bounds)
-    fit_g = fitting.DogBoxLSQFitter()
+    
+    
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', AstropyUserWarning)
+        g_init = models.Gaussian1D(amplitude=amp0, mean=mean0, stddev=stdev0,
+                                   bounds=bounds)
+        fit_g = fitting.DogBoxLSQFitter()
     sel = np.isfinite(yarr)
-    g = fit_g(g_init, xarr[sel], yarr[sel])
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', AstropyUserWarning)
+        g = fit_g(g_init, xarr[sel], yarr[sel])
     if (plot_streak is True) and (ax is not None):
         ax.plot(xarr, yarr)
         ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3,
