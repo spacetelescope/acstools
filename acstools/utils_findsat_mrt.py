@@ -3,7 +3,6 @@ These are various helper routines for findsat_mrt.py
 '''
 
 import numpy as np
-import matplotlib.pyplot as plt
 from astropy.modeling import models, fitting
 from astropy.table import Table, vstack
 from skimage import transform
@@ -21,6 +20,13 @@ from scipy import interpolate
 from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
+try:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
+    warnings.warn('matplotlib not found, plotting is disabled',
+                  AstropyUserWarning)
 
 __taskname__ = "utils_findsat_mrt"
 __author__ = "David V. Stark"
@@ -233,7 +239,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
         g = fit_g(g_init, xarr[sel], yarr[sel])
-    if (plot_streak is True) and (ax is not None):
+    if (plot_streak is True) and (ax is not None) & (plt is not None):
         ax.plot(xarr, yarr)
         ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3,
                 alpha=0.3)
@@ -437,7 +443,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         # set up plot
         use_ax = None
 
-        if plot_streak is True:
+        if (plot_streak is True) & (plt is not None):
             fig, [ax1, ax2] = plt.subplots(1, 2)
             mad = np.nanmedian(np.abs(subregion))
             ax2.imshow(subregion, vmin=-mad, vmax=5*mad, origin='lower')
@@ -454,7 +460,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         widths[ii] = width
         mean_fluxes[ii] = mean_flux
 
-        if plot_streak is True:
+        if (plot_streak is True) & (plt is not None):
             ax1.set_title('snr={}, width={}'.format(snr, width))
             ax1.set_xlabel('position')
             ax1.set_ylabel('brightness')
@@ -638,7 +644,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
     slope_int = -1./slope
     b_int = (y0+dy)-slope_int*(x0+dx)
 
-    if plot is True:
+    if (plot is True) & (plt is not None):
         fig, ax = plt.subplots(figsize=(10, 10))
 
         ax.plot([0, sz[0]-1], [sz/2-0.5,
@@ -680,7 +686,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
         xi = x0+rho
         xf = x0+rho
 
-    if plot is True:
+    if (plot is True) & (plt is not None):
         ax.scatter([xi, xf], [yi, yf], s=100, color='magenta')
 
     p0 = (xi, yi)
@@ -744,7 +750,7 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         ind0 = ii*dx
         ind1 = (ii+1)*dx
         chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
-        if plot_streak is True:
+        if (plot_streak is True) & (plt is not None):
             fig, ax = plt.subplots()
         else:
             ax = None
@@ -753,7 +759,7 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
                                                        max_width=max_width,
                                                        plot_streak=plot_streak,
                                                        bounds=bounds)
-        if plot_streak is True:
+        if (plot_streak is True) & (plt is not None):
             ax.set_title('{}-snr={},width={},mean={}'.format(ii, snr, width,
                                                              g.mean.value))
 
@@ -1165,7 +1171,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     image = add_streak(image, width, 1, rho=0, theta=90, psf_sigma=sigma)
 
     # plot the image
-    if plot is True:
+    if (plot is True) & (plt is not None):
         fig, ax = plt.subplots(figsize=(20, 10))
         ax.imshow(image, origin='lower')
         ax.set_xlabel('X')
@@ -1177,7 +1183,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                threads=threads, return_length=False)
 
     # plot the RT
-    if plot is True:
+    if (plot is True) & (plt is not None):
         fig2, ax2 = plt.subplots()
         ax2.imshow(rt, aspect='auto', origin='lower')
         ax2.set_xlabel('angle pixel')
@@ -1239,7 +1245,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                                  kind='cubic')
         cutout = f(new_theta_arr, new_rho_arr)  # overwrite old cutout
 
-    if plot is True:
+    if (plot is True) & (plt is not None):
         fig3, ax3 = plt.subplots()
         ax3.imshow(cutout.data, origin='lower', aspect='auto')
 
