@@ -106,7 +106,6 @@ __version__ = "1.0"
 __vdate__ = "16-Dec-2022"
 __all__ = ['trailfinder', 'wfc_wrapper']
 
-plt.rcParams['font.size'] = '18'
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 # Initialize the logger
@@ -252,7 +251,10 @@ class trailfinder(object):
         self._medrt = None
         self._image_mad = None
         self._image_stddev = None
-        self._interactive = mpl.is_interactive()
+        if plt is not None:
+            self._interactive = mpl.is_interactive()
+        else:
+            self._interactive = False
 
         # info for saving output
         self.output_dir = output_dir
