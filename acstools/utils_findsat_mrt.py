@@ -21,7 +21,6 @@ from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
 try:
-    import matplotlib as mpl
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
