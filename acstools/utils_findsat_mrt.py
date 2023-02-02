@@ -394,8 +394,8 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         Same as the original table but with new columns: (1) mean trail flux,
         (2) trail width, (3) trail S/N ratio (4) trail persistence, (5) trail
         status (1 = failed snr or width requirements, 2 = passed snr and width
-                requirements but failed persistence test, 3 = passed snr,
-                width, and persistence requirements.
+        requirements but failed persistence test, 3 = passed snr, width, and
+        persistence requirements.
 
     '''
 
