@@ -22,8 +22,6 @@ from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
 
-
-
 __taskname__ = "utils_findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
@@ -187,7 +185,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
             warnings.simplefilter('ignore', AstropyUserWarning)
             fit = fitting.LinearLSQFitter()
             or_fit = fitting.FittingWithOutlierRemoval(fit, sigma_clip,
-                                                       niter=3, sigma=3) 
+                                                       niter=3, sigma=3)
         # make sure there are regions to fit on either side of the initial
         # position. If not, lower order
         sel_low = np.where(np.isfinite(yarr) &
@@ -225,8 +223,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
 
     if bounds is None:
         bounds = {'amplitude': (0, None)}
-    
-    
+
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
         g_init = models.Gaussian1D(amplitude=amp0, mean=mean0, stddev=stdev0,
@@ -635,7 +632,6 @@ def streak_endpoints(rho, theta, sz, plot=False):
     dx = rho*np.cos(np.radians(theta))
 
     slope = np.sin(np.radians(theta))/np.cos(np.radians(theta))
-    intercept = y0 - slope*x0
 
     # get perpendicular slope/intercept (this is the line that represents what
     # the streak looks like)
@@ -830,7 +826,6 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
         LOG.warning('rho/theta and endpoints set, defaulting to using\
                     endpoints')
         use_rhotheta = False
-        use_endpoints = True
 
     elif (rho is not None) & (theta is None) & (endpoints is None):
         LOG.error('rho set but not theta')
@@ -841,9 +836,7 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
         return image
     elif (rho is not None) & (theta is not None) & (endpoints is None):
         use_rhotheta = True
-        use_endpoints = False
     elif (rho is None) & (theta is None) & (endpoints is not None):
-        use_endpoints = True
         use_rhotheta = False
 
     # calculate endpoints from rho,theta if necessary
@@ -1092,8 +1085,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
                 radon_image[:, i] = np.nanmedian(rotated, axis=0)
                 median_time_1 = time.time()
                 total_median_time += (median_time_1 - median_time_0)
-            lengths[:,i] = np.sum(np.isfinite(rotated), axis=0)
-
+            lengths[:, i] = np.sum(np.isfinite(rotated), axis=0)
 
     else:
         p = Pool(threads)

@@ -95,7 +95,7 @@ try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
 except ImportError:
-    plt=None    
+    plt = None
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
 
@@ -531,7 +531,7 @@ class trailfinder(object):
             try:
                 snrmap = self.mrt/self.mrt_err
                 tbl = s.find_stars(snrmap, mask=~np.isfinite(snrmap))
-            except:
+            except Exception:
                 tbl = None
             if tbl is not None:
                 tbl = tbl[np.isfinite(tbl['xcentroid'])]
@@ -876,7 +876,6 @@ class trailfinder(object):
                 LOG.error('No MRT to save')
 
         if save_mask is True:
-            LOG.info('writing mask')
             if self.mask is not None:
                 hdu0 = fits.PrimaryHDU()
                 if self.header is not None:
@@ -886,6 +885,8 @@ class trailfinder(object):
                 hdul = fits.HDUList([hdu0, hdu1, hdu2])
                 hdul.writeto('{}/{}_mask.fits'.format(output_dir, root),
                              overwrite=True)
+                LOG.info('writing mask to {}/{}_mask.fits'.format(output_dir,
+                                                                  root))
             else:
                 LOG.error('No mask to save')
 
@@ -934,7 +935,7 @@ class trailfinder(object):
                     warnings.filterwarnings('ignore',
                                             message='Attribute `version` of')
                     self.source_list.write('{}/{}_catalog.fits'.
-                                           format(output_dir,root),
+                                           format(output_dir, root),
                                            overwrite=True)
                 LOG.info('wrote catalog')
             else:
@@ -975,7 +976,8 @@ class trailfinder(object):
                     for k in self.save_image_header_keys:
                         try:
                             hdr[k] = self.image_header[k]
-                        except:
+                        # sometimes header keywords missing. Skip these.
+                        except Exception:
                             LOG.error('\nadding image header key {} \
                                       failed\n'.format(k))
 
