@@ -967,7 +967,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
           print_calc_times=False):
     """
     Calculates the (median) radon transform of an image given specified
-    projection angles.
+    projection angles. For further information see [1]_ and [2]_.
 
     Parameters
     ----------

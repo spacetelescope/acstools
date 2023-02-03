@@ -7,6 +7,8 @@ accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails. These trails can then be used to create a mask.
 
+For further details see [1]_.
+
 Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
 (4th extension)
 
@@ -76,6 +78,11 @@ Or the entire process can be run in a single line with
 >>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
                 execute=True)
 
+References
+----------
+.. [1] Stark, David V., Grogin, N., Ryon, J., Lucas, R., "(ACS ISR 2022-08)
+       Improved Identification of Satellite Trails in ACS/WFC Imaging Using a
+       Modified Radon Transform" ( https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf) # noqa
 """
 
 
