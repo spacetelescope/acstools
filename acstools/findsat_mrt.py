@@ -12,13 +12,13 @@ easy to process.
 
 This package is found to be roughly 10x more sensitive compared to the current
 satellite trail finding code included with acstools,
-'satdet<https://acstools--176.org.readthedocs.build/en/176/satdet.html>_.
+`satdet<https://acstools--176.org.readthedocs.build/en/176/satdet.html>`_.
 However, this approach can struggle with dense fields, while the performance
 of satdat in these fields may be more reliable (but this has not yet been
 tested).
 
 For further details on this algorithm and tests of its performance, see
-'ACS ISR 2022-09<https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf)>'_. # noqa
+`ACS ISR 2022-08<https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf)>`_. # noqa
 
 Examples
 ________
