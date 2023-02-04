@@ -92,11 +92,6 @@ Or the entire process can be run in a single line with
 >>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
                 execute=True)
 
-References
-----------
-.. [1] Stark, David V., Grogin, N., Ryon, J., Lucas, R., "(ACS ISR 2022-08)
-       Improved Identification of Satellite Trails in ACS/WFC Imaging Using a
-       Modified Radon Transform" ( https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf) # noqa
 """
 
 
