@@ -18,7 +18,7 @@ of satdat in these fields may be more reliable (but this has not yet been
 tested).
 
 For further details on this algorithm and tests of its performance, see
-`ACS ISR 2022-08 <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf)>`_. # noqa
+`ACS ISR 2022-08 <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf>`_. # noqa
 
 Examples
 ________
