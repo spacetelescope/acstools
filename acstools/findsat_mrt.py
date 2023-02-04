@@ -7,10 +7,24 @@ accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails. These trails can then be used to create a mask.
 
-For further details see [1]_.
+A second class called wfc_wrapper is designed explicitly to make ACS/WFC data
+easy to process.
 
-Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
-(4th extension)
+This package is found to be roughly 10x more sensitive compared to the current
+satellite trail finding code included with acstools,
+'satdet<https://acstools--176.org.readthedocs.build/en/176/satdet.html>_.
+However, this approach can struggle with dense fields, while the performance
+of satdat in these fields may be more reliable (but this has not yet been
+tested).
+
+For further details on this algorithm and tests of its performance, see
+'ACS ISR 2022-09<https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf)>'_. # noqa
+
+Examples
+________
+
+**Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
+(4th extension)**
 
 Load data
 
@@ -50,14 +64,14 @@ this process.
 >>> s.plot_image(overlay_mask=True)    # plots input image with mask overlaid
 
 
-Example 2: Quick run to find satellite trails
+**Example 2: Quick run to find satellite trails**
 
 After loading and preprocessing the image (see example above), run
 
 >>> s = trailfinder(image=image, threads=8)  # initializes
 >>> s.run_all()                              # runs everything else
 
-Example 3: Run with the WFC wrapper
+**Example 3: Run with the WFC wrapper***
 
 The WFC wrapper can automatically do the binning, background subtraction, and
 bad pixel flagging:
@@ -128,15 +142,14 @@ class trailfinder(object):
             image=None,
             header=None,
             image_header=None,
-            save_image_header_keys=[],
+            save_image_header_keys=None,
             threads=2,
             min_length=25,
             max_width=75,
             buffer=250,
             threshold=5,
-            theta=np.arange(0, 180, 0.5),
-            kernels=[package_directory+'/data/rt_line_kernel_width{}.fits'.
-                     format(k) for k in [15, 7, 3]],
+            theta=None,
+            kernels=None,
             mask_include_status=[2],
             plot=False,
             output_dir='.',
@@ -150,7 +163,7 @@ class trailfinder(object):
             save_mask=False):
         '''
         Class to identify satellite trails in image data using the Median
-        Radon Transform.
+        Radon Transform, and create a mask for them.
 
         Parameters
         ----------
@@ -180,12 +193,12 @@ class trailfinder(object):
         threshold : float, optional
             Minimum S/N when extracting sources from the MRT. The default is 5.
         theta : ndarray, optional
-            Angles at which to calculate the MRT. The default is
-            np.arange(0,180,0.5).
+            Angles at which to calculate the MRT. The default is None, which
+            sets to np.arange(0,180,0.5).
         kernels : list, optional
             Paths to each kernel to be used for source finding in the MRT.
-            The default is to use the 3, 7, and 15 pixel wide kernels included
-            with this package.
+            The default is None, which reverts to using the 3, 7, and 15 pixel
+            wide kernels included with this package.
         mask_include_status: list, optional
             List indicating trails with which status should be considered
             when making the mask. The default is [2].
@@ -227,6 +240,16 @@ class trailfinder(object):
         None.
 
         '''
+        
+        # updating a few defaults
+        if theta is None:
+            theta = np.arange(0, 180, 0.5)
+        if kernels is None:
+            kernels = [package_directory+'/data/rt_line_kernel_width{}.fits'.
+                     format(k) for k in [15, 7, 3]]
+        if save_image_header_keys is None:
+            save_image_header_keys = []
+
 
         # inputs
         self.image = image
@@ -1069,7 +1092,11 @@ class wfc_wrapper(trailfinder):
         '''
         Wrapper for trail_finder class designed specifically for ACS/WFC data.
         Enables quick reading and preprocessing of standard full-frame
-        ACS/WFC images. Note it is not designed for use with subarray images.
+        ACS/WFC images. 
+        
+        .. note::
+            
+            * This class is not designed for use with subarray images.
 
 
         Parameters
