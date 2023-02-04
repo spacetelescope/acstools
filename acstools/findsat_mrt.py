@@ -240,16 +240,15 @@ class trailfinder(object):
         None.
 
         '''
-        
+
         # updating a few defaults
         if theta is None:
             theta = np.arange(0, 180, 0.5)
         if kernels is None:
             kernels = [package_directory+'/data/rt_line_kernel_width{}.fits'.
-                     format(k) for k in [15, 7, 3]]
+                       format(k) for k in [15, 7, 3]]
         if save_image_header_keys is None:
             save_image_header_keys = []
-
 
         # inputs
         self.image = image
@@ -1092,12 +1091,11 @@ class wfc_wrapper(trailfinder):
         '''
         Wrapper for trail_finder class designed specifically for ACS/WFC data.
         Enables quick reading and preprocessing of standard full-frame
-        ACS/WFC images. 
-        
-        .. note::
-            
-            * This class is not designed for use with subarray images.
+        ACS/WFC images.
 
+        .. note::
+
+            * This class is not designed for use with subarray images.
 
         Parameters
         ----------
