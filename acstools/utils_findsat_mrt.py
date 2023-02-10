@@ -33,11 +33,10 @@ __taskname__ = "utils_findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
 __vdate__ = "10-Feb-2022"
-__all__ = ['_round_up_to_odd', 'merge_tables', 'good_indices',
-           '_fit_streak_profile', '_rotate_image_trail', 'filter_sources',
-           'create_mask', 'rotate', 'streak_endpoints', '_streak_persistence',
-           'add_streak', '_rot_sum', '_rot_med', 'radon',
-           'create_mrt_line_kernel']
+__all__ = ['merge_tables', 'good_indices', 'fit_streak_profile',
+           'rotate_image_to_trail', 'filter_sources', 'create_mask', 'rotate',
+           'streak_endpoints', 'streak_persistence', 'add_streak', 'rot_sum',
+           'rot_med', 'radon', 'create_mrt_line_kernel']
 
 # Initialize the logger
 logging.basicConfig()
@@ -137,7 +136,7 @@ def good_indices(inds, shape):
     return good_inds
 
 
-def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
+def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
                         max_width=None, ax=None, bounds=None):
     '''
     Fits a Gaussian to a 1D cross-section of a trail in an image
@@ -291,7 +290,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     return g, snr, width, mean_flux
 
 
-def _rotate_image_trail(image, endpoints):
+def rotate_image_to_trail(image, endpoints):
     '''
     Rotates an image so a given trail runs in the horizontal direction
 
@@ -417,8 +416,8 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
     for ii, p in enumerate(streak_positions):
 
         # rotating so trail is horizontal
-        rotated, [[rx1, ry1], [rx2, ry2]], theta = _rotate_image_trail(image,
-                                                                       p)
+        rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image,
+                                                                         p)
 
         # update ry1/2 to include buffer region
         ry1_new = np.min([ry1, ry2])-buffer
@@ -460,7 +459,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
             use_ax = ax1
 
         # measure trail properties
-        g, snr, width, mean_flux = _fit_streak_profile(medarr,
+        g, snr, width, mean_flux = fit_streak_profile(medarr,
                                                        (None, dy_streak, 5),
                                                        ax=use_ax,
                                                        max_width=max_width,
@@ -504,7 +503,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                          format(nchunk))
                 LOG.info('Section size for persistence check: {}'.format(dx))
 
-                persistence[ii] = _streak_persistence(subregion, int(dx),
+                persistence[ii] = streak_persistence(subregion, int(dx),
                                                       g.mean.value,
                                                       g.stddev.value,
                                                       max_width=max_width)
@@ -552,8 +551,8 @@ def create_mask(image, trail_id, endpoints, widths):
     for t, e, w in zip(trail_id, endpoints, widths):
 
         #rotate so trail is horizontal
-        rotated, [[rx1, ry1], [rx2, ry2]], theta = _rotate_image_trail(image,
-                                                                       e)
+        rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image,
+                                                                         e)
 
         # create submask using known width 
         ry = (ry1 + ry2)/2.  # take average, although they should be about the
@@ -705,7 +704,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
     return [p0, p1]
 
 
-def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
+def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
                         plot_streak=False):
     '''
     Measure streak persistence across image.
@@ -769,7 +768,7 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
             ax = None
 
         # fit properties of chunk
-        g, snr, width, mean_flux = _fit_streak_profile(chunk, guess, ax=ax,
+        g, snr, width, mean_flux = fit_streak_profile(chunk, guess, ax=ax,
                                                        max_width=max_width,
                                                        plot_streak=plot_streak,
                                                        bounds=bounds)
@@ -867,7 +866,7 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
         print('calculated endpoints: {}'.format(endpoints))
 
     # rotate image so trail horizontal
-    rotated, newendpoints, rot_theta = _rotate_image_trail(image, endpoints)
+    rotated, newendpoints, rot_theta = rotate_image_to_trail(image, endpoints)
 
     # add trail
     x1, y1 = newendpoints[0]
@@ -901,7 +900,7 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
     return image
 
 
-def _rot_sum(image, angle, return_length):
+def rot_sum(image, angle, return_length):
     '''
     Rotates and image by a designated angle and sums the values in each column
 
@@ -945,7 +944,7 @@ def _rot_sum(image, angle, return_length):
     return medarr
 
 
-def _rot_med(image, angle, return_length):
+def rot_med(image, angle, return_length):
     '''
     Rotates and image by a designated angle and take a median in each column
 
@@ -1136,12 +1135,12 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         return_lengths = [True for i in range(len(angles))]
         pairs = list(zip(images, angles, return_lengths))
         if median is False:
-            result = p.starmap(_rot_sum, pairs)
+            result = p.starmap(rot_sum, pairs)
             result = np.array(result)
             radon_image = result[:, 0, :]
             lengths = result[:, 1, :]
         else:
-            result = p.starmap(_rot_med, pairs)
+            result = p.starmap(rot_med, pairs)
             result = np.array(result)
             print(np.shape(result))
             radon_image = result[:, 0, :]
