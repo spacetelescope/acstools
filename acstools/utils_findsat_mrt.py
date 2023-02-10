@@ -1,5 +1,5 @@
 '''
-These are various helper routines for findsat_mrt.py
+Various helper routines for findsat_mrt.py
 '''
 
 import numpy as np
@@ -63,7 +63,7 @@ def _round_up_to_odd(f):
 
 def merge_tables(tbls, theta_sep=10, rho_sep=10):
     '''
-    Routine to merge multiple trail tables together while removing duplicates
+    Merge multiple trail tables together while removing duplicates
 
     Parameters
     ----------
@@ -101,8 +101,7 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
 
 def good_indices(inds, shape):
     '''
-    Program to make sure indices are within bounds of array. Occasionally
-    useful for various tasks
+    Ensures indices are within bounds of array. 
 
     Parameters
     ----------
@@ -136,8 +135,7 @@ def good_indices(inds, shape):
 def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
                         max_width=None, ax=None, bounds=None):
     '''
-    Fits a Gaussian function to a 1D cross-section of a trail identified in an
-    image.
+    Fits a Gaussian to a 1D cross-section of a trail in an image
 
     Parameters
     ----------
@@ -346,9 +344,10 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                    min_length=50, check_persistence=True, min_persistence=0.5,
                    persistence_chunk=100, min_persistence_snr=3):
     '''
-    Routine to filter a trail catalog of likely spurious sources based on S/N,
-    trail width, and trail_persistence (over what fraction of the trail path
-    can the trail actually be well-detected).
+    Filter trail catalog of likely spurious sources
+    
+    The filtering is based on S/N, trail width, and trail_persistence (over
+    what fraction of the trail path can the trail actually be well-detected).
 
     Parameters
     ----------
@@ -610,8 +609,7 @@ def rotate(origin, point, angle):
 
 def streak_endpoints(rho, theta, sz, plot=False):
     '''
-    Calculates the endpoints of a streak parameterized by rho, theta assuming
-    an image of size sz
+    Get endpoints of a trail using rho, theta coordinates and image size
 
     Parameters
     ----------
@@ -697,10 +695,11 @@ def streak_endpoints(rho, theta, sz, plot=False):
 def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
                         plot_streak=False):
     '''
-    Routine to measure a sreak's persistence score. It does this by breaking
-    the trail into even chunks and trying to fit a Gaussian to a 1D
-    cross-section from each chunk. Successful fits contribute to the
-    persistence score.
+    Measure streak persistence across image.
+    
+    The persistence is measured by breaking the trail into even chunks and
+    trying to fit a Gaussian to a 1D cross-section from each chunk. Successful
+    fits contribute to the persistence score.
 
     Parameters
     ----------
@@ -796,9 +795,8 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
                psf_sigma=None):
     '''
-    Generates a model streak and adds it to an input image. The code optionally
-    convolves the trail image with a psf.
-
+    Generates a (optionally) psf-convolved model trail and add it to an image. 
+    
     Parameters
     ----------
     image : ndarray
@@ -924,8 +922,7 @@ def _rot_sum(image, angle, return_length):
 
 def _rot_med(image, angle, return_length):
     '''
-    Rotates and image by a designated angle and take a median of the values
-    in each column
+    Rotates and image by a designated angle and take a median in each column
 
     Parameters
     ----------
@@ -966,8 +963,10 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
           fill_value=np.nan, median=True, threads=1, return_length=False,
           print_calc_times=False):
     """
-    Calculates the (median) radon transform of an image given specified
-    projection angles. For further information see [1]_ and [2]_.
+    Calculates the (median) radon transform of an image.
+    
+    This routine is adopted from the skimage routine of the same name. For
+    further information see [1]_ and [2]_.
 
     Parameters
     ----------
@@ -1006,6 +1005,11 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         dimension of ``radon_image``.
     length: ndarray, optional
         Length of data array
+        
+    Raises
+    ------
+    ValueError
+        Input image is not 2-D, padded image is not square
 
     References
     ----------
@@ -1129,8 +1133,10 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                            plot=False, theta=np.arange(0, 180, 0.5),
                            threads=1):
     '''
-    Creates a model signal MRT signal of a line of specified width and blurred
-    by a psf. Used for detection of real linear signals in imaging data.
+    Creates a model signal MRT signal of a line of specified width. 
+    
+    The trails can be blurred by a psf. These kernels are used for detection
+    of real linear signals in the MRT of imaging data.
 
     Parameters
     ----------

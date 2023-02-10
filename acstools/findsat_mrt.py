@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Identify satellite trails in ACS/WFC imaging with the Median Radon Transform.
+
 This module contains a class called trailfinder that is used to identify
 satellite trails and/or other linear features in astronomical image data. To
 accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
-final catalog of trails. These trails can then be used to create a mask.
+final catalog of trails, which can then be used to create a mask.
 
 A second class called wfc_wrapper is designed explicitly to make ACS/WFC data
 easy to process.
 
-This package is found to be roughly 10x more sensitive compared to the current
-satellite trail finding code included with acstools,
+This algorithm is found to be roughly 10x more sensitive compared to the 
+current satellite trail finding code included with acstools,
 `satdet <https://acstools--176.org.readthedocs.build/en/176/satdet.html>`_.
 However, this approach can struggle with dense fields, while the performance
 of satdat in these fields may be more reliable (but this has not yet been
 tested).
 
 For further details on this algorithm and tests of its performance, see
-`ACS ISR 2022-08 <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2208.pdf>`_. # noqa
+`ACS ISR 2022-08 <https://ui.adsabs.harvard.edu/abs/2022acs..rept....8S/abstract>`_.
 
 Examples
 ________
 
-**Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
-(4th extension)**
+Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
+(4th extension)
 
 Load data
 
@@ -43,7 +45,7 @@ calculation
 >>> from astropy.nddata import bitmask
 >>> import ccdproc
 >>> mask = bitmask.bitfield_to_boolean_mask(dq,
-                                            ignore_flags=[4096, 8192, 16384])
+...                                         ignore_flags=[4096, 8192, 16384])
 >>> image[mask == True]=np.nan
 >>> image = image-np.nanmedian(image)
 >>> image = ccdproc.block_reduce(image, 4, func=np.nansum)
@@ -64,14 +66,14 @@ this process.
 >>> s.plot_image(overlay_mask=True)    # plots input image with mask overlaid
 
 
-**Example 2: Quick run to find satellite trails**
+Example 2: Quick run to find satellite trails
 
 After loading and preprocessing the image (see example above), run
 
 >>> s = trailfinder(image=image, threads=8)  # initializes
 >>> s.run_all()                              # runs everything else
 
-**Example 3: Run with the WFC wrapper**
+Example 3: Run identification/masking using the WFC wrapper
 
 The WFC wrapper can automatically do the binning, background subtraction, and
 bad pixel flagging:
@@ -90,7 +92,7 @@ process:
 Or the entire process can be run in a single line with
 
 >>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
-                execute=True)
+...                 execute=True)
 
 """
 
@@ -157,8 +159,7 @@ class trailfinder(object):
             save_mrt=False,
             save_mask=False):
         '''
-        Class to identify satellite trails in image data using the Median
-        Radon Transform, and create a mask for them.
+        Top-level class to handle trail identification and masking.
 
         Parameters
         ----------
@@ -513,7 +514,7 @@ class trailfinder(object):
 
     def find_mrt_sources(self, kernels=None, threshold=None, plot=None):
         '''
-        Findings sources in the MRT consistent with satellite trails/streaks
+        Finds sources in the MRT consistent with satellite trails/streaks
 
         Parameters
         ----------
@@ -615,8 +616,7 @@ class trailfinder(object):
                        plot_streak=False, check_persistence=None,
                        min_persistence=None):
         '''
-        Filters an input catalog of trails based on their remeasured S/N,
-        width, and persistence to determine which are robust.
+        Filters catalog of trails based on S/N, width, and persistence 
 
         Parameters
         ----------
@@ -728,8 +728,7 @@ class trailfinder(object):
 
     def make_mask(self, include_status=None, plot=None):
         '''
-        Makes a 1/0 satellite trail mask and a segmentation image with each
-        trail numbered based on the identified trails.
+        Makes a 1/0 satellite trail mask and a segmentation map
 
         Parameters
         ----------
@@ -837,7 +836,9 @@ class trailfinder(object):
     def save_output(self, root=None, output_dir=None, save_mrt=None,
                     save_mask=None, save_catalog=None, save_diagnostic=None):
         '''
-        Saves output, including (1) MRT, (2) mask/segementation image,
+        Save output.
+        
+        Output includes optionally: (1) MRT, (2) mask/segementation image,
         (3) catalog, and (4) trail catalog.
 
         Parameters
@@ -1002,7 +1003,8 @@ class trailfinder(object):
                     for k in self.save_image_header_keys:
                         try:
                             hdr[k] = self.image_header[k]
-                        # sometimes header keywords missing. Skip these.
+                        # sometimes header keywords missing. Skip these but
+                        # notify user.
                         except Exception:
                             LOG.error('\nadding image header key {} \
                                       failed\n'.format(k))
@@ -1011,14 +1013,15 @@ class trailfinder(object):
 
     def _remove_angles(self, ignore_theta_range=None):
         '''
-        Set to remove a specific range (or set of ranges) of angles from the
-        trail catalog. This is primarily for removing trails at angles known to
+        Remove a range (or set of ranges) of angles from the trail catalog
+
+        This routine is primarily for removing trails at angles known to
         be overwhelmingly dominated by features that are not of interest, e.g.,
         for removing diffraction spikes.
 
         Parameters
         ----------
-        ignore_theta_range : list, optional
+        ignore_theta_range : list of tuples, optional
             List of angle ranges to avoid.
             Format is [(min angle1,max angle1),(min angle2, max angle2) ... ].
             Default is None, which defers to self attribute of same name.
@@ -1051,8 +1054,7 @@ class trailfinder(object):
 
     def run_all(self, **kwargs):
         '''
-        Simple wrapper code to run the entire pipeline to identify, filter, and
-        mask trails.
+        Run the entire pipeline to identify, filter, and mask trails.
 
         Parameters
         ----------
@@ -1084,9 +1086,10 @@ class wfc_wrapper(trailfinder):
                  execute=False,
                  **kwargs):
         '''
-        Wrapper for trail_finder class designed specifically for ACS/WFC data.
-        Enables quick reading and preprocessing of standard full-frame
-        ACS/WFC images.
+        Wrapper for trail_finder designed specifically for ACS/WFC data.
+        
+        This class enables quick reading and preprocessing of standard 
+        full-frame ACS/WFC images.
 
         .. note::
 
@@ -1115,6 +1118,12 @@ class wfc_wrapper(trailfinder):
         Returns
         -------
         None.
+        
+        Raises
+        ------
+        ValueError
+            Image is subarray, image extension not recognized/specified, or
+            image type not recognized.
 
         '''
 
@@ -1166,7 +1175,9 @@ class wfc_wrapper(trailfinder):
 
     def mask_bad_pixels(self, ignore_flags=None):
         '''
-        Masks bad pixels by replacing them with nan. Uses the bitmask arrays
+        Masks bad pixels 
+        
+        Bad pixels are replacing with nan. This code the bitmask arrays
         for flc/flt images, and weight arrays for drc/drz images
 
         Parameters
@@ -1218,8 +1229,7 @@ class wfc_wrapper(trailfinder):
 
     def rebin(self, binsize=None):
         '''
-        Rebins the image array. The x/y rebinning are the same. NaNs are
-        ignored.
+        Rebins the image array.
 
         Parameters
         ----------
@@ -1249,8 +1259,7 @@ class wfc_wrapper(trailfinder):
 
     def run_preprocess(self, **kwargs):
         '''
-        Runs all the preprocessing steps together: mask_bad_pixels,
-        subtract_background, rebin.
+        Runs all the image preprocessing steps.
 
         Parameters
         ----------
