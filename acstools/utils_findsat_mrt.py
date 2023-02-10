@@ -20,6 +20,8 @@ from scipy import interpolate
 from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
+
+# turn plotting off if matplotlib is not available
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -30,7 +32,7 @@ except ImportError:
 __taskname__ = "utils_findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
-__vdate__ = "06-Dec-2022"
+__vdate__ = "10-Feb-2022"
 __all__ = ['_round_up_to_odd', 'merge_tables', 'good_indices',
            '_fit_streak_profile', '_rotate_image_trail', 'filter_sources',
            'create_mask', 'rotate', 'streak_endpoints', '_streak_persistence',
@@ -81,7 +83,7 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
 
     '''
 
-    counter = 1
+    counter = 1 # this just tells me if I'm creating a new table or appending
     for t in tbls:
         if counter == 1:
             src = t
@@ -117,12 +119,15 @@ def good_indices(inds, shape):
         dimensions
 
     '''
+    
+    # make sure inds is the right format
     if type(inds) is not list:
         inds = [inds]
     if type(shape) == int:
         shape = [shape]
     shape = list(shape)  # covers other sizes of shape
 
+    # now check individual indices
     good_inds = []
     for ind, sz in zip(inds, shape):
         ind1, ind2 = ind
@@ -173,16 +178,16 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     amp0, mean0, stdev0 = p0  # initial guesses for amplitude, mean, stddev.
     # Can be "None"
 
-    # update mean0 if necessary; other will be updated below
+    # update mean0 to middle of frame if necessary; other will be updated below
     if mean0 is None:
         mean0 = np.len(yarr)/2-0.5
 
     xarr = np.arange(len(yarr))  # x pixel array
 
-    # subtract background
+    # subtract baseline level
     if fit_background is True:
 
-        # try gitting a polynomial to background. Keep to low order to avoid
+        # try fitting a polynomial to background. Keep to low order to avoid
         # weirdness occuring. E.g., line
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', AstropyUserWarning)
@@ -190,7 +195,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
             or_fit = fitting.FittingWithOutlierRemoval(fit, sigma_clip,
                                                        niter=3, sigma=3)
         # make sure there are regions to fit on either side of the initial
-        # position. If not, lower order
+        # position. If not, use lower order to avoid bad behavior
         sel_low = np.where(np.isfinite(yarr) &
                            (xarr < (mean0-max_width/2)))[0]
         sel_high = np.where(np.isfinite(yarr) &
@@ -199,6 +204,8 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
             order = 1
         else:
             order = 3
+            
+        # final fitting region
         sel = np.concatenate([sel_low, sel_high])
 
         # now run fitting
@@ -212,8 +219,8 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     else:
         # if not fitting, subtract median using outer 50% of data
         ind = int(len(yarr)/4)  # use to select outer quarter of data
-        mean = np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])  # estimate#
-        # of baseline level using outer 50% of channels
+        mean = np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])  # estimate
+        # ... of baseline level using outer 50% of channels
         yarr = yarr - mean
 
     # fit cross-sectional profile
@@ -225,7 +232,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         stdev0 = 5.
 
     if bounds is None:
-        bounds = {'amplitude': (0, None)}
+        bounds = {'amplitude': (0, None)} # forcing positive amplitude
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
@@ -236,6 +243,8 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
         g = fit_g(g_init, xarr[sel], yarr[sel])
+        
+    #plot if triggered
     if (plot_streak is True) and (ax is not None) & (plt is not None):
         ax.plot(xarr, yarr)
         ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3,
@@ -258,7 +267,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     else:
         mean_flux = np.nanmean(yarr[sel])
 
-    # measure noise outside the profile region
+    # measure noise outside the profile. Using median abs dev to avoid outliers
     sel = (xarr < (g.mean - 3*g.stddev)) | (xarr > (g.mean + 3*g.stddev))
     if np.sum(sel) == 0:
         noise = 0
@@ -266,7 +275,7 @@ def _fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         noise = np.nanmedian(np.abs(yarr[sel] -
                                     np.nanmedian(yarr[sel])))/0.67449
 
-    # use amplitude and noise to estimate snr
+    # use amplitude and noise to re-estimate snr
     snr = (peak-noise)/noise
 
     LOG.info('amplitude of feature: {}'.format(peak))
@@ -312,7 +321,6 @@ def _rotate_image_trail(image, endpoints):
     # calculate trail angle
     dy = y2-y1
     dx = x2-x1
-
     theta = np.arctan2(dy, dx)
 
     # rotate image so trail is horizontal
@@ -398,15 +406,17 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
 
     '''
 
+    # we'll save the newly measured parameters in the following arrays
     widths = np.zeros(len(streak_positions))
     snrs = np.zeros(len(streak_positions))
     status = np.zeros(len(streak_positions)).astype(int)
     persistence = np.zeros(len(streak_positions))
     mean_fluxes = np.zeros(len(streak_positions))
 
-    # cycle through lines and add them to the mask
+    # cycle through lines and add them to the mask if they pass tests
     for ii, p in enumerate(streak_positions):
 
+        # rotating so trail is horizontal
         rotated, [[rx1, ry1], [rx2, ry2]], theta = _rotate_image_trail(image,
                                                                        p)
 
@@ -449,6 +459,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                      lw=2, color='magenta', alpha=0.4)
             use_ax = ax1
 
+        # measure trail properties
         g, snr, width, mean_flux = _fit_streak_profile(medarr,
                                                        (None, dy_streak, 5),
                                                        ax=use_ax,
@@ -458,6 +469,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         widths[ii] = width
         mean_fluxes[ii] = mean_flux
 
+        #plot if triggered
         if (plot_streak is True) & (plt is not None):
             ax1.set_title('snr={}, width={}'.format(snr, width))
             ax1.set_xlabel('position')
@@ -476,7 +488,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                 maxchunk = np.floor(snr*snr/min_persistence_snr**2)
 
                 dx = persistence_chunk  # starting dx value
-                nchunk = np.floor(subregion.shape[1]/dx)
+                nchunk = np.floor(subregion.shape[1]/dx) # number of chunks
 
                 # make sure estimated snr per section is >3
                 if nchunk > maxchunk:
@@ -539,13 +551,14 @@ def create_mask(image, trail_id, endpoints, widths):
     # cycle through trail endpoints/widths
     for t, e, w in zip(trail_id, endpoints, widths):
 
+        #rotate so trail is horizontal
         rotated, [[rx1, ry1], [rx2, ry2]], theta = _rotate_image_trail(image,
                                                                        e)
 
-        # create submask using known width and
+        # create submask using known width 
         ry = (ry1 + ry2)/2.  # take average, although they should be about the
         # same
-        # max functionused to ensure it stays within bounds
+        # max function used to ensure it stays within bounds
         mask_y1 = np.maximum(0, np.floor(ry - w/2)).astype(int)
         # min function used to ensure it stays within bounds
         mask_y2 = np.minimum(rotated.shape[0]-1, np.ceil(ry+w/2)).astype(int)
@@ -730,8 +743,10 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         Persistence score of the input trail.
 
     '''
+    # starting guess
+    guess = (None, streak_y0, streak_stdev)
 
-    guess = (None, streak_y0, streak_stdev)  # starting guess
+    #bounds of fit
     bounds = {'amplitude': (0, None), 'mean': (streak_y0, streak_y0 + 25)}
 
     snr_arr = []
@@ -753,6 +768,7 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         else:
             ax = None
 
+        # fit properties of chunk
         g, snr, width, mean_flux = _fit_streak_profile(chunk, guess, ax=ax,
                                                        max_width=max_width,
                                                        plot_streak=plot_streak,
@@ -767,6 +783,7 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         width_arr.append(width)
         mean_arr.append(g.mean.value)
 
+        # assess if successful
         success = (snr > 3) & (np.isfinite(snr))
         if ii > 0:
             success = success & (np.abs(mean_arr[ii] -
@@ -785,6 +802,8 @@ def _streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
                                                        g.mean.value + width)}
         else:
             LOG.info('fit failed, will not update guesses')
+            
+    # save the persistence score
     pscore = np.sum(persist)/len(persist)
 
     LOG.info('persistance: {}'.format(pscore))
@@ -909,11 +928,17 @@ def _rot_sum(image, angle, return_length):
     R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
+    
+    # rotate image
     rotated = warp(image, R, clip=False, cval=np.nan)
+    
+    #take sum along each column
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore',
                                 message='All-NaN slice encountered')
         medarr = np.nansum(rotated, axis=0)
+        
+    # get length along each column
     if return_length is True:
         length = np.sum(np.isfinite(rotated), axis=0)
         return [medarr, length]
@@ -947,11 +972,17 @@ def _rot_med(image, angle, return_length):
     R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
+    
+    # rotate the image
     rotated = warp(image, R, clip=False, cval=np.nan)
+    
+    # take median on each column
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore',
                                 message='All-NaN slice encountered')
         medarr = np.nanmedian(rotated, axis=0)
+        
+    # get length of each column
     if return_length is True:
         length = np.sum(np.isfinite(rotated), axis=0)
         return [medarr, length]
@@ -1097,6 +1128,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
             lengths[:, i] = np.sum(np.isfinite(rotated), axis=0)
 
     else:
+        # splitting calculation up among many threads to speed up. Each thread
+        # rotates and sums/medians at a specific angle
         p = Pool(threads)
         angles = np.deg2rad(theta)
         images = [padded_image for i in range(len(angles))]

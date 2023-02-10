@@ -109,6 +109,7 @@ from astropy.nddata import bitmask
 import logging
 import warnings
 
+# test for matplotlib, turn off plotting if it does not exist
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -117,13 +118,13 @@ except ImportError:
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
 
-
 __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
-__vdate__ = "16-Dec-2022"
+__vdate__ = "10-Feb-2023"
 __all__ = ['trailfinder', 'wfc_wrapper']
 
+# storing package directory so relative paths work
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 # Initialize the logger
@@ -281,7 +282,7 @@ class trailfinder(object):
         else:
             self._interactive = False
 
-        # info for saving output
+        # info for what output to save and where
         self.output_dir = output_dir
         self.root = output_root
         self.save_catalog = save_catalog
@@ -295,7 +296,7 @@ class trailfinder(object):
 
     def run_mrt(self, theta=None, threads=None, plot=None):
         '''
-        Runs the median radon transform on the input image
+        Runs the median radon transform on the input image.
 
         Parameters
         ----------
@@ -324,18 +325,19 @@ class trailfinder(object):
         else:
             self.threads = threads
 
+        #run MRT
         rt, length = u.radon(self.image, circle=False, median=True,
                              fill_value=np.nan, threads=threads,
                              return_length=True, theta=theta)
 
-        # automatically trim rt where length too short
+        # trim mrt where length too short
         rt[length < self.min_length] = np.nan
 
-        # save various outputs
+        # retain various outputs
         self.mrt = rt
         self.length = length
 
-        # calculate some properties
+        # calculate some useful properties
         # median
         self._medrt = np.nanmedian(rt)
         # median abs deviation
@@ -351,10 +353,11 @@ class trailfinder(object):
         with np.errstate(divide='ignore', invalid='ignore'):
             self.mrt_err = 1.25*self._image_stddev/np.sqrt(self.length)
 
-        # calculate rho array
+        # create the rho array
         rho0 = rt.shape[0]/2-0.5
         self.rho = np.arange(rt.shape[0])-rho0
 
+        #plot if set
         if (plot is True) & (plt is not None):
             self.plot_mrt()
 
@@ -377,6 +380,7 @@ class trailfinder(object):
 
         '''
 
+        # exit if no image
         if self.image is None:
             LOG.error('No image to plot')
             return
@@ -384,11 +388,11 @@ class trailfinder(object):
         if ax is None:
             fig, ax = plt.subplots()
 
-        # recaluclate mad and stdev here in case it hasn't been done yet
-
+        # recalculate mad and stdev here in case it hasn't been done yet
         self._image_mad = np.nanmedian(np.abs(self.image))
         self._image_stddev = self._image_mad/0.67449  # using MAD to avoid
         # influence from outliers
+        
         ax.imshow(self.image, cmap='viridis', origin='lower', aspect='auto',
                   vmin=scale[0]*self._image_stddev,
                   vmax=scale[1]*self._image_stddev)
@@ -403,6 +407,7 @@ class trailfinder(object):
                 ax.imshow(self.mask, alpha=0.5, cmap='Reds', origin='lower',
                           aspect='auto')
 
+        #write to file if interactive is off and plottin is on
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_image'
             if overlay_mask:
@@ -433,10 +438,12 @@ class trailfinder(object):
 
         '''
 
+        #exit if no MRT
         if self.mrt is None:
             LOG.error('No MRT to plot')
             return
 
+        #Letting user know if there are no sources to overplot
         if (show_sources is True) and (self.source_list is None):
             show_sources = False
             LOG.info('No sources to show')
@@ -450,6 +457,7 @@ class trailfinder(object):
         ax.set_xlabel('angle(theta) pixel')
         ax.set_ylabel('offset(rho) pixel')
 
+        #overplot sources if applicable
         if show_sources is True:
             x = self.source_list['xcentroid']
             y = self.source_list['ycentroid']
@@ -463,6 +471,7 @@ class trailfinder(object):
                                label='status={}'.format(s))
             ax.legend(loc='upper center')
 
+        #send plot to file if interactive is off
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_mrt'
             if show_sources:
@@ -548,18 +557,25 @@ class trailfinder(object):
         LOG.info('Detection threshold: {}'.format(threshold))
 
         # cycle through kernels
-        tbls = []
+        tbls = [] # we'll store detected sources here
         for k in kernels:
             with fits.open(k) as h:
                 kernel = h[0].data
             LOG.info('Using kernel {}'.format(k))
+            
+            # detect sources
             s = StarFinder(threshold, kernel, min_separation=20,
                            exclude_border=False, brightest=None, peakmax=None)
+            
+            # can fail for cases where nothing found. Allow code to return
+            # nothing and move on
             try:
                 snrmap = self.mrt/self.mrt_err
                 tbl = s.find_stars(snrmap, mask=~np.isfinite(snrmap))
             except Exception:
                 tbl = None
+                
+            # append to big table of sources
             if tbl is not None:
                 tbl = tbl[np.isfinite(tbl['xcentroid'])]
                 LOG.info('{} sources found using kernel'.format(len(tbl)))
@@ -571,6 +587,7 @@ class trailfinder(object):
                 tbls.append(tbl)
             else:
                 LOG.info('no sources found using kernel')
+                
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
             LOG.info('Removing duplicate sources')
@@ -579,7 +596,7 @@ class trailfinder(object):
         else:
             self.source_list = None
 
-        # add the theta and rho arrays
+        # add the theta and rho values to the table
         if self.source_list is not None:
             dtheta = self.theta[1]-self.theta[0]
             self.source_list['theta'] = \
@@ -587,8 +604,8 @@ class trailfinder(object):
             self.source_list['rho'] = \
                 self.rho[0] + self.source_list['ycentroid']
 
-        # add the status array and endpoints array. Everything will be zero
-        # because no additional checks have been done
+        # add the status array and endpoints array. Status will be zero
+        # because no additional checks have been done yet
             self.source_list['endpoints'] = \
                 [u.streak_endpoints(t['rho'], -t['theta'], self.image.shape)
                  for t in self.source_list]
@@ -659,7 +676,6 @@ class trailfinder(object):
         '''
 
         # check inputs, update class attributes as needed
-
         if ~self._interactive:
             plot_streak = False
 
@@ -690,7 +706,6 @@ class trailfinder(object):
         if plot is None:
             plot = self.plot
 
-        # turn rho/theta coordinates into endpoints
         if self.source_list is not None:
 
             LOG.info('Filtering sources...')
@@ -715,11 +730,13 @@ class trailfinder(object):
             # update the status
             self.source_list.update(properties)
 
+        # optionally trim the catalog of all rejected sources
         if trim_catalog is True:
             sel = (self.source_list['width'] < maxwidth) & \
                 (self.source_list['snr'] > threshold)
             self.source_list = self.source_list[sel]
 
+        # plot if triggered
         if (plot is True) & (plt is not None):
             fig, ax = plt.subplots()
             self.plot_mrt(show_sources=True)
@@ -729,6 +746,9 @@ class trailfinder(object):
     def make_mask(self, include_status=None, plot=None):
         '''
         Makes a 1/0 satellite trail mask and a segmentation map
+
+        The segmentation mask is an image where pixels belonging to a given
+        trail have values equal to the trail ID number
 
         Parameters
         ----------
@@ -744,6 +764,8 @@ class trailfinder(object):
         None.
 
         '''
+        
+        #update inputs/class attributes as needed
         if include_status is None:
             include_status = self.mask_include_status
         else:
@@ -751,6 +773,7 @@ class trailfinder(object):
         if plot is None:
             plot = self.plot
 
+        # crate the mask/segmentation
         if self.source_list is not None:
 
             include = [s['status'] in include_status for s in self.source_list]
@@ -765,6 +788,7 @@ class trailfinder(object):
         self.segment = segment.astype(int)
         self.mask = mask
 
+        # plot if triggered
         if (plot is True) & (plt is not None):
             self.plot_mask()
             self.plot_segment()
@@ -778,6 +802,8 @@ class trailfinder(object):
         ax, AxesSubplot
             The Matplotlib subplot containing the mask image
         '''
+        
+        # exit if there's not mask
         if self.mask is None:
             LOG.error('No mask to show')
             return
@@ -786,6 +812,7 @@ class trailfinder(object):
         ax.imshow(self.mask, origin='lower', aspect='auto')
         ax.set_title('Mask')
 
+        # send mask to file if interactive off
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_mask'
             file_name = file_name + '.png'
@@ -803,6 +830,8 @@ class trailfinder(object):
             A matplotlib subplot containing the segmentation map
 
         '''
+        
+        # exit if no segmentation image
         if self.segment is None:
             LOG.error('No segment map to show')
             return
@@ -816,6 +845,8 @@ class trailfinder(object):
             counter += 1
 
         fig, ax = plt.subplots()
+        
+        # update the colormap to match the segmentation IDs
         cmap = plt.get_cmap('tab20', np.max(data) - np.min(data) + 1)
         mat = ax.imshow(data, cmap=cmap, vmin=np.min(data) - 0.5,
                         vmax=np.max(data) + 0.5, origin='lower', aspect='auto')
@@ -828,6 +859,7 @@ class trailfinder(object):
         cax.ax.set_ylabel('trail ID')
         ax.set_title('Segmentation Mask')
 
+        #send to file if not interactive
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_segment'
             file_name = file_name + '.png'
@@ -894,6 +926,7 @@ class trailfinder(object):
         else:
             self.save_catalog = save_catalog
 
+        # save the MRT image
         if save_mrt is True:
             LOG.info('writing MRT')
             if self.mrt is not None:
@@ -902,6 +935,7 @@ class trailfinder(object):
             else:
                 LOG.error('No MRT to save')
 
+        # save the 1/0 mask image
         if save_mask is True:
             if self.mask is not None:
                 hdu0 = fits.PrimaryHDU()
@@ -917,6 +951,7 @@ class trailfinder(object):
             else:
                 LOG.error('No mask to save')
 
+        # save the diagnostic plot
         if save_diagnostic is True:
             LOG.info('writing diagnostic plot')
 
@@ -951,6 +986,7 @@ class trailfinder(object):
             if (self.plot is False) & (plt is not None):
                 plt.close()
 
+        # save the catalog of trails
         if save_catalog is True:
 
             if self.source_list is not None:
@@ -984,7 +1020,7 @@ class trailfinder(object):
                                                               root),
                                   overwrite=True)
 
-            # I want to append the original data header to this too
+            # I want to append the original data header to this catalog too
             if (self.header is not None) | (self.image_header is not None):
 
                 h = fits.open('{}/{}_catalog.fits'.format(output_dir, root),
@@ -1033,6 +1069,7 @@ class trailfinder(object):
 
         '''
 
+        #update keyword values/class attributes as needed
         if ignore_theta_range is None:
             ignore_theta_range == self.ignore_theta_range
         else:
@@ -1135,7 +1172,7 @@ class wfc_wrapper(trailfinder):
         self.preprocess = preprocess
         self.execute = execute
 
-        # get image type
+        # open image
         h = fits.open(self.image_file)
 
         # check that image id not subarray
@@ -1169,6 +1206,7 @@ class wfc_wrapper(trailfinder):
         if preprocess is True:
             self.run_preprocess()
 
+        #run the whole pipeline if set to true
         if execute is True:
             LOG.info('Running the trailfinding pipeline')
             self.run_all()
@@ -1230,6 +1268,8 @@ class wfc_wrapper(trailfinder):
     def rebin(self, binsize=None):
         '''
         Rebins the image array.
+        
+        The binning in the x and y direction are identical.
 
         Parameters
         ----------
