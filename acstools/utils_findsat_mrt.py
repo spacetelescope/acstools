@@ -43,6 +43,11 @@ logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}')
 LOG.setLevel(logging.INFO)
 
+# filtering out warnings from nansum and nanmedian that say there's a all-nan
+# line in the data. These are expected because of how we label bad data in an
+#image, but they are inconsequential
+warnings.filterwarnings(action='ignore', message='All-NaN slice encountered')
+
 
 def _round_up_to_odd(f):
     '''
@@ -761,7 +766,13 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 
         ind0 = ii*dx
         ind1 = (ii+1)*dx
-        chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
+        
+        # suppressing the all-Nan slice warning. It's expected and unimportant
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
+        
         if (plot_streak is True) & (plt is not None):
             fig, ax = plt.subplots()
         else:
@@ -976,10 +987,10 @@ def rot_med(image, angle, return_length):
     rotated = warp(image, R, clip=False, cval=np.nan)
     
     # take median on each column
-    with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore',
-                                message='All-NaN slice encountered')
-        medarr = np.nanmedian(rotated, axis=0)
+   # with warnings.catch_warnings():
+   #     warnings.filterwarnings(action='ignore',
+    #                            message='All-NaN slice encountered')
+    medarr = np.nanmedian(rotated, axis=0)
         
     # get length of each column
     if return_length is True:
