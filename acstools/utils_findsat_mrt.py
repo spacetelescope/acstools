@@ -841,8 +841,8 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
 
     Returns
     -------
-    image : TYPE
-        DESCRIPTION.
+    image : ndarray
+        The input image with the streak added on.
 
     '''
 
@@ -1160,8 +1160,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
 
 
 def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
-                           plot=False, theta=np.arange(0, 180, 0.5),
-                           threads=1):
+                           plot=False, theta=None, threads=1):
     '''
     Creates a model signal MRT signal of a line of specified width. 
     
@@ -1184,7 +1183,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         Flag to plot the original image, MRT, and kernel cutout
     theta : array, optional
         Set of angles at which to calculate the MRT, default is
-        np.arange(0,180,0,5)
+        None, which reverts to np.arange(0,180,0.5).
     threads: int, optional
         Number of threads to use when calculating MRT. Default is 1.
     Returns
@@ -1193,6 +1192,10 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         The resulting kernel
 
     '''
+
+    #updating some defaults
+    if theta is None:
+        theta = np.arange(0,180,0.5)
 
     # set up empty image and coordinates
     image = np.zeros(shape)
