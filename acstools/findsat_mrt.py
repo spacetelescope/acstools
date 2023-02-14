@@ -132,6 +132,9 @@ logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}')
 LOG.setLevel(logging.INFO)
 
+# filtering out warnings from nansum and nanmedian that say there's a all-nan
+# line in the data. These are expected because of how we label bad data in an
+#image, but they are inconsequential
 
 class trailfinder(object):
 
@@ -246,6 +249,12 @@ class trailfinder(object):
                        format(k) for k in [15, 7, 3]]
         if save_image_header_keys is None:
             save_image_header_keys = []
+
+        # setting a warning filter for the nanmedian calculations. These
+        # warnings are inconsequential and already accounted for in the code
+        warnings.filterwarnings(action='ignore',
+                                message='All-NaN slice encountered')
+
 
         # inputs
         self.image = image
