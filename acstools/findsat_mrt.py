@@ -138,6 +138,83 @@ LOG.setLevel(logging.INFO)
 
 class trailfinder(object):
 
+    '''Top-level class to handle trail identification and masking.    
+    
+    Parameters
+    ----------
+    image : ndarray, optional
+        Input image. The default is None, but nothing will work until this
+        is defined
+    header: Header,optional
+        The header for the input data (0th extension). This is not used for
+        anything during the analysis, but it is saved with the output mask
+        and satellite trail catalog so information about the original
+        observation can be easily retrieved.
+    image_header: Header, optional
+        The specific header for the fits extension being used. This is
+        added onto the catalog
+    save_image_header_keys: list, optional
+        List of header keys from image_header to save in the output trail
+        catalog header. Default is None.
+    threads : int, optional
+        Number of threads to use when calculating MRT. The default is 1.
+    min_length : int, optional
+        Minimum streak length to allow. The default is 25 pixels.
+    max_width : int, optional
+        Maximum streak width to allow. The default is 75 pixels.
+    buffer : int, optional
+        Size of cutout region extending perpendicular outward from a
+        streak. The default is 250 pixels on each side.
+    threshold : float, optional
+        Minimum S/N when extracting sources from the MRT. The default is 5.
+    theta : ndarray, optional
+        Angles at which to calculate the MRT. The default is None, which
+        sets to np.arange(0,180,0.5).
+    kernels : list, optional
+        Paths to each kernel to be used for source finding in the MRT.
+        The default is None, which reverts to using the 3, 7, and 15 pixel
+        wide kernels included with this package.
+    mask_include_status: list, optional
+        List indicating trails with which status should be considered
+        when making the mask. The default is [2].
+    plot : bool, optional
+        Plots all intermediate steps. The default is False. Warning:
+            setting this option generates A LOT of plots. It's essentially
+            just for debugging purposes'
+    output_dir : string, optional
+        Path in which to save output. The default is './'.
+    output_root : string, optional
+        A prefix for all output files. The default is ''.
+    check_persistence : bool, optional
+        Calculates the persistence of all identified streaks. The default
+        is True.
+    min_persistence : float, optional
+        Minimum persistence of a "true" satellite trail. Must be between 0
+        and 1. The default is 0.5. Note that this does not reject satellite
+        trails from the output catalog, but highlights them in a different
+        color in the output plot.
+    ignore_theta_range : array-like, optional
+        List if ranges in theta to ignore when identifying satellite
+        trails. This parameter is most useful for avoiding false positives
+        due to diffraction spikes that always create streaks around the
+        same angle for a given telescope/instrument. Format should be a
+        list of tuples, e.g., [(theta0_a,theta1_a),(theta0_b,theta1_b)].
+        Default is None.
+    save_catalog: bool, optional
+        Set to save the catalog of identified trails. Default is True
+    save_diagnostic: bool, optional
+        Set to save a diagnotic plot showing the input image and identified
+        trails. Default is True.
+    save_mrt: bool, optional
+        Set to save the MRT in a fits file. Default is false.
+    save_mask: bool, optional
+        Set to save the trail mask in a fits file. Default is false.
+
+    Returns
+    -------
+    None.
+
+    '''
     def __init__(
             self,
             image=None,
@@ -162,84 +239,8 @@ class trailfinder(object):
             save_diagnostic=True,
             save_mrt=False,
             save_mask=False):
-        '''
-        Top-level class to handle trail identification and masking.
+        
 
-        Parameters
-        ----------
-        image : ndarray, optional
-            Input image. The default is None, but nothing will work until this
-            is defined
-        header: Header,optional
-            The header for the input data (0th extension). This is not used for
-            anything during the analysis, but it is saved with the output mask
-            and satellite trail catalog so information about the original
-            observation can be easily retrieved.
-        image_header: Header, optional
-            The specific header for the fits extension being used. This is
-            added onto the catalog
-        save_image_header_keys: list, optional
-            List of header keys from image_header to save in the output trail
-            catalog header. Default is None.
-        threads : int, optional
-            Number of threads to use when calculating MRT. The default is 1.
-        min_length : int, optional
-            Minimum streak length to allow. The default is 25 pixels.
-        max_width : int, optional
-            Maximum streak width to allow. The default is 75 pixels.
-        buffer : int, optional
-            Size of cutout region extending perpendicular outward from a
-            streak. The default is 250 pixels on each side.
-        threshold : float, optional
-            Minimum S/N when extracting sources from the MRT. The default is 5.
-        theta : ndarray, optional
-            Angles at which to calculate the MRT. The default is None, which
-            sets to np.arange(0,180,0.5).
-        kernels : list, optional
-            Paths to each kernel to be used for source finding in the MRT.
-            The default is None, which reverts to using the 3, 7, and 15 pixel
-            wide kernels included with this package.
-        mask_include_status: list, optional
-            List indicating trails with which status should be considered
-            when making the mask. The default is [2].
-        plot : bool, optional
-            Plots all intermediate steps. The default is False. Warning:
-                setting this option generates A LOT of plots. It's essentially
-                just for debugging purposes'
-        output_dir : string, optional
-            Path in which to save output. The default is './'.
-        output_root : string, optional
-            A prefix for all output files. The default is ''.
-        check_persistence : bool, optional
-            Calculates the persistence of all identified streaks. The default
-            is True.
-        min_persistence : float, optional
-            Minimum persistence of a "true" satellite trail. Must be between 0
-            and 1. The default is 0.5. Note that this does not reject satellite
-            trails from the output catalog, but highlights them in a different
-            color in the output plot.
-        ignore_theta_range : array-like, optional
-            List if ranges in theta to ignore when identifying satellite
-            trails. This parameter is most useful for avoiding false positives
-            due to diffraction spikes that always create streaks around the
-            same angle for a given telescope/instrument. Format should be a
-            list of tuples, e.g., [(theta0_a,theta1_a),(theta0_b,theta1_b)].
-            Default is None.
-        save_catalog: bool, optional
-            Set to save the catalog of identified trails. Default is True
-        save_diagnostic: bool, optional
-            Set to save a diagnotic plot showing the input image and identified
-            trails. Default is True.
-        save_mrt: bool, optional
-            Set to save the MRT in a fits file. Default is false.
-        save_mask: bool, optional
-            Set to save the trail mask in a fits file. Default is false.
-
-        Returns
-        -------
-        None.
-
-        '''
 
         # updating a few defaults
         if theta is None:
@@ -1123,6 +1124,48 @@ class trailfinder(object):
 
 class wfc_wrapper(trailfinder):
 
+    '''
+    Wrapper for trail_finder designed specifically for ACS/WFC data.
+    
+    This class enables quick reading and preprocessing of standard 
+    full-frame ACS/WFC images.
+
+    .. note::
+
+        * This class is not designed for use with subarray images.
+
+    Parameters
+    ----------
+    image_file : string
+        ACS/WFC data file to read. Should be a fits file.
+    extension : int, optional
+        Extension of input file to read. The default is None.
+    binsize : int, optional
+        Amount the input data should be binned by. The default is None
+        (no binning).
+    ignore_flags : list
+        DQ flags that lead to a pixel being ignored. Default is [4096,
+        8192, 16384]. Only relevant for flt/flc files.
+    preprocess : bool, optional
+        Flag to run all the preprocessing steps (bad pixel flagging,
+        background subtraction, rebinning. The default is True.
+    execute : bool, optional
+        Flag to run the entire trailfinder pipeline. The default is False.
+    **kwargs : dict, optional
+        Additional keyword arguments for trailfinder.
+
+    Returns
+    -------
+    None.
+    
+    Raises
+    ------
+    ValueError
+        Image is subarray, image extension not recognized/specified, or
+        image type not recognized.
+
+        '''    
+
     def __init__(self,
                  image_file,
                  extension=None,
@@ -1131,47 +1174,6 @@ class wfc_wrapper(trailfinder):
                  preprocess=True,
                  execute=False,
                  **kwargs):
-        '''
-        Wrapper for trail_finder designed specifically for ACS/WFC data.
-        
-        This class enables quick reading and preprocessing of standard 
-        full-frame ACS/WFC images.
-
-        .. note::
-
-            * This class is not designed for use with subarray images.
-
-        Parameters
-        ----------
-        image_file : string
-            ACS/WFC data file to read. Should be a fits file.
-        extension : int, optional
-            Extension of input file to read. The default is None.
-        binsize : int, optional
-            Amount the input data should be binned by. The default is None
-            (no binning).
-        ignore_flags : list
-            DQ flags that lead to a pixel being ignored. Default is [4096,
-            8192, 16384]. Only relevant for flt/flc files.
-        preprocess : bool, optional
-            Flag to run all the preprocessing steps (bad pixel flagging,
-            background subtraction, rebinning. The default is True.
-        execute : bool, optional
-            Flag to run the entire trailfinder pipeline. The default is False.
-        **kwargs : dict, optional
-            Additional keyword arguments for trailfinder.
-
-        Returns
-        -------
-        None.
-        
-        Raises
-        ------
-        ValueError
-            Image is subarray, image extension not recognized/specified, or
-            image type not recognized.
-
-        '''
 
         trailfinder.__init__(self, **kwargs)
         self.image_file = image_file

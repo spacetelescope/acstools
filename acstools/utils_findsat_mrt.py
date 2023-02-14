@@ -20,7 +20,6 @@ from scipy import interpolate
 from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
-import pprint
 
 # turn plotting off if matplotlib is not available
 try:

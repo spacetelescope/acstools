@@ -41,7 +41,6 @@ To install the development version of this package::
    acsphotcte
    satdet
    findsat_mrt
-   utils_findsat_mrt
    polarization_tools
    utils_calib
 
