@@ -936,7 +936,11 @@ def rot_sum(image, angle, return_length):
     rotated = warp(image, R, clip=False, cval=np.nan)
     
     #take sum along each column
-    medarr = np.nansum(rotated, axis=0)
+    with warnings.catch_warnings():
+        # suppressing this warning as it's inconsequential and expected
+        warnings.filterwarnings(action='ignore',
+                                message='All-NaN slice encountered')
+        medarr = np.nansum(rotated, axis=0)
         
     # get length along each column
     if return_length is True:
@@ -977,7 +981,11 @@ def rot_med(image, angle, return_length):
     rotated = warp(image, R, clip=False, cval=np.nan)
     
     # take median on each column
-    medarr = np.nanmedian(rotated, axis=0)
+    with warnings.catch_warnings():
+        # suppressing this warning as it's inconsequential and expected
+        warnings.filterwarnings(action='ignore',
+                                message='All-NaN slice encountered')
+        medarr = np.nanmedian(rotated, axis=0)
         
     # get length of each column
     if return_length is True:
@@ -1208,9 +1216,9 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     # add a simple streak across the image.
     image = add_streak(image, width, 1, rho=0, theta=90, psf_sigma=sigma)
 
-    # plot the image
+    # plot the model image
     if (plot is True) & (plt is not None):
-        fig, ax = plt.subplots(figsize=(20, 10))
+        fig, ax = plt.subplots()
         ax.imshow(image, origin='lower')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -1220,27 +1228,38 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     rt = radon(image, circle=False, median=True, fill_value=np.nan,
                threads=threads, return_length=False)
 
-    # plot the RT
+    #plot the MRT
     if (plot is True) & (plt is not None):
         fig2, ax2 = plt.subplots()
         ax2.imshow(rt, aspect='auto', origin='lower')
         ax2.set_xlabel('angle pixel')
         ax2.set_ylabel('offset pixel')
+        ax2.set_title('Model MRT')
 
     # find the center of the signal by summing along each direction and finding
     # the max.
     rt_rho = np.nansum(rt, axis=1)
     rt_theta = np.nansum(rt, axis=0)
-    fig, [ax1, ax2] = plt.subplots(1, 2)
-    ax1.plot(rt_theta, '.')
-    ax2.plot(rt_rho, '.')
-
     rho0 = np.nanargmax(rt_rho)
     theta0 = np.nanargmax(rt_theta)
-    ax2.plot([rho0, rho0], [0, 1])
-    ax1.plot([theta0, theta0], [0, 8])
-    ax1.set_xlim(theta0-5, theta0+5)
-    ax2.set_xlim(rho0-10, rho0+10)
+    
+    # plot the 1D slices
+    if (plot is True) & (plt is not None):
+
+        fig3, [ax3a, ax3b] = plt.subplots(1, 2)
+        ax3a.plot(rt_theta, '.')
+        ax3b.plot(rt_rho, '.')
+
+        ax3a.plot([theta0, theta0], [0, 8])
+        ax3b.plot([rho0, rho0], [0, 1])
+        ax3a.set_xlim(theta0-5, theta0+5)
+        ax3b.set_xlim(rho0-10, rho0+10)
+        
+        ax3a.set_xlabel('theta pixel')
+        ax3a.set_ylabel('summed value')
+        
+        ax3b.set_xlabel('rho pixel')
+        ax3b.set_ylabel('summed value')
 
     # may need to refine center coords. Run a Gaussian fit to see if necessary
     g_init = models.Gaussian1D(mean=rho0)
@@ -1284,8 +1303,11 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         cutout = f(new_theta_arr, new_rho_arr)  # overwrite old cutout
 
     if (plot is True) & (plt is not None):
-        fig3, ax3 = plt.subplots()
-        ax3.imshow(cutout.data, origin='lower', aspect='auto')
+        fig4, ax4 = plt.subplots()
+        ax4.imshow(cutout.data, origin='lower', aspect='auto')
+        ax4.set_title('final kernel')
+        ax4.set_xlabel('theta pixel')
+        ax4.set_ylabel('rho pixel')
 
     if outfile is not None:
         fits.writeto(outfile, cutout.data, overwrite=True)
