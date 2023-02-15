@@ -36,7 +36,7 @@ __vdate__ = "10-Feb-2022"
 __all__ = ['merge_tables', 'good_indices', 'fit_streak_profile',
            'rotate_image_to_trail', 'filter_sources', 'create_mask', 'rotate',
            'streak_endpoints', 'streak_persistence', 'add_streak', 'rot_sum',
-           'rot_med', 'radon', 'create_mrt_line_kernel']
+           'rot_med', 'radon', 'create_mrt_line_kernel', 'update_dq']
 
 # Initialize the logger
 logging.basicConfig()
@@ -1166,14 +1166,68 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     else:
         return radon_image
 
+def update_dq(filename, ext, mask, dqval=16384, verbose=True):
+    """Update the given image and DQ extension with the given
+    satellite trails mask and flag.
+    
+    This is an exact copy of the code from acstools.satdet originally written
+    by David Borncamp and Pey-Lian Lim. I copied here in case that satellite
+    finder is ever deprecated.
+    
+    Parameters
+    ----------
+    filename : str
+        FITS image filename to update.
+    ext : int, str, or tuple
+        DQ extension, as accepted by ``astropy.io.fits``, to update.
+    mask : ndarray
+        Boolean mask, with `True` marking the satellite trail(s).
+        This can be the result(s) from :func:`make_mask`.
+    dqval : int, optional
+        DQ value to use for the trail. Default value of 16384 is
+        tailored for ACS/WFC.
+    verbose : bool, optional
+        Print extra information to the terminal.
+    """
+    
+    with fits.open(filename, mode='update') as pf:
+        dqarr = pf[ext].data
+        old_mask = (dqval & dqarr) != 0  # Existing flagged trails
+        new_mask = mask & ~old_mask  # Only flag previously unflagged trails
+        npix_updated = np.count_nonzero(new_mask)
+
+        # Update DQ extension only if necessary
+        if npix_updated > 0:
+            pf[ext].data[new_mask] += dqval
+            pf['PRIMARY'].header.add_history(
+                f'{time.ctime()} satdet v{__version__}({__vdate__})')
+            pf['PRIMARY'].header.add_history(
+                f'  Updated {npix_updated} px in EXT {ext} with DQ={dqval}')
+
+    if verbose:
+        fname = f'{filename}[{ext}]'
+
+        print(f'DQ flag value is {dqval}\n'
+              f'Input... flagged NPIX={np.count_nonzero(mask)}\n'
+              f'Existing flagged NPIX={np.count_nonzero(old_mask)}\n'
+              f'Newly... flagged NPIX={npix_updated}')
+
+        if npix_updated > 0:
+            print(f'{fname} updated')
+        else:
+            print(f'No updates necessary for {fname}')
+
+
 
 def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                            plot=False, theta=None, threads=1):
     '''
     Creates a model signal MRT signal of a line of specified width. 
     
-    The trails can be blurred by a psf. These kernels are used for detection
-    of real linear signals in the MRT of imaging data.
+    The trails can be blurred by a simple Gaussian model psf. More accurate
+    psf convolution using an input psf model will be incorporated in the future.
+    These kernels are used for detection of real linear signals in the MRT of
+    imaging data.
 
     Parameters
     ----------

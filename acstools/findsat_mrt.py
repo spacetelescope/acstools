@@ -1328,3 +1328,29 @@ class wfc_wrapper(trailfinder):
         self.mask_bad_pixels(**kwargs)
         self.subtract_background()
         self.rebin(**kwargs)
+
+    def update_dq(self,**kwargs):
+        '''
+        Update DQ array with the satellite trail mask. 
+
+        .. note::
+
+            * This routine only works on flc/flt images.
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments for 
+            acstools.utils_findsat_mrt.update_dq.
+
+        Returns
+        -------
+        None.
+
+        '''
+
+        if self.image_type not in ['flc', 'flt']:
+            raise ValueError('DQ array can only be updated for flc/flt images')
+
+        u.update_dq(self.image_file, self.extension, self.mask,
+                  dqval=16384, verbose=True)
