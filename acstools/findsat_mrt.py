@@ -9,7 +9,7 @@ accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails, which can then be used to create a mask.
 
-A second class called wfcWrapper is designed explicitly to make ACS/WFC data
+A second class called WfcWrapper is designed explicitly to make ACS/WFC data
 easy to process.
 
 This algorithm is found to be roughly 10x more sensitive compared to the
@@ -78,8 +78,8 @@ Example 3: Run identification/masking using the WFC wrapper
 The WFC wrapper can automatically do the binning, background subtraction, and
 bad pixel flagging:
 
->>> from acstools.findsat_mrt import wfcWrapper
->>> w = wfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
+>>> from acstools.findsat_mrt import WfcWrapper
+>>> w = WfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
 
 In all other respects, it behaves just like TrailFinder, so to continue the
 process:
@@ -91,7 +91,7 @@ process:
 
 Or the entire process can be run in a single line with
 
->>> w = wfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
+>>> w = WfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
 ...                 execute=True)
 
 """
@@ -122,7 +122,7 @@ __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
 __vdate__ = "10-Feb-2023"
-__all__ = ['TrailFinder', 'wfcWrapper']
+__all__ = ['TrailFinder', 'WfcWrapper']
 
 # storing package directory so relative paths work
 PACKAGE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -184,6 +184,7 @@ class TrailFinder(object):
         .. note::
                 * Setting this option can generate A LOT of plots. It's
                 primarily for debugging purposes.
+                
     output_dir : string, optional
         Path in which to save output. The default is './'.
     output_root : string, optional
@@ -1122,7 +1123,7 @@ class TrailFinder(object):
         self.save_output(**kwargs)
 
 
-class wfcWrapper(TrailFinder):
+class WfcWrapper(TrailFinder):
 
     '''
     Wrapper for trail_finder designed specifically for ACS/WFC data.
