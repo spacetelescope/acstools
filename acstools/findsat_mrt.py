@@ -184,7 +184,7 @@ class TrailFinder(object):
         .. note::
                 * Setting this option can generate A LOT of plots. It's
                 primarily for debugging purposes.
-                
+
     output_dir : string, optional
         Path in which to save output. The default is './'.
     output_root : string, optional
