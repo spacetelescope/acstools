@@ -179,12 +179,9 @@ class TrailFinder(object):
         List indicating trails with which status should be considered
         when making the mask. The default is [2].
     plot : bool, optional
-        Plots all intermediate steps. The default is False.
-
-        .. note::
-                * Setting this option can generate A LOT of plots. It's
-                primarily for debugging purposes.
-
+        Plots all intermediate steps. The default is False. Note that setting
+        this option can generate A LOT of plots. It's primarily for debugging
+        purposes.
     output_dir : string, optional
         Path in which to save output. The default is './'.
     output_root : string, optional
