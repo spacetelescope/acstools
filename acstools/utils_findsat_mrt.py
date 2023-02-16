@@ -43,6 +43,7 @@ logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}')
 LOG.setLevel(logging.INFO)
 
+
 def _round_up_to_odd(f):
     '''
     Rounds number to nearest odd value
@@ -81,7 +82,7 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
 
     '''
 
-    counter = 1 # this just tells me if I'm creating a new table or appending
+    counter = 1  # this just tells me if I'm creating a new table or appending
     for t in tbls:
         if counter == 1:
             src = t
@@ -101,7 +102,7 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
 
 def good_indices(inds, shape):
     '''
-    Ensures indices are within bounds of array. 
+    Ensures indices are within bounds of array.
 
     Parameters
     ----------
@@ -117,7 +118,7 @@ def good_indices(inds, shape):
         dimensions
 
     '''
-    
+
     # make sure inds is the right format
     if type(inds) is not list:
         inds = [inds]
@@ -136,7 +137,7 @@ def good_indices(inds, shape):
 
 
 def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
-                        max_width=None, ax=None, bounds=None):
+                       max_width=None, ax=None, bounds=None):
     '''
     Fits a Gaussian to a 1D cross-section of a trail in an image
 
@@ -192,7 +193,7 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
             fit = fitting.LinearLSQFitter()
             or_fit = fitting.FittingWithOutlierRemoval(fit, sigma_clip,
                                                        niter=3, sigma=3)
-            
+
         # make sure there are regions to fit on either side of the initial
         # position. If not, use lower order to avoid bad behavior
         sel_low = np.where(np.isfinite(yarr) &
@@ -203,7 +204,7 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
             order = 1
         else:
             order = 3
-            
+
         # final fitting region
         sel = np.concatenate([sel_low, sel_high])
 
@@ -231,19 +232,19 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         stdev0 = 5.
 
     if bounds is None:
-        bounds = {'amplitude': (0, None)} # forcing positive amplitude
+        bounds = {'amplitude': (0, None)}  # forcing positive amplitude
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
         g_init = models.Gaussian1D(amplitude=amp0, mean=mean0, stddev=stdev0,
-                               bounds=bounds)
+                                   bounds=bounds)
         fit_g = fitting.DogBoxLSQFitter()
     sel = np.isfinite(yarr)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', AstropyUserWarning)
         g = fit_g(g_init, xarr[sel], yarr[sel])
-        
-    #plot if triggered
+
+    # plot if triggered
     if (plot_streak is True) and (ax is not None) & (plt is not None):
         ax.plot(xarr, yarr)
         ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3,
@@ -352,7 +353,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                    persistence_chunk=100, min_persistence_snr=3):
     '''
     Filter trail catalog of likely spurious sources
-    
+
     The filtering is based on S/N, trail width, and trail_persistence (over
     what fraction of the trail path can the trail actually be well-detected).
 
@@ -438,7 +439,6 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         subregion = rotated[int(ry1_trim):int(ry2_trim),
                             int(rx1_trim):int(rx2_trim)]
 
-
         # make 1D profile of trail (looking down its axis) by taking a median
         # of all pixels in each row
         medarr = np.nanmedian(subregion, axis=1)
@@ -461,15 +461,15 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
 
         # measure trail properties
         g, snr, width, mean_flux = fit_streak_profile(medarr,
-                                                       (None, dy_streak, 5),
-                                                       ax=use_ax,
-                                                       max_width=max_width,
-                                                       plot_streak=plot_streak)
+                                                      (None, dy_streak, 5),
+                                                      ax=use_ax,
+                                                      max_width=max_width,
+                                                      plot_streak=plot_streak)
         snrs[ii] = snr
         widths[ii] = width
         mean_fluxes[ii] = mean_flux
 
-        #plot if triggered
+        # plot if triggered
         if (plot_streak is True) & (plt is not None):
             ax1.set_title('snr={}, width={}'.format(snr, width))
             ax1.set_xlabel('position')
@@ -487,8 +487,8 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                 # per section (assuming uniform streak)
                 maxchunk = np.floor(snr*snr/min_persistence_snr**2)
 
-                dx = persistence_chunk  # starting dx value
-                nchunk = np.floor(subregion.shape[1]/dx) # number of chunks
+                dx = persistence_chunk   # starting dx value
+                nchunk = np.floor(subregion.shape[1]/dx)  # number of chunks
 
                 # make sure estimated snr per section is >3
                 if nchunk > maxchunk:
@@ -505,9 +505,9 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                 LOG.info('Section size for persistence check: {}'.format(dx))
 
                 persistence[ii] = streak_persistence(subregion, int(dx),
-                                                      g.mean.value,
-                                                      g.stddev.value,
-                                                      max_width=max_width)
+                                                     g.mean.value,
+                                                     g.stddev.value,
+                                                     max_width=max_width)
                 if persistence[ii] > min_persistence:
                     status[ii] = 2
 
@@ -551,11 +551,11 @@ def create_mask(image, trail_id, endpoints, widths):
     # cycle through trail endpoints/widths
     for t, e, w in zip(trail_id, endpoints, widths):
 
-        #rotate so trail is horizontal
+        # rotate so trail is horizontal
         rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image,
                                                                          e)
 
-        # create submask using known width 
+        # create submask using known width
         ry = (ry1 + ry2)/2.  # take average, although they should be about the
         # same
         # max function used to ensure it stays within bounds
@@ -706,10 +706,10 @@ def streak_endpoints(rho, theta, sz, plot=False):
 
 
 def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
-                        plot_streak=False):
+                       plot_streak=False):
     '''
     Measure streak persistence across image.
-    
+
     The persistence is measured by breaking the trail into even chunks and
     trying to fit a Gaussian to a 1D cross-section from each chunk. Successful
     fits contribute to the persistence score.
@@ -746,7 +746,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
     # starting guess
     guess = (None, streak_y0, streak_stdev)
 
-    #bounds of fit
+    # bounds of fit
     bounds = {'amplitude': (0, None), 'mean': (streak_y0, streak_y0 + 25)}
 
     snr_arr = []
@@ -762,10 +762,9 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 
         ind0 = ii*dx
         ind1 = (ii+1)*dx
-        
 
         chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
-        
+
         if (plot_streak is True) & (plt is not None):
             fig, ax = plt.subplots()
         else:
@@ -773,9 +772,9 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 
         # fit properties of chunk
         g, snr, width, mean_flux = fit_streak_profile(chunk, guess, ax=ax,
-                                                       max_width=max_width,
-                                                       plot_streak=plot_streak,
-                                                       bounds=bounds)
+                                                      max_width=max_width,
+                                                      plot_streak=plot_streak,
+                                                      bounds=bounds)
         if (plot_streak is True) & (plt is not None):
             ax.set_title('{}-snr={},width={},mean={}'.format(ii, snr, width,
                                                              g.mean.value))
@@ -805,7 +804,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
                                                        g.mean.value + width)}
         else:
             LOG.info('fit failed, will not update guesses')
-            
+
     # save the persistence score
     pscore = np.sum(persist)/len(persist)
 
@@ -817,8 +816,8 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
                psf_sigma=None):
     '''
-    Generates a (optionally) psf-convolved model trail and add it to an image. 
-    
+    Generates a (optionally) psf-convolved model trail and add it to an image.
+
     Parameters
     ----------
     image : ndarray
@@ -931,17 +930,17 @@ def rot_sum(image, angle, return_length):
     R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
-    
+
     # rotate image
     rotated = warp(image, R, clip=False, cval=np.nan)
-    
-    #take sum along each column
+
+    # take sum along each column
     with warnings.catch_warnings():
         # suppressing this warning as it's inconsequential and expected
         warnings.filterwarnings(action='ignore',
                                 message='All-NaN slice encountered')
         medarr = np.nansum(rotated, axis=0)
-        
+
     # get length along each column
     if return_length is True:
         length = np.sum(np.isfinite(rotated), axis=0)
@@ -976,17 +975,17 @@ def rot_med(image, angle, return_length):
     R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
                   [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
                   [0, 0, 1]])
-    
+
     # rotate the image
     rotated = warp(image, R, clip=False, cval=np.nan)
-    
+
     # take median on each column
     with warnings.catch_warnings():
         # suppressing this warning as it's inconsequential and expected
         warnings.filterwarnings(action='ignore',
                                 message='All-NaN slice encountered')
         medarr = np.nanmedian(rotated, axis=0)
-        
+
     # get length of each column
     if return_length is True:
         length = np.sum(np.isfinite(rotated), axis=0)
@@ -1000,7 +999,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
           print_calc_times=False):
     """
     Calculates the (median) radon transform of an image.
-    
+
     This routine is adopted from the skimage routine of the same name. For
     further information see [1]_ and [2]_.
 
@@ -1041,7 +1040,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         dimension of ``radon_image``.
     length: ndarray, optional
         Length of data array
-        
+
     Raises
     ------
     ValueError
@@ -1166,14 +1165,15 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     else:
         return radon_image
 
+
 def update_dq(filename, ext, mask, dqval=16384, verbose=True):
     """Update the given image and DQ extension with the given
     satellite trails mask and flag.
-    
+
     This is an exact copy of the code from acstools.satdet originally written
     by David Borncamp and Pey-Lian Lim. I copied here in case that satellite
     finder is ever deprecated.
-    
+
     Parameters
     ----------
     filename : str
@@ -1189,7 +1189,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
     verbose : bool, optional
         Print extra information to the terminal.
     """
-    
+
     with fits.open(filename, mode='update') as pf:
         dqarr = pf[ext].data
         old_mask = (dqval & dqarr) != 0  # Existing flagged trails
@@ -1218,16 +1218,15 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
             print(f'No updates necessary for {fname}')
 
 
-
 def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                            plot=False, theta=None, threads=1):
     '''
-    Creates a model signal MRT signal of a line of specified width. 
-    
+    Creates a model signal MRT signal of a line of specified width.
+
     The trails can be blurred by a simple Gaussian model psf. More accurate
-    psf convolution using an input psf model will be incorporated in the future.
-    These kernels are used for detection of real linear signals in the MRT of
-    imaging data.
+    psf convolution using an input psf model will be incorporated in the
+    future. These kernels are used for detection of real linear signals in the
+    MRT of imaging data.
 
     Parameters
     ----------
@@ -1255,9 +1254,9 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
 
     '''
 
-    #updating some defaults
+    # updating some defaults
     if theta is None:
-        theta = np.arange(0,180,0.5)
+        theta = np.arange(0, 180, 0.5)
 
     # set up empty image and coordinates
     image = np.zeros(shape)
@@ -1282,7 +1281,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     rt = radon(image, circle=False, median=True, fill_value=np.nan,
                threads=threads, return_length=False)
 
-    #plot the MRT
+    # plot the MRT
     if (plot is True) & (plt is not None):
         fig2, ax2 = plt.subplots()
         ax2.imshow(rt, aspect='auto', origin='lower')
@@ -1296,7 +1295,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     rt_theta = np.nansum(rt, axis=0)
     rho0 = np.nanargmax(rt_rho)
     theta0 = np.nanargmax(rt_theta)
-    
+
     # plot the 1D slices
     if (plot is True) & (plt is not None):
 
@@ -1308,10 +1307,10 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         ax3b.plot([rho0, rho0], [0, 1])
         ax3a.set_xlim(theta0-5, theta0+5)
         ax3b.set_xlim(rho0-10, rho0+10)
-        
+
         ax3a.set_xlabel('theta pixel')
         ax3a.set_ylabel('summed value')
-        
+
         ax3b.set_xlabel('rho pixel')
         ax3b.set_ylabel('summed value')
 

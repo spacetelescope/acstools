@@ -3,24 +3,24 @@
 """
 Identify satellite trails in ACS/WFC imaging with the Median Radon Transform.
 
-This module contains a class called trailfinder that is used to identify
+This module contains a class called TrailFinder that is used to identify
 satellite trails and/or other linear features in astronomical image data. To
 accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails, which can then be used to create a mask.
 
-A second class called wfc_wrapper is designed explicitly to make ACS/WFC data
+A second class called wfcWrapper is designed explicitly to make ACS/WFC data
 easy to process.
 
-This algorithm is found to be roughly 10x more sensitive compared to the 
+This algorithm is found to be roughly 10x more sensitive compared to the
 current satellite trail finding code included with acstools,
 `satdet <https://acstools--176.org.readthedocs.build/en/176/satdet.html>`_.
 However, this approach can struggle with dense fields, while the performance
 of satdat in these fields may be more reliable (but this has not yet been
 tested).
 
-For further details on this algorithm and tests of its performance, see
-`ACS ISR 2022-08 <https://ui.adsabs.harvard.edu/abs/2022acs..rept....8S/abstract>`_.
+For further details on this algorithm and tests of its performance, see the
+`ISR <https://ui.adsabs.harvard.edu/abs/2022acs..rept....8S/abstract>`_.
 
 Examples
 ________
@@ -30,7 +30,7 @@ Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
 
 Load data
 
->>> from acstools.findsat_mrt import trailfinder
+>>> from acstools.findsat_mrt import TrailFinder
 >>> from astropy.io import fits
 >>> import numpy as np
 >>> file = 'j97006j5q_flc.fits'
@@ -50,9 +50,9 @@ calculation
 >>> image = image-np.nanmedian(image)
 >>> image = ccdproc.block_reduce(image, 4, func=np.nansum)
 
-Initialize trailfinder and run steps
+Initialize TrailFinder and run steps
 
->>> s = trailfinder(image=image, threads=8)  # initializes
+>>> s = TrailFinder(image=image, threads=8)  # initializes
 >>> s.run_mrt()                       # calculates MRT
 >>> s.find_mrt_sources()              # finds point sources in MRT
 >>> s.filter_sources()                # filters sources from MRT
@@ -70,7 +70,7 @@ Example 2: Quick run to find satellite trails
 
 After loading and preprocessing the image (see example above), run
 
->>> s = trailfinder(image=image, threads=8)  # initializes
+>>> s = TrailFinder(image=image, threads=8)  # initializes
 >>> s.run_all()                              # runs everything else
 
 Example 3: Run identification/masking using the WFC wrapper
@@ -78,10 +78,10 @@ Example 3: Run identification/masking using the WFC wrapper
 The WFC wrapper can automatically do the binning, background subtraction, and
 bad pixel flagging:
 
->>> from acstools.findsat_mrt import wfc_wrapper
->>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
+>>> from acstools.findsat_mrt import wfcWrapper
+>>> w = wfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
 
-In all other respects, it behaves just like trailfinder, so to continue the
+In all other respects, it behaves just like TrailFinder, so to continue the
 process:
 
 >>> w.run_mrt()
@@ -91,7 +91,7 @@ process:
 
 Or the entire process can be run in a single line with
 
->>> w = wfc_wrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
+>>> w = wfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
 ...                 execute=True)
 
 """
@@ -122,10 +122,10 @@ __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
 __vdate__ = "10-Feb-2023"
-__all__ = ['trailfinder', 'wfc_wrapper']
+__all__ = ['TrailFinder', 'wfcWrapper']
 
 # storing package directory so relative paths work
-package_directory = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 # Initialize the logger
 logging.basicConfig()
@@ -134,12 +134,13 @@ LOG.setLevel(logging.INFO)
 
 # filtering out warnings from nansum and nanmedian that say there's a all-nan
 # line in the data. These are expected because of how we label bad data in an
-#image, but they are inconsequential
+# image, but they are inconsequential
 
-class trailfinder(object):
 
-    '''Top-level class to handle trail identification and masking.    
-    
+class TrailFinder(object):
+
+    '''Top-level class to handle trail identification and masking.
+
     Parameters
     ----------
     image : ndarray, optional
@@ -178,8 +179,8 @@ class trailfinder(object):
         List indicating trails with which status should be considered
         when making the mask. The default is [2].
     plot : bool, optional
-        Plots all intermediate steps. The default is False. 
-        
+        Plots all intermediate steps. The default is False.
+
         .. note::
                 * Setting this option can generate A LOT of plots. It's
                 primarily for debugging purposes.
@@ -241,14 +242,12 @@ class trailfinder(object):
             save_diagnostic=True,
             save_mrt=False,
             save_mask=False):
-        
-
 
         # updating a few defaults
         if theta is None:
             theta = np.arange(0, 180, 0.5)
         if kernels is None:
-            kernels = [package_directory+'/data/rt_line_kernel_width{}.fits'.
+            kernels = [PACKAGE_DIRECTORY+'/data/rt_line_kernel_width{}.fits'.
                        format(k) for k in [15, 7, 3]]
         if save_image_header_keys is None:
             save_image_header_keys = []
@@ -257,7 +256,6 @@ class trailfinder(object):
         # warnings are inconsequential and already accounted for in the code
         warnings.filterwarnings(action='ignore',
                                 message='All-NaN slice encountered')
-
 
         # inputs
         self.image = image
@@ -337,7 +335,7 @@ class trailfinder(object):
         else:
             self.threads = threads
 
-        #run MRT
+        # run MRT
         rt, length = u.radon(self.image, circle=False, median=True,
                              fill_value=np.nan, threads=threads,
                              return_length=True, theta=theta)
@@ -369,7 +367,7 @@ class trailfinder(object):
         rho0 = rt.shape[0]/2-0.5
         self.rho = np.arange(rt.shape[0])-rho0
 
-        #plot if set
+        # plot if set
         if (plot is True) & (plt is not None):
             self.plot_mrt()
 
@@ -404,7 +402,7 @@ class trailfinder(object):
         self._image_mad = np.nanmedian(np.abs(self.image))
         self._image_stddev = self._image_mad/0.67449  # using MAD to avoid
         # influence from outliers
-        
+
         ax.imshow(self.image, cmap='viridis', origin='lower', aspect='auto',
                   vmin=scale[0]*self._image_stddev,
                   vmax=scale[1]*self._image_stddev)
@@ -419,7 +417,7 @@ class trailfinder(object):
                 ax.imshow(self.mask, alpha=0.5, cmap='Reds', origin='lower',
                           aspect='auto')
 
-        #write to file if interactive is off and plottin is on
+        # write to file if interactive is off and plottin is on
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_image'
             if overlay_mask:
@@ -450,12 +448,12 @@ class trailfinder(object):
 
         '''
 
-        #exit if no MRT
+        # exit if no MRT
         if self.mrt is None:
             LOG.error('No MRT to plot')
             return
 
-        #Letting user know if there are no sources to overplot
+        # Letting user know if there are no sources to overplot
         if (show_sources is True) and (self.source_list is None):
             show_sources = False
             LOG.info('No sources to show')
@@ -469,7 +467,7 @@ class trailfinder(object):
         ax.set_xlabel('angle(theta) pixel')
         ax.set_ylabel('offset(rho) pixel')
 
-        #overplot sources if applicable
+        # overplot sources if applicable
         if show_sources is True:
             x = self.source_list['xcentroid']
             y = self.source_list['ycentroid']
@@ -483,7 +481,7 @@ class trailfinder(object):
                                label='status={}'.format(s))
             ax.legend(loc='upper center')
 
-        #send plot to file if interactive is off
+        # send plot to file if interactive is off
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_mrt'
             if show_sources:
@@ -569,16 +567,16 @@ class trailfinder(object):
         LOG.info('Detection threshold: {}'.format(threshold))
 
         # cycle through kernels
-        tbls = [] # we'll store detected sources here
+        tbls = []   # we'll store detected sources here
         for k in kernels:
             with fits.open(k) as h:
                 kernel = h[0].data
             LOG.info('Using kernel {}'.format(k))
-            
+
             # detect sources
             s = StarFinder(threshold, kernel, min_separation=20,
                            exclude_border=False, brightest=None, peakmax=None)
-            
+
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
             try:
@@ -586,7 +584,7 @@ class trailfinder(object):
                 tbl = s.find_stars(snrmap, mask=~np.isfinite(snrmap))
             except Exception:
                 tbl = None
-                
+
             # append to big table of sources
             if tbl is not None:
                 tbl = tbl[np.isfinite(tbl['xcentroid'])]
@@ -599,7 +597,7 @@ class trailfinder(object):
                 tbls.append(tbl)
             else:
                 LOG.info('no sources found using kernel')
-                
+
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
             LOG.info('Removing duplicate sources')
@@ -645,7 +643,7 @@ class trailfinder(object):
                        plot_streak=False, check_persistence=None,
                        min_persistence=None):
         '''
-        Filters catalog of trails based on S/N, width, and persistence 
+        Filters catalog of trails based on S/N, width, and persistence
 
         Parameters
         ----------
@@ -776,8 +774,8 @@ class trailfinder(object):
         None.
 
         '''
-        
-        #update inputs/class attributes as needed
+
+        # update inputs/class attributes as needed
         if include_status is None:
             include_status = self.mask_include_status
         else:
@@ -814,7 +812,7 @@ class trailfinder(object):
         ax, AxesSubplot
             The Matplotlib subplot containing the mask image
         '''
-        
+
         # exit if there's not mask
         if self.mask is None:
             LOG.error('No mask to show')
@@ -842,7 +840,7 @@ class trailfinder(object):
             A matplotlib subplot containing the segmentation map
 
         '''
-        
+
         # exit if no segmentation image
         if self.segment is None:
             LOG.error('No segment map to show')
@@ -857,7 +855,7 @@ class trailfinder(object):
             counter += 1
 
         fig, ax = plt.subplots()
-        
+
         # update the colormap to match the segmentation IDs
         cmap = plt.get_cmap('tab20', np.max(data) - np.min(data) + 1)
         mat = ax.imshow(data, cmap=cmap, vmin=np.min(data) - 0.5,
@@ -871,7 +869,7 @@ class trailfinder(object):
         cax.ax.set_ylabel('trail ID')
         ax.set_title('Segmentation Mask')
 
-        #send to file if not interactive
+        # send to file if not interactive
         if ~self._interactive:
             file_name = self.output_dir + self.root + '_segment'
             file_name = file_name + '.png'
@@ -881,7 +879,7 @@ class trailfinder(object):
                     save_mask=None, save_catalog=None, save_diagnostic=None):
         '''
         Save output.
-        
+
         Output includes optionally: (1) MRT, (2) mask/segementation image,
         (3) catalog, and (4) trail catalog.
 
@@ -1081,7 +1079,7 @@ class trailfinder(object):
 
         '''
 
-        #update keyword values/class attributes as needed
+        # update keyword values/class attributes as needed
         if ignore_theta_range is None:
             ignore_theta_range == self.ignore_theta_range
         else:
@@ -1124,12 +1122,12 @@ class trailfinder(object):
         self.save_output(**kwargs)
 
 
-class wfc_wrapper(trailfinder):
+class wfcWrapper(TrailFinder):
 
     '''
     Wrapper for trail_finder designed specifically for ACS/WFC data.
-    
-    This class enables quick reading and preprocessing of standard 
+
+    This class enables quick reading and preprocessing of standard
     full-frame ACS/WFC images.
 
     .. note::
@@ -1152,21 +1150,21 @@ class wfc_wrapper(trailfinder):
         Flag to run all the preprocessing steps (bad pixel flagging,
         background subtraction, rebinning. The default is True.
     execute : bool, optional
-        Flag to run the entire trailfinder pipeline. The default is False.
+        Flag to run the entire TrailFinder pipeline. The default is False.
     **kwargs : dict, optional
-        Additional keyword arguments for trailfinder.
+        Additional keyword arguments for TrailFinder.
 
     Returns
     -------
     None.
-    
+
     Raises
     ------
     ValueError
         Image is subarray, image extension not recognized/specified, or
         image type not recognized.
 
-        '''    
+        '''
 
     def __init__(self,
                  image_file,
@@ -1177,7 +1175,7 @@ class wfc_wrapper(trailfinder):
                  execute=False,
                  **kwargs):
 
-        trailfinder.__init__(self, **kwargs)
+        TrailFinder.__init__(self, **kwargs)
         self.image_file = image_file
         self.extension = extension
         self.binsize = binsize
@@ -1219,15 +1217,15 @@ class wfc_wrapper(trailfinder):
         if preprocess is True:
             self.run_preprocess()
 
-        #run the whole pipeline if set to true
+        # run the whole pipeline if set to true
         if execute is True:
             LOG.info('Running the trailfinding pipeline')
             self.run_all()
 
     def mask_bad_pixels(self, ignore_flags=None):
         '''
-        Masks bad pixels 
-        
+        Masks bad pixels
+
         Bad pixels are replacing with nan. This code the bitmask arrays
         for flc/flt images, and weight arrays for drc/drz images
 
@@ -1281,7 +1279,7 @@ class wfc_wrapper(trailfinder):
     def rebin(self, binsize=None):
         '''
         Rebins the image array.
-        
+
         The binning in the x and y direction are identical.
 
         Parameters
@@ -1329,9 +1327,9 @@ class wfc_wrapper(trailfinder):
         self.subtract_background()
         self.rebin(**kwargs)
 
-    def update_dq(self,**kwargs):
+    def update_dq(self, **kwargs):
         '''
-        Update DQ array with the satellite trail mask. 
+        Update DQ array with the satellite trail mask.
 
         .. note::
 
@@ -1340,7 +1338,7 @@ class wfc_wrapper(trailfinder):
         Parameters
         ----------
         **kwargs : dict, optional
-            Additional keyword arguments for 
+            Additional keyword arguments for
             acstools.utils_findsat_mrt.update_dq.
 
         Returns
@@ -1353,4 +1351,4 @@ class wfc_wrapper(trailfinder):
             raise ValueError('DQ array can only be updated for flc/flt images')
 
         u.update_dq(self.image_file, self.extension, self.mask,
-                  dqval=16384, verbose=True)
+                    dqval=16384, verbose=True)
