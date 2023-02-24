@@ -115,7 +115,7 @@ except ImportError:
     plt = None
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
-    
+
 #test for photutils
 try:
     from photutils.detection import StarFinder

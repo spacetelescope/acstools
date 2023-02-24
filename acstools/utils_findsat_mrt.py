@@ -5,13 +5,10 @@ Various helper routines for findsat_mrt.py
 import numpy as np
 from astropy.modeling import models, fitting
 from astropy.table import Table, vstack
-from skimage import transform
 from astropy.stats import sigma_clip
 import logging
 from astropy.convolution import Gaussian2DKernel
 from astropy.convolution import convolve
-from skimage.transform._warps import warp
-from skimage._shared.utils import convert_to_float
 from warnings import warn
 from multiprocessing import Pool
 import time
@@ -20,6 +17,14 @@ from scipy import interpolate
 from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
+
+#check for skimage
+try:
+    from skimage import transform
+    from skimage.transform._warps import warp
+    from skimage._shared.utils import convert_to_float
+except ImportError:
+    warnings.warn('skimage not installed. MRT calculation will not work.')
 
 # turn plotting off if matplotlib is not available
 try:
