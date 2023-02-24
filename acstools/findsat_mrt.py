@@ -99,9 +99,7 @@ Or the entire process can be run in a single line with
 
 import numpy as np
 from astropy.io import fits
-from photutils.detection import StarFinder
 from astropy.utils.exceptions import AstropyUserWarning
-import ccdproc
 import os
 from astropy.table import Table
 import acstools.utils_findsat_mrt as u
@@ -117,6 +115,18 @@ except ImportError:
     plt = None
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
+    
+#test for photutils
+try:
+    from photutils.detection import StarFinder
+except ImportError:
+    warnings.warn('photutils not installed. Source detection will not work.')
+
+#text for ccdproc
+try:
+    import ccdproc
+except ImportError:
+    warnings.warn('ccdproc not installed. Binning routines will not work.')
 
 __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
