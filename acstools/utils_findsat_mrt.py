@@ -13,7 +13,6 @@ from warnings import warn
 from multiprocessing import Pool
 import time
 from astropy.nddata import Cutout2D
-from scipy import interpolate
 from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
@@ -25,6 +24,12 @@ try:
     from skimage._shared.utils import convert_to_float
 except ImportError:
     warnings.warn('skimage not installed. MRT calculation will not work.')
+
+#check for scipy
+try:
+    from scipy import interpolate
+except ImportError:
+    warnings.warn('scipy not installed. Kernel generation will not work')
 
 # turn plotting off if matplotlib is not available
 try:
