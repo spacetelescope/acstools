@@ -138,7 +138,8 @@ class PhotCTEAPI:
         response = requests.post(
             self._api_url,
             data=json.dumps(data),
-            headers=self._api_credentials
+            headers=self._api_credentials,
+            timeout=100
         )
 
         status_code = response.status_code
