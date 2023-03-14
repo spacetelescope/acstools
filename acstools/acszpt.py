@@ -300,7 +300,7 @@ class Query:
                                 "https://stsci.service-now.com/hst")
 
             try:
-                response = requests.post(invokeURL, data=body)
+                response = requests.post(invokeURL, data=body, timeout=100)
 
             except requests.exceptions.HTTPError:
                 raise ACSZeropointQueryError(f"HTTP Error to AWS API Gateway:{help_desk_string}") from None
