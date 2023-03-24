@@ -1,88 +1,85 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Identify satellite trails in ACS/WFC imaging with the Median Radon Transform.
+This module identifies satellite trails in ACS/WFC imaging with the Median Radon Transform.
 
-This module contains a class called TrailFinder that is used to identify
+It contains a class called `~acstools.findsat_mrt.TrailFinder` that is used to identify
 satellite trails and/or other linear features in astronomical image data. To
 accomplish this goal, the Median Radon Transform (MRT) is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails, which can then be used to create a mask.
 
-A second class called WfcWrapper is designed explicitly to make ACS/WFC data
-easy to process.
+A second class called `~acstools.findsat_mrt.WfcWrapper` is designed explicitly
+to make ACS/WFC data easy to process.
 
 This algorithm is found to be roughly 10x more sensitive compared to the
-current satellite trail finding code included with acstools,
-`satdet <https://acstools--176.org.readthedocs.build/en/176/satdet.html>`_.
+current satellite trail finding code included with acstools, :ref:`satdet`.
 However, this approach can struggle with dense fields, while the performance
-of satdat in these fields may be more reliable (but this has not yet been
+of :ref:`satdet` in these fields may be more reliable (but this has not yet been
 tested).
 
 For further details on this algorithm and tests of its performance, see the
-`ISR <https://ui.adsabs.harvard.edu/abs/2022acs..rept....8S/abstract>`_.
+`ISR ACS 2022-8 <https://ui.adsabs.harvard.edu/abs/2022acs..rept....8S/abstract>`_.
 
 Examples
-________
+--------
 
-Example 1: Identification of trails in an ACS/WFC image, j97006j5q_flc.fits
-(4th extension)
+**Example 1:** Identification of trails in an ACS/WFC image, ``j97006j5q_flc.fits``
+(the second science and DQ extensions).
 
-Load data
+To load the data:
 
->>> from acstools.findsat_mrt import TrailFinder
->>> from astropy.io import fits
 >>> import numpy as np
+>>> from astropy.io import fits
+>>> from acstools.findsat_mrt import TrailFinder
 >>> file = 'j97006j5q_flc.fits'
->>> extension = 4
 >>> with fits.open(file) as h:
->>>     image = h[extension].data
->>>     dq = h[extension+2].data
+>>>     image = h['SCI', 2].data
+>>>     dq = h['DQ', 2].data
 
-Mask bad pixels, remove median background, and rebin the data to speed up MRT
-calculation
+Mask some bad pixels, remove median background, and rebin the data to speed up MRT
+calculation:
 
->>> from astropy.nddata import bitmask
->>> import ccdproc
->>> mask = bitmask.bitfield_to_boolean_mask(dq,
-...                                         ignore_flags=[4096, 8192, 16384])
->>> image[mask == True]=np.nan
->>> image = image-np.nanmedian(image)
->>> image = ccdproc.block_reduce(image, 4, func=np.nansum)
+>>> from astropy.nddata import bitmask, block_reduce
+>>> mask = bitmask.bitfield_to_boolean_mask(
+...     dq, ignore_flags=[4096, 8192, 16384])
+>>> image[mask] = np.nan
+>>> image = image - np.nanmedian(image)
+>>> image = block_reduce(image, 4, func=np.nansum)
 
-Initialize TrailFinder and run steps
+Initialize `~acstools.findsat_mrt.TrailFinder` and run these steps:
 
->>> s = TrailFinder(image=image, threads=8)  # initializes
+>>> s = TrailFinder(image, processes=8)  # initialization
 >>> s.run_mrt()                       # calculates MRT
 >>> s.find_mrt_sources()              # finds point sources in MRT
 >>> s.filter_sources()                # filters sources from MRT
 >>> s.make_mask()                     # makes a mask from the identified trails
 >>> s.save_output(root='test')        # saves the output
 
-The input image, mask, and MRT (with sources overlaid) can be plotting during
-this process.
+The input image, mask, and MRT (with sources overlaid) can be plotted during
+this process:
 
 >>> s.plot_mrt(show_sources=True)      # plots MRT with sources overlaid
 >>> s.plot_image(overlay_mask=True)    # plots input image with mask overlaid
 
-
-Example 2: Quick run to find satellite trails
+**Example 2:** Quick run to find satellite trails.
 
 After loading and preprocessing the image (see example above), run
+the following:
 
->>> s = TrailFinder(image=image, threads=8)  # initializes
+>>> s = TrailFinder(image, processes=8)  # initialization
 >>> s.run_all()                              # runs everything else
 
-Example 3: Run identification/masking using the WFC wrapper
+**Example 3:** Run identification/masking using the WFC wrapper.
 
-The WFC wrapper can automatically do the binning, background subtraction, and
+`~acstools.findsat_mrt.WfcWrapper` can automatically do the binning, background subtraction, and
 bad pixel flagging:
 
 >>> from acstools.findsat_mrt import WfcWrapper
->>> w = WfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2)
+>>> w = WfcWrapper('jc8m32j5q_flc.fits', preprocess=True, extension=4, binsize=2)
 
-In all other respects, it behaves just like TrailFinder, so to continue the
-process:
+In all other respects, it behaves just like `~acstools.findsat_mrt.TrailFinder`,
+so to continue the process:
 
 >>> w.run_mrt()
 >>> w.find_sources()
@@ -91,21 +88,22 @@ process:
 
 Or the entire process can be run in a single line with
 
->>> w = WfcWrapper('jc8m32j5q_flc.fits',preprocess=True,extension=4,binsize=2,
+>>> w = WfcWrapper('jc8m32j5q_flc.fits', preprocess=True, extension=4, binsize=2,
 ...                 execute=True)
 
 """
-
+import logging
+import os
+import warnings
 
 import numpy as np
 from astropy.io import fits
-from astropy.utils.exceptions import AstropyUserWarning
-import os
+from astropy.nddata import bitmask, block_reduce
 from astropy.table import Table
-import acstools.utils_findsat_mrt as u
-from astropy.nddata import bitmask
-import logging
-import warnings
+from astropy.utils.data import get_pkg_data_filename
+
+from acstools.utils_findsat_mrt import (create_mask, filter_sources, merge_tables,
+                                        radon, streak_endpoints, update_dq)
 
 # test for matplotlib, turn off plotting if it does not exist
 try:
@@ -113,20 +111,13 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
-    warnings.warn('matplotlib not found, plotting is disabled',
-                  AstropyUserWarning)
+    warnings.warn('matplotlib not found, plotting is disabled')
 
-#test for photutils
+# test for photutils
 try:
     from photutils.detection import StarFinder
 except ImportError:
     warnings.warn('photutils not installed. Source detection will not work.')
-
-#text for ccdproc
-try:
-    import ccdproc
-except ImportError:
-    warnings.warn('ccdproc not installed. Binning routines will not work.')
 
 __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
@@ -134,41 +125,33 @@ __version__ = "1.0"
 __vdate__ = "10-Feb-2023"
 __all__ = ['TrailFinder', 'WfcWrapper']
 
-# storing package directory so relative paths work
-PACKAGE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-
 # Initialize the logger
 logging.basicConfig()
 LOG = logging.getLogger(f'{__taskname__}')
 LOG.setLevel(logging.INFO)
 
-# filtering out warnings from nansum and nanmedian that say there's a all-nan
-# line in the data. These are expected because of how we label bad data in an
-# image, but they are inconsequential
 
-
-class TrailFinder(object):
-
+class TrailFinder:
     '''Top-level class to handle trail identification and masking.
 
     Parameters
     ----------
-    image : ndarray, optional
-        Input image. The default is None, but nothing will work until this
-        is defined
-    header: Header,optional
-        The header for the input data (0th extension). This is not used for
+    image : ndarray
+        Input image.
+    header : `astropy.io.fits.Header`, optional
+        The primary header for the input data (usually the 0th extension). This is not used for
         anything during the analysis, but it is saved with the output mask
         and satellite trail catalog so information about the original
-        observation can be easily retrieved.
-    image_header: Header, optional
-        The specific header for the fits extension being used. This is
-        added onto the catalog
-    save_image_header_keys: list, optional
-        List of header keys from image_header to save in the output trail
-        catalog header. Default is None.
-    threads : int, optional
-        Number of threads to use when calculating MRT. The default is 1.
+        observation can be easily retrieved. Default is `None`.
+    image_header : `astropy.io.fits.Header`, optional
+        The specific header for the FITS extension being used. This is
+        added onto the catalog. Default is `None`.
+    save_image_header_keys : list, optional
+        List of header keys from ``image_header`` to save in the output trail
+        catalog header. Default is `None`.
+    processes : int, optional
+        Number of processes to use when calculating MRT. The default is 1.
+        Do not use more than :py:func:`multiprocessing.cpu_count`.
     min_length : int, optional
         Minimum streak length to allow. The default is 25 pixels.
     max_width : int, optional
@@ -179,60 +162,58 @@ class TrailFinder(object):
     threshold : float, optional
         Minimum S/N when extracting sources from the MRT. The default is 5.
     theta : ndarray, optional
-        Angles at which to calculate the MRT. The default is None, which
-        sets to np.arange(0,180,0.5).
+        Angles at which to calculate the MRT. The default is `None`, which
+        sets to ``numpy.arange(0, 180, 0.5)``.
     kernels : list, optional
         Paths to each kernel to be used for source finding in the MRT.
-        The default is None, which reverts to using the 3, 7, and 15 pixel
+        The default is `None`, which reverts to using the 3-, 7-, and 15-pixel
         wide kernels included with this package.
-    mask_include_status: list, optional
+    mask_include_status : list, optional
         List indicating trails with which status should be considered
-        when making the mask. The default is [2].
+        when making the mask. For valid statuses, see
+        :func:`acstools.utils_findsat_mrt.filter_sources`.
+        The default is ``[2]``.
     plot : bool, optional
-        Plots all intermediate steps. The default is False. Note that setting
-        this option can generate A LOT of plots. It's primarily for debugging
+        Plots all intermediate steps. The default is `False`. Note that setting
+        this option can generate A LOT of plots. It is primarily for debugging
         purposes.
-    output_dir : string, optional
-        Path in which to save output. The default is './'.
+    output_dir : str, optional
+        Path in which to save output. The default is ``'.'`` (current directory).
     output_root : string, optional
-        A prefix for all output files. The default is ''.
+        A prefix for all output files. The default is ``''`` (no prefix).
     check_persistence : bool, optional
         Calculates the persistence of all identified streaks. The default
-        is True.
+        is `True`.
     min_persistence : float, optional
         Minimum persistence of a "true" satellite trail. Must be between 0
         and 1. The default is 0.5. Note that this does not reject satellite
         trails from the output catalog, but highlights them in a different
         color in the output plot.
-    ignore_theta_range : array-like, optional
-        List if ranges in theta to ignore when identifying satellite
+    ignore_theta_range : list of tuples, optional
+        List of ranges in ``theta`` to ignore when identifying satellite
         trails. This parameter is most useful for avoiding false positives
         due to diffraction spikes that always create streaks around the
         same angle for a given telescope/instrument. Format should be a
-        list of tuples, e.g., [(theta0_a,theta1_a),(theta0_b,theta1_b)].
-        Default is None.
-    save_catalog: bool, optional
-        Set to save the catalog of identified trails. Default is True
-    save_diagnostic: bool, optional
-        Set to save a diagnotic plot showing the input image and identified
-        trails. Default is True.
-    save_mrt: bool, optional
-        Set to save the MRT in a fits file. Default is false.
-    save_mask: bool, optional
-        Set to save the trail mask in a fits file. Default is false.
-
-    Returns
-    -------
-    None.
+        list of tuples, e.g., ``[(theta0_a, theta1_a), (theta0_b, theta1_b)]``.
+        Default is `None`.
+    save_catalog : bool, optional
+        Save the catalog of identified trails. Default is `True`.
+    save_diagnostic : bool, optional
+        Save a diagnotic plot showing the input image and identified
+        trails. Default is `True`.
+    save_mrt : bool, optional
+        Save the MRT in a FITS file. Default is `False`.
+    save_mask : bool, optional
+        Save the trail mask in a FITS file. Default is `False`.
 
     '''
     def __init__(
             self,
-            image=None,
+            image,
             header=None,
             image_header=None,
             save_image_header_keys=None,
-            threads=2,
+            processes=1,
             min_length=25,
             max_width=75,
             buffer=250,
@@ -255,15 +236,10 @@ class TrailFinder(object):
         if theta is None:
             theta = np.arange(0, 180, 0.5)
         if kernels is None:
-            kernels = [PACKAGE_DIRECTORY+'/data/rt_line_kernel_width{}.fits'.
-                       format(k) for k in [15, 7, 3]]
+            kernels = [get_pkg_data_filename(f'rt_line_kernel_width{k}.fits'
+                       for k in (15, 7, 3))]
         if save_image_header_keys is None:
             save_image_header_keys = []
-
-        # setting a warning filter for the nanmedian calculations. These
-        # warnings are inconsequential and already accounted for in the code
-        warnings.filterwarnings(action='ignore',
-                                message='All-NaN slice encountered')
 
         # inputs
         self.image = image
@@ -274,7 +250,7 @@ class TrailFinder(object):
         self.min_length = min_length
         self.max_width = max_width
         self.kernels = kernels
-        self.threads = threads
+        self.processes = processes
         self.theta = theta
         self.plot = plot
         self.buffer = buffer
@@ -309,44 +285,41 @@ class TrailFinder(object):
         self.save_mask = save_mask
 
         # plot image upon initialization
-        if (image is not None) & (self.plot is True) & (plt is not None):
+        if (self.plot is True) and (plt is not None):
             self.plot_image()
 
-    def run_mrt(self, theta=None, threads=None, plot=None):
+    def run_mrt(self, theta=None, processes=None, plot=None):
         '''
         Runs the median radon transform on the input image.
 
         Parameters
         ----------
         theta : array, optional
-            List of angles at which to calculate the MRT. The default is None,
-            which defers to self attribute of same name.
-        threads : int, optional
-            Number of CPU threads used to calculate the MRT. The default is
-            None, which defers to self attribute of same name.
+            List of angles at which to calculate the MRT. The default is `None`,
+            which defers to ``self.theta``; otherwise, it overwrites ``self.theta``.
+        processes : int, optional
+            Number of CPU processes used to calculate the MRT. The default is
+            `None`, which defers to ``self.processes``; otherwise, it overwrites
+            ``self.processes``.
         plot : bool, optional
-            Flag to plot the resulting MRT. The default is None, which defers
-            to the self attribute of same name.
-        Returns
-        -------
-        None.
+            Flag to plot the resulting MRT. The default is `None`, which defers
+            to ``self.plot``.
 
         '''
-
         # check inputs, update class attributes if necessary
         if theta is None:
             theta = self.theta
         else:
             self.theta = theta
-        if threads is None:
-            threads = self.threads
+        if processes is None:
+            processes = self.processes
         else:
-            self.threads = threads
+            self.processes = processes
 
         # run MRT
-        rt, length = u.radon(self.image, circle=False, median=True,
-                             fill_value=np.nan, threads=threads,
-                             return_length=True, theta=theta)
+        rt, length = radon(self.image, circle=False, median=True,
+                           fill_value=np.nan, processes=processes,
+                           return_length=True, theta=theta)
 
         # trim mrt where length too short
         rt[length < self.min_length] = np.nan
@@ -355,60 +328,68 @@ class TrailFinder(object):
         self.mrt = rt
         self.length = length
 
-        # calculate some useful properties
-        # median
-        self._medrt = np.nanmedian(rt)
-        # median abs deviation
-        self._madrt = np.nanmedian(np.abs(rt[np.abs(rt) > 0])-self._medrt)
+        # setting a warning filter for the nanmedian calculations. These
+        # warnings are inconsequential and already accounted for in the code
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            # calculate some useful properties
+            # median
+            self._medrt = np.nanmedian(rt)
+            # median abs deviation
+            self._madrt = np.nanmedian(np.abs(rt[np.abs(rt) > 0]) - self._medrt)
 
-        # calculate the approximate uncertainty of the MRT at each point
-        self._image_mad = np.nanmedian(np.abs(self.image))
+            # calculate the approximate uncertainty of the MRT at each point
+            self._image_mad = np.nanmedian(np.abs(self.image))
+
         # using MAD to avoid influence from outliers
-        self._image_stddev = self._image_mad/0.67449
+        self._image_stddev = self._image_mad / 0.67449
         # error on median ~ 1.25x error on mean. There are regions with length
         # equals zero which keeps raising warnings. Suppressing that warning
         # here
         with np.errstate(divide='ignore', invalid='ignore'):
-            self.mrt_err = 1.25*self._image_stddev/np.sqrt(self.length)
+            self.mrt_err = 1.25 * self._image_stddev / np.sqrt(self.length)
 
         # create the rho array
-        rho0 = rt.shape[0]/2-0.5
-        self.rho = np.arange(rt.shape[0])-rho0
+        rho0 = rt.shape[0] / 2 - 0.5
+        self.rho = np.arange(rt.shape[0]) - rho0
 
         # plot if set
         if (plot is True) & (plt is not None):
             self.plot_mrt()
 
-    def plot_image(self, ax=None, scale=[-1, 5], overlay_mask=False):
+    def plot_image(self, ax=None, scale=(-1, 5), overlay_mask=False):
         '''
         Plots the input image
 
         Parameters
         ----------
-        ax : AxesSubplot, optional
+        ax : `matplotlib.axes.Axes`, optional
             A matplotlib subplot where the image should be shown. The default
-            is None.
-        scale : array-like, optional
+            is `None` (one will be created for you).
+        scale : tuple of floats, optional
             A two element array with the minimum and maximum image values used
             to set the color scale, in units of the image median absolute
-            deviation. The default is [-1,5].
-        overlay_mask: bool, optional
-            Set to overlay the trail mask, if already calculated. Default is
-            False.
+            deviation (MAD). The default is ``(-1, 5)``.
+        overlay_mask : bool, optional
+            Overlay the trail mask, if already calculated. Default is `False`.
 
         '''
-
-        # exit if no image
-        if self.image is None:
-            LOG.error('No image to plot')
+        if plt is None:
             return
 
         if ax is None:
             fig, ax = plt.subplots()
 
         # recalculate mad and stdev here in case it hasn't been done yet
-        self._image_mad = np.nanmedian(np.abs(self.image))
-        self._image_stddev = self._image_mad/0.67449  # using MAD to avoid
+        # setting a warning filter for the nanmedian calculations. These
+        # warnings are inconsequential and already accounted for in the code
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            self._image_mad = np.nanmedian(np.abs(self.image))
+
+        self._image_stddev = self._image_mad / 0.67449  # using MAD to avoid
         # influence from outliers
 
         ax.imshow(self.image, cmap='viridis', origin='lower', aspect='auto',
@@ -427,11 +408,10 @@ class TrailFinder(object):
 
         # write to file if interactive is off and plottin is on
         if ~self._interactive:
-            file_name = self.output_dir + self.root + '_image'
+            file_name = os.path.join(self.output_dir, self.root + '_image')
             if overlay_mask:
                 file_name = file_name + '_mask'
-            file_name = file_name + '.png'
-            plt.savefig(file_name)
+            plt.savefig(file_name + '.png')
 
     def plot_mrt(self, scale=[-1, 5], ax=None, show_sources=False):
         '''
@@ -609,7 +589,7 @@ class TrailFinder(object):
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
             LOG.info('Removing duplicate sources')
-            sources = u.merge_tables(tbls)
+            sources = merge_tables(tbls)
             self.source_list = sources
         else:
             self.source_list = None
@@ -624,15 +604,14 @@ class TrailFinder(object):
 
         # add the status array and endpoints array. Status will be zero
         # because no additional checks have been done yet
-            self.source_list['endpoints'] = \
-                [u.streak_endpoints(t['rho'], -t['theta'], self.image.shape)
-                 for t in self.source_list]
-            self.source_list['status'] = \
-                np.zeros(len(self.source_list)).astype(int)
+            self.source_list['endpoints'] = [
+                streak_endpoints(t['rho'], -t['theta'], self.image.shape)
+                for t in self.source_list]
+            self.source_list['status'] = np.zeros(len(self.source_list), dtype=int)
 
         # run the routine to remove angles if any bad ranges are specified
-        if (self.source_list is not None) and (self.ignore_theta_range is not
-                                               None):
+        if ((self.source_list is not None) and
+                (self.ignore_theta_range is not None)):
             self._remove_angles()
 
         # print the total number of sources found
@@ -641,7 +620,7 @@ class TrailFinder(object):
         else:
             LOG.info('{} final sources found'.format(len(self.source_list)))
             # plot sources if set
-            if (plot is True) & (plt is not None):
+            if (plot is True) and (plt is not None):
                 self.plot_mrt(show_sources=True)
 
         return self.source_list
@@ -736,14 +715,14 @@ class TrailFinder(object):
                 LOG.info('Min persistence: {}'.format(min_persistence))
 
             # run filtering routine
-            properties = u.filter_sources(self.image,
-                                          self.source_list['endpoints'],
-                                          max_width=maxwidth, buffer=250,
-                                          plot_streak=plot_streak,
-                                          min_length=min_length,
-                                          minsnr=threshold,
-                                          check_persistence=check_persistence,
-                                          min_persistence=min_persistence)
+            properties = filter_sources(self.image,
+                                        self.source_list['endpoints'],
+                                        max_width=maxwidth, buffer=250,
+                                        plot_streak=plot_streak,
+                                        min_length=min_length,
+                                        minsnr=threshold,
+                                        check_persistence=check_persistence,
+                                        min_persistence=min_persistence)
 
             # update the status
             self.source_list.update(properties)
@@ -793,16 +772,15 @@ class TrailFinder(object):
 
         # crate the mask/segmentation
         if self.source_list is not None:
-
             include = [s['status'] in include_status for s in self.source_list]
             trail_id = self.source_list['id'][include]
             endpoints = self.source_list['endpoints'][include]
             widths = self.source_list['width'][include]
-            segment, mask = u.create_mask(self.image, trail_id, endpoints,
-                                          widths)
+            segment, mask = create_mask(self.image, trail_id, endpoints, widths)
         else:
             mask = np.zeros_like(self.image)
             segment = np.zeros_like(self.image)
+
         self.segment = segment.astype(int)
         self.mask = mask
 
@@ -1282,7 +1260,13 @@ class WfcWrapper(TrailFinder):
         '''
 
         LOG.info('Subtracting median background')
-        self.image = self.image - np.nanmedian(self.image)
+
+        # setting a warning filter for the nanmedian calculations. These
+        # warnings are inconsequential and already accounted for in the code
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            self.image = self.image - np.nanmedian(self.image)
 
     def rebin(self, binsize=None):
         '''
@@ -1314,7 +1298,12 @@ class WfcWrapper(TrailFinder):
 
         LOG.info('Rebinning the data by {}'.format(binsize))
 
-        self.image = ccdproc.block_reduce(self.image, binsize, func=np.nansum)
+        # setting a warning filter for the nansum calculations. These
+        # warnings are inconsequential and already accounted for in the code
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            self.image = block_reduce(self.image, binsize, func=np.nansum)
 
     def run_preprocess(self, **kwargs):
         '''
@@ -1358,5 +1347,5 @@ class WfcWrapper(TrailFinder):
         if self.image_type not in ['flc', 'flt']:
             raise ValueError('DQ array can only be updated for flc/flt images')
 
-        u.update_dq(self.image_file, self.extension, self.mask,
-                    dqval=16384, verbose=True)
+        update_dq(self.image_file, self.extension, self.mask,
+                  dqval=16384, verbose=True)

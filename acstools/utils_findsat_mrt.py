@@ -1,23 +1,21 @@
 '''
-Various helper routines for findsat_mrt.py
+Various helper functions for :ref:`findsat_mrt`.
 '''
+import logging
+import time
+import warnings
+from multiprocessing import Pool
 
 import numpy as np
-from astropy.modeling import models, fitting
-from astropy.table import Table, vstack
-from astropy.stats import sigma_clip
-import logging
-from astropy.convolution import Gaussian2DKernel
-from astropy.convolution import convolve
-from warnings import warn
-from multiprocessing import Pool
-import time
-from astropy.nddata import Cutout2D
+from astropy.convolution import convolve, Gaussian2DKernel
 from astropy.io import fits
-import warnings
+from astropy.modeling import models, fitting
+from astropy.nddata import Cutout2D
+from astropy.stats import sigma_clip
+from astropy.table import Table, vstack
 from astropy.utils.exceptions import AstropyUserWarning
 
-#check for skimage
+# check for scikit-image
 try:
     from skimage import transform
     from skimage.transform._warps import warp
@@ -25,7 +23,7 @@ try:
 except ImportError:
     warnings.warn('skimage not installed. MRT calculation will not work.')
 
-#check for scipy
+# check for scipy
 try:
     from scipy import interpolate
 except ImportError:
@@ -36,8 +34,7 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
-    warnings.warn('matplotlib not found, plotting is disabled',
-                  AstropyUserWarning)
+    warnings.warn('matplotlib not found, plotting is disabled')
 
 __taskname__ = "utils_findsat_mrt"
 __author__ = "David V. Stark"
@@ -1005,7 +1002,7 @@ def rot_med(image, angle, return_length):
 
 
 def radon(image, theta=None, circle=False, *, preserve_range=False,
-          fill_value=np.nan, median=True, threads=1, return_length=False,
+          fill_value=np.nan, median=True, processes=1, return_length=False,
           print_calc_times=False):
     """
     Calculates the (median) radon transform of an image.
@@ -1035,8 +1032,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     median: bool, optional
         Flag to turn on Median Radon Transform instead of standard Radon
         Transform.nDefault is True.
-    threads: int, optional
-        Number of threads to use when calculating the transform. Default is 1
+    processes: int, optional
+        Number of processes to use when calculating the transform. Default is 1
         (no multi-threading)
     return_length: bool, optional
         Option to return an array giving the length of the data array used to
@@ -1075,11 +1072,11 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     total_warp_time = 0.
 
     if median is True:
-        LOG.info('Calculating median Radon Transform with {} threads'
-                 .format(threads))
+        LOG.info('Calculating median Radon Transform with {} processes'
+                 .format(processes))
     else:
-        LOG.info('Calculating standard Radon Transform with {} threads'
-                 .format(threads))
+        LOG.info('Calculating standard Radon Transform with {} processes'
+                 .format(processes))
     if image.ndim != 2:
         raise ValueError('The input image must be 2-D')
     if theta is None:
@@ -1096,8 +1093,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         dist = ((coords - img_shape // 2) ** 2).sum(0)
         outside_reconstruction_circle = dist > radius ** 2
         if np.any(image[outside_reconstruction_circle]):
-            warn('Radon transform: image must be zero outside the '
-                 'reconstruction circle')
+            warnings.warn('Radon transform: image must be zero outside the '
+                          'reconstruction circle', AstropyUserWarning)
         # Crop image to make it square
         slices = tuple(slice(int(np.ceil(excess / 2)),
                              int(np.ceil(excess / 2) + shape_min))
@@ -1122,7 +1119,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
                            dtype=image.dtype)+np.nan
     lengths = np.copy(radon_image)
 
-    if threads <= 1:
+    if processes <= 1:
         for i, angle in enumerate(np.deg2rad(theta)):
             cos_a, sin_a = np.cos(angle), np.sin(angle)
             R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
@@ -1142,9 +1139,9 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
             lengths[:, i] = np.sum(np.isfinite(rotated), axis=0)
 
     else:
-        # splitting calculation up among many threads to speed up. Each thread
+        # splitting calculation up among many processes to speed up. Each thread
         # rotates and sums/medians at a specific angle
-        p = Pool(threads)
+        p = Pool(processes)
         angles = np.deg2rad(theta)
         images = [padded_image for i in range(len(angles))]
         return_lengths = [True for i in range(len(angles))]
@@ -1157,7 +1154,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         else:
             result = p.starmap(rot_med, pairs)
             result = np.array(result)
-            print(np.shape(result))
+            # print(np.shape(result))  # DEBUG
             radon_image = result[:, 0, :]
             lengths = result[:, 1, :]
         radon_image = radon_image.T
@@ -1229,7 +1226,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
 
 
 def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
-                           plot=False, theta=None, threads=1):
+                           plot=False, theta=None, processes=1):
     '''
     Creates a model signal MRT signal of a line of specified width.
 
@@ -1255,8 +1252,8 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     theta : array, optional
         Set of angles at which to calculate the MRT, default is
         None, which reverts to np.arange(0,180,0.5).
-    threads: int, optional
-        Number of threads to use when calculating MRT. Default is 1.
+    processes: int, optional
+        Number of processes to use when calculating MRT. Default is 1.
     Returns
     -------
     kernel : ndarray
@@ -1289,7 +1286,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
 
     # calculate the RT for this model
     rt = radon(image, circle=False, median=True, fill_value=np.nan,
-               threads=threads, return_length=False)
+               processes=processes, return_length=False)
 
     # plot the MRT
     if (plot is True) & (plt is not None):

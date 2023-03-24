@@ -8,6 +8,9 @@ MRT-based Satellite Trails Detection
     :no-heading:
     :no-inheritance-diagram:
 
+Helper Functions
+================
+
 .. automodapi:: acstools.utils_findsat_mrt
     :no-heading:
     :no-inheritance-diagram:

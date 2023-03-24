@@ -30,7 +30,7 @@ class TestFindsatMRT(BaseACSTOOLS):
         WfcWrapper(inputfile, binsize=4, extension=4,
                    output_root='jc8m32j5q_flc',
                    output_dir=tmp_path,
-                   threads=8, execute=True, save_mask=True,
+                   processes=8, execute=True, save_mask=True,
                    save_diagnostic=False, save_catalog=True)
 
         #Compare mask with truth
