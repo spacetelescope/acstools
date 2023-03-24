@@ -290,7 +290,7 @@ class TrailFinder:
 
     def run_mrt(self, theta=None, processes=None, plot=None):
         '''
-        Runs the median radon transform on the input image.
+        Run the median radon transform on the input image.
 
         Parameters
         ----------
@@ -360,7 +360,7 @@ class TrailFinder:
 
     def plot_image(self, ax=None, scale=(-1, 5), overlay_mask=False):
         '''
-        Plots the input image
+        Plot the input image.
 
         Parameters
         ----------
@@ -415,7 +415,7 @@ class TrailFinder:
 
     def plot_mrt(self, scale=[-1, 5], ax=None, show_sources=False):
         '''
-        Plots the MRT
+        Plot the MRT.
 
         Parameters
         ----------
