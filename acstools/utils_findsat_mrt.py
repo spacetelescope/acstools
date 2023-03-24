@@ -252,7 +252,7 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         g = fit_g(g_init, xarr[sel], yarr[sel])
 
     # plot if triggered
-    if (plot_streak is True) and (ax is not None) & (plt is not None):
+    if (plot_streak is True) and (ax is not None) and (plt is not None):
         ax.plot(xarr, yarr)
         ax.plot(xarr[sel], g(xarr[sel]), color='red', label='Fit', lw=3,
                 alpha=0.3)
@@ -458,7 +458,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         # set up plot
         use_ax = None
 
-        if (plot_streak is True) & (plt is not None):
+        if (plot_streak is True) and (plt is not None):
             fig, [ax1, ax2] = plt.subplots(1, 2)
             mad = np.nanmedian(np.abs(subregion))
             ax2.imshow(subregion, vmin=-mad, vmax=5*mad, origin='lower')
@@ -477,14 +477,14 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         mean_fluxes[ii] = mean_flux
 
         # plot if triggered
-        if (plot_streak is True) & (plt is not None):
+        if (plot_streak is True) and (plt is not None):
             ax1.set_title('snr={}, width={}'.format(snr, width))
             ax1.set_xlabel('position')
             ax1.set_ylabel('brightness')
             fig.tight_layout()
 
         # update status as needed
-        if (snr > minsnr) & ((width) < max_width):
+        if (snr > minsnr) & (width < max_width):
             status[ii] = 1
 
             # new step; track persistence (if toggled)
@@ -661,7 +661,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
     slope_int = -1./slope
     b_int = (y0+dy)-slope_int*(x0+dx)
 
-    if (plot is True) & (plt is not None):
+    if (plot is True) and (plt is not None):
         fig, ax = plt.subplots(figsize=(10, 10))
 
         ax.plot([0, sz[0]-1], [sz/2-0.5,
@@ -703,7 +703,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
         xi = x0+rho
         xf = x0+rho
 
-    if (plot is True) & (plt is not None):
+    if (plot is True) and (plt is not None):
         ax.scatter([xi, xf], [yi, yf], s=100, color='magenta')
 
     p0 = (xi, yi)
@@ -772,7 +772,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 
         chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
 
-        if (plot_streak is True) & (plt is not None):
+        if (plot_streak is True) and (plt is not None):
             fig, ax = plt.subplots()
         else:
             ax = None
@@ -782,7 +782,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
                                                       max_width=max_width,
                                                       plot_streak=plot_streak,
                                                       bounds=bounds)
-        if (plot_streak is True) & (plt is not None):
+        if (plot_streak is True) and (plt is not None):
             ax.set_title('{}-snr={},width={},mean={}'.format(ii, snr, width,
                                                              g.mean.value))
 
@@ -793,7 +793,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         mean_arr.append(g.mean.value)
 
         # assess if successful
-        success = (snr > 3) & (np.isfinite(snr))
+        success = (snr > 3) & np.isfinite(snr)
         if ii > 0:
             success = success & (np.abs(mean_arr[ii] -
                                         mean_arr[ii-1]) < width_arr[ii-1])
@@ -853,21 +853,21 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
     '''
 
     # make sure either rho,theta or endpoints are set
-    if ((rho is not None) | (theta is not None)) & (endpoints is not None):
+    if ((rho is not None) or (theta is not None)) and (endpoints is not None):
         LOG.warning('rho/theta and endpoints set, defaulting to using\
                     endpoints')
         use_rhotheta = False
 
-    elif (rho is not None) & (theta is None) & (endpoints is None):
+    elif (rho is not None) and (theta is None) and (endpoints is None):
         LOG.error('rho set but not theta')
         return image
 
-    elif (rho is None) & (theta is not None) & (endpoints is None):
+    elif (rho is None) and (theta is not None) and (endpoints is None):
         LOG.error('theta set but not rho')
         return image
-    elif (rho is not None) & (theta is not None) & (endpoints is None):
+    elif (rho is not None) and (theta is not None) and (endpoints is None):
         use_rhotheta = True
-    elif (rho is None) & (theta is None) & (endpoints is not None):
+    elif (rho is None) and (theta is None) and (endpoints is not None):
         use_rhotheta = False
 
     # calculate endpoints from rho,theta if necessary
@@ -1277,7 +1277,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     image = add_streak(image, width, 1, rho=0, theta=90, psf_sigma=sigma)
 
     # plot the model image
-    if (plot is True) & (plt is not None):
+    if (plot is True) and (plt is not None):
         fig, ax = plt.subplots()
         ax.imshow(image, origin='lower')
         ax.set_xlabel('X')
@@ -1289,7 +1289,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                processes=processes, return_length=False)
 
     # plot the MRT
-    if (plot is True) & (plt is not None):
+    if (plot is True) and (plt is not None):
         fig2, ax2 = plt.subplots()
         ax2.imshow(rt, aspect='auto', origin='lower')
         ax2.set_xlabel('angle pixel')
@@ -1304,7 +1304,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     theta0 = np.nanargmax(rt_theta)
 
     # plot the 1D slices
-    if (plot is True) & (plt is not None):
+    if (plot is True) and (plt is not None):
 
         fig3, [ax3a, ax3b] = plt.subplots(1, 2)
         ax3a.plot(rt_theta, '.')
@@ -1362,7 +1362,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
                                  kind='cubic')
         cutout = f(new_theta_arr, new_rho_arr)  # overwrite old cutout
 
-    if (plot is True) & (plt is not None):
+    if (plot is True) and (plt is not None):
         fig4, ax4 = plt.subplots()
         ax4.imshow(cutout.data, origin='lower', aspect='auto')
         ax4.set_title('final kernel')

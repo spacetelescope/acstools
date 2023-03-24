@@ -355,7 +355,7 @@ class TrailFinder:
         self.rho = np.arange(rt.shape[0]) - rho0
 
         # plot if set
-        if (plot is True) & (plt is not None):
+        if (plot is True) and (plt is not None):
             self.plot_mrt()
 
     def plot_image(self, ax=None, scale=(-1, 5), overlay_mask=False):
@@ -729,12 +729,12 @@ class TrailFinder:
 
         # optionally trim the catalog of all rejected sources
         if trim_catalog is True:
-            sel = (self.source_list['width'] < maxwidth) & \
-                (self.source_list['snr'] > threshold)
+            sel = ((self.source_list['width'] < maxwidth) &
+                   (self.source_list['snr'] > threshold))
             self.source_list = self.source_list[sel]
 
         # plot if triggered
-        if (plot is True) & (plt is not None):
+        if (plot is True) and (plt is not None):
             fig, ax = plt.subplots()
             self.plot_mrt(show_sources=True)
 
@@ -785,7 +785,7 @@ class TrailFinder:
         self.mask = mask
 
         # plot if triggered
-        if (plot is True) & (plt is not None):
+        if (plot is True) and (plt is not None):
             self.plot_mask()
             self.plot_segment()
 
@@ -979,7 +979,7 @@ class TrailFinder:
             ax3.set_ylim(ax3_ylim)
             plt.tight_layout()
             plt.savefig('{}/{}_diagnostic.png'.format(output_dir, root))
-            if (self.plot is False) & (plt is not None):
+            if (self.plot is False) and (plt is not None):
                 plt.close()
 
         # save the catalog of trails
