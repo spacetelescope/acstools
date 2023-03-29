@@ -404,15 +404,16 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
 
     Returns
     -------
-    properties : Table
-        Same as the original table but with new columns: (1) mean trail flux,
-        (2) trail width, (3) trail S/N ratio (4) trail persistence, (5) trail
-        status (1 = failed snr or width requirements, 2 = passed snr and width
-        requirements but failed persistence test, 3 = passed snr, width, and
-        persistence requirements.
+    properties : `~astropy.table.Table`
+        Same as the original table but with new columns:
+
+        * mean trail flux
+        * trail width
+        * trail SNR
+        * trail persistence
+        * trail status (see :attr:`acstools.utils_findsat_mrt.TrailFinder.mask_include_status`)
 
     '''
-
     # we'll save the newly measured parameters in the following arrays
     widths = np.zeros(len(streak_positions))
     snrs = np.zeros(len(streak_positions))
@@ -553,7 +554,7 @@ def create_mask(image, trail_id, endpoints, widths):
 
     '''
 
-    segment = np.zeros_like(image).astype(int)
+    segment = np.zeros(image.shape, dtype=int)
 
     # cycle through trail endpoints/widths
     for t, e, w in zip(trail_id, endpoints, widths):
