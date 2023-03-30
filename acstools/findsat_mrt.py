@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This module identifies satellite trails in ACS/WFC imaging with the Median Radon Transform.
+This module identifies satellite trails in ACS/WFC imaging with the Median Radon Transform (MRT).
 
 It contains a class called `~acstools.findsat_mrt.TrailFinder` that is used to identify
 satellite trails and/or other linear features in astronomical image data. To
-accomplish this goal, the Median Radon Transform (MRT) is calculated for an
+accomplish this goal, the MRT is calculated for an
 image. Point sources are then extracted from the MRT and filtered to yield a
 final catalog of trails, which can then be used to create a mask.
 
@@ -54,7 +54,7 @@ Initialize `~acstools.findsat_mrt.TrailFinder` and run these steps:
 >>> s.find_mrt_sources()              # finds point sources in MRT
 >>> s.filter_sources()                # filters sources from MRT
 >>> s.make_mask()                     # makes a mask from the identified trails
->>> s.save_output(root='test')        # saves the output
+>>> s.save_output()        # saves the output
 
 The input image, mask, and MRT (with sources overlaid) can be plotted during
 this process:
@@ -89,7 +89,7 @@ so to continue the process:
 Or the entire process can be run in a single line with
 
 >>> w = WfcWrapper('jc8m32j5q_flc.fits', preprocess=True, extension=4, binsize=2,
-...                 execute=True)
+...                execute=True)
 
 """
 import logging
@@ -1181,12 +1181,12 @@ class WfcWrapper(TrailFinder):
         ACS/WFC data file to read. Should be a FITS file.
     extension : int, optional
         Extension of input file to read. The default is `None`.
-    binsize : int, optional
-        Amount the input data should be binned by. The default is `None`
-        (no binning).
+    binsize : int or `None`, optional
+        See :attr:`~acstools.utils_findsat_mrt.WfcWrapper.binsize`.
+        The default is `None` (no binning).
     ignore_flags : list of int
-        DQ flags that lead to a pixel being ignored. Default is
-        ``[4096, 8192, 16384]``. Only relevant for FLT/FLC files.
+        See :attr:`~acstools.utils_findsat_mrt.WfcWrapper.ignore_flags`.
+        Default is ``[4096, 8192, 16384]``.
     preprocess : bool, optional
         Flag to run all the preprocessing steps (bad pixel flagging,
         background subtraction, rebinning). The default is `True`.
@@ -1256,34 +1256,47 @@ class WfcWrapper(TrailFinder):
         if execute:
             LOG.info('Running the trailfinding pipeline')
             self.run_all()
-# UNTIL HERE
-    def mask_bad_pixels(self, ignore_flags=None):
+
+    @property
+    def binsize(self):
+        """Amount the input data should be binned by."""
+        return self._binsize
+
+    @binsize.setter
+    def binsize(self, value):
+        if value is not None and not isinstance(value, int):
+            raise ValueError(f"binsize must be None or int but got: {value}")
+        self._binsize = value
+
+    @property
+    def ignore_flags(self):
+        """DQ flags that lead to a pixel being ignored when masking.
+        Only relevant for FLT/FLC files.
+        """
+        return self._ignore_flags
+
+    @ignore_flags.setter
+    def ignore_flags(self, value):
+        if not isinstance(value, list) or not all(isinstance(v, int) for v in value):
+            raise ValueError(f"ignore_flags must be list of int but got: {value}")
+        self._ignore_flags = value
+
+    def mask_bad_pixels(self):
         '''
-        Masks bad pixels.
+        Mask bad pixels.
+        This uses `ignore_flags` (for FLC/FLT), so update it first, if needed.
 
-        Bad pixels are replacing with NaN. This uses the bitmask arrays
-        for FLC/FLT images, and weight arrays for DRC/DRZ images.
-
-        Parameters
-        ----------
-        ignore_flags : list, optional
-            List of DQ bitmasks to ignore when masking. Only relevant for
-            FLC/FLT files. The default is `None`, which defers to self attribute
-            of the same name.
+        Bad pixels are replaced with NaN by modifying ``self.image`` in-place.
+        This uses the bitmask arrays for FLC/FLT images,
+        and weight arrays for DRC/DRZ images.
 
         '''
-        # check inputs, update class attributes as needed
-        if ignore_flags is None:
-            ignore_flags = self.ignore_flags
-        else:
-            self.ignore_flags = ignore_flags
-
         LOG.info('masking bad pixels')
 
         if self.image_type in ('flc', 'flt'):
             # for FLC/FLT, use DQ array
             mask = bitmask.bitfield_to_boolean_mask(self.image_mask,
-                                                    ignore_flags=ignore_flags)
+                                                    ignore_flags=self.ignore_flags)
             self.image[mask] = np.nan
 
         elif self.image_type in ('drz', 'drc'):
@@ -1292,7 +1305,10 @@ class WfcWrapper(TrailFinder):
 
     def subtract_background(self):
         '''
-        Subtracts a median background from the image, ignoring NaNs.
+        Subtract a median background from the image, ignoring NaNs,
+        where ``self.image`` is modified in-place.
+        Bad pixels should first be handled via :meth:`mask_bad_pixels`
+        before running this.
         '''
         LOG.info('Subtracting median background')
 
@@ -1303,55 +1319,47 @@ class WfcWrapper(TrailFinder):
                                     message='All-NaN slice encountered')
             self.image = self.image - np.nanmedian(self.image)
 
-    def rebin(self, binsize=None):
+    def rebin(self):
         '''
-        Rebins the image array.
-
+        Rebin the image array by modifying ``self.image`` in-place.
         The binning in the x and y direction are identical.
-
-        Parameters
-        ----------
-        binsize : int, optional
-            Bin size. The default is None, which defers to the self attribute
-            of the same name.
+        This uses `binsize`, so update it first, if needed.
 
         '''
-        # check onputs, update class attributes as needed
-        if binsize is None:
-            binsize = self.binsize
-        else:
-            self.binsize = binsize
-
-        if binsize is None:
+        if self.binsize is None:
             LOG.warn('No bin size defined. Will not perform binning')
             return
 
-        LOG.info('Rebinning the data by {}'.format(binsize))
+        LOG.info('Rebinning the data by {}'.format(self.binsize))
 
         # setting a warning filter for the nansum calculations. These
         # warnings are inconsequential and already accounted for in the code
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore',
                                     message='All-NaN slice encountered')
-            self.image = block_reduce(self.image, binsize, func=np.nansum)
+            self.image = block_reduce(self.image, self.binsize, func=np.nansum)
 
-    def run_preprocess(self, **kwargs):
+    def run_preprocess(self):
         '''
-        Runs all the image preprocessing steps.
+        Runs all the image preprocessing steps in the following order:
 
-        Parameters
-        ----------
-        **kwargs : dict, optional
-            Additional keyword arguments for :meth:`rebin` and :meth:`mask_bad_pixels`.
+        1. :meth:`mask_bad_pixels`
+        2. :meth:`subtract_background`
+        3. :meth:`rebin`
+
+        See the documentation for methods above for more details.
 
         '''
-        self.mask_bad_pixels(**kwargs)
+        self.mask_bad_pixels()
         self.subtract_background()
-        self.rebin(**kwargs)
+        self.rebin()
 
-    def update_dq(self, **kwargs):
+    def update_dq(self, dqval=16384, verbose=True):
         '''
-        Update DQ array with the satellite trail mask.
+        Update DQ array with the satellite trail mask (``self.mask``) using
+        :func:`acstools.utils_findsat_mrt.update_dq`.
+        The file in ``self.image_file`` is updated for this operation,
+        particularly the DQ extension associated with ``self.extension``.
 
         .. note::
 
@@ -1359,13 +1367,14 @@ class WfcWrapper(TrailFinder):
 
         Parameters
         ----------
-        **kwargs : dict, optional
-            Additional keyword arguments for
-            :func:`acstools.utils_findsat_mrt.update_dq`.
+        dqval : int, optional
+            DQ value to use for the trail. Default value of 16384 is
+            tailored for ACS/WFC.
+        verbose : bool, optional
+            Print extra information to the terminal.
 
         '''
         if self.image_type not in ('flc', 'flt'):
-            raise ValueError('DQ array can only be updated for FLC/FLT images')
+            raise ValueError(f'DQ array can only be updated for FLC/FLT images, not {self.image_type}')
 
-        update_dq(self.image_file, self.extension, self.mask,
-                  dqval=16384, verbose=True)
+        update_dq(self.image_file, self.extension + 2, self.mask, dqval=dqval, verbose=verbose)
