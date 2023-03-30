@@ -174,7 +174,8 @@ class TrailFinder:
         this option can generate A LOT of plots. It is primarily for debugging
         purposes.
     output_dir : str, optional
-        Path in which to save output. The default is ``'.'`` (current directory).
+        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.output_dir`.
+        The default is ``'.'`` (current directory).
     output_root : string, optional
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.root`.
         The default is ``''`` (no prefix).
@@ -184,22 +185,21 @@ class TrailFinder:
     min_persistence : float, optional
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.min_persistence`.
         Must be between 0 and 1. The default is 0.5.
-    ignore_theta_range : list of tuples, optional
-        List of ranges in ``theta`` to ignore when identifying satellite
-        trails. This parameter is most useful for avoiding false positives
-        due to diffraction spikes that always create streaks around the
-        same angle for a given telescope/instrument. Format should be a
-        list of tuples, e.g., ``[(theta0_a, theta1_a), (theta0_b, theta1_b)]``.
+    ignore_theta_range : list of tuples or `None`, optional
+        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.ignore_theta_range`.
         Default is `None`.
     save_catalog : bool, optional
-        Save the catalog of identified trails. Default is `True`.
+        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_catalog`.
+        Default is `True`.
     save_diagnostic : bool, optional
-        Save a diagnotic plot showing the input image and identified
-        trails. Default is `True`.
+        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_diagnostic`.
+        Default is `True`.
     save_mrt : bool, optional
-        Save the MRT in a FITS file. Default is `False`.
+        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_mrt`.
+        Default is `False`.
     save_mask : bool, optional
-        Save the trail mask in a FITS file. Default is `False`.
+        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_mask`.
+        Default is `False`.
 
     '''
     def __init__(
@@ -406,6 +406,17 @@ class TrailFinder:
         self._mask_include_status = value
 
     @property
+    def output_dir(self):
+        """Path in which to save output."""
+        return self._output_dir
+
+    @output_dir.setter
+    def output_dir(self, value):
+        if not os.path.isdir(value):
+            raise ValueError(f"output_dir must be a directory but got: {value}")
+        self._output_dir = value
+
+    @property
     def root(self):
         """A prefix for all output files."""
         return self._root
@@ -440,6 +451,68 @@ class TrailFinder:
         if value < 0 or value > 1:
             raise ValueError(f"min_persistence must be between 0 and 1 but got: {value}")
         self._min_persistence = value
+
+    @property
+    def ignore_theta_range(self):
+        """List of ranges in `theta` to ignore when identifying satellite trails.
+        This parameter is most useful for avoiding false positives
+        due to diffraction spikes that always create streaks around the
+        same angle for a given telescope/instrument. Format should be a
+        list of tuples, e.g., ``[(theta0_a, theta1_a), (theta0_b, theta1_b)]``.
+        """
+        return self._ignore_theta_range
+
+    @ignore_theta_range.setter
+    def ignore_theta_range(self, value):
+        if ((value is None) or
+                (isinstance(value, list) and all(len(x) == 2 for x in value))):
+            self._ignore_theta_range = value
+        else:
+            raise ValueError(f"Invalid ignore_theta_range: {value}")
+
+    @property
+    def save_catalog(self):
+        """Save the catalog of identified trails to a FITS table."""
+        return self._save_catalog
+
+    @save_catalog.setter
+    def save_catalog(self, value):
+        if not isinstance(value, bool):
+            raise ValueError(f"save_catalog must be bool but got: {value}")
+        self._save_catalog = value
+
+    @property
+    def save_diagnostic(self):
+        """Save a diagnotic plot showing the input image and identified trails to a PNG file."""
+        return self._save_diagnostic
+
+    @save_diagnostic.setter
+    def save_diagnostic(self, value):
+        if not isinstance(value, bool):
+            raise ValueError(f"save_diagnostic must be bool but got: {value}")
+        self._save_diagnostic = value
+
+    @property
+    def save_mrt(self):
+        """Save the MRT in a FITS file."""
+        return self._save_mrt
+
+    @save_mrt.setter
+    def save_mrt(self, value):
+        if not isinstance(value, bool):
+            raise ValueError(f"save_mrt must be bool but got: {value}")
+        self._save_mrt = value
+
+    @property
+    def save_mask(self):
+        """Save the trail mask in a FITS file."""
+        return self._save_mask
+
+    @save_mask.setter
+    def save_mask(self, value):
+        if not isinstance(value, bool):
+            raise ValueError(f"save_mask must be bool but got: {value}")
+        self._save_mask = value
 
     def run_mrt(self, plot=False):
         '''
@@ -922,14 +995,12 @@ class TrailFinder:
             plt.savefig(file_name)
 
         return ax
-# UNTIL HERE
-    def save_output(self, output_dir=None, save_mrt=None,
-                    save_mask=None, save_catalog=None, save_diagnostic=None,
-                    close_plot=True):
+
+    def save_output(self, close_plot=True):
         '''
         Save output. Any existing file will be overwritten.
-        This uses `root`, so update them first, if needed.
-        Output includes optionally:
+        This uses `root`, `output_dir`, `save_mrt`, `save_catalog`, and `save_diagnostic`,
+        so update them first, if needed. Output includes optionally:
 
         1. MRT
         2. Mask/segementation image
@@ -938,58 +1009,21 @@ class TrailFinder:
 
         Parameters
         ----------
-        output_dir : string, optional
-            Directory in which to save output files. Default is None, which
-            defers to self attribute of same name.
-        save_mrt : bool, optional
-            Set to save the MRT in a fits file. Default is None, which
-            defers to self attribute of same name.
-        save_mask : bool, optional
-            Set to save the mask and segmentation images in a fits file.
-            Default is None, which defers to self attribute of same name.
-        save_catalog : bool, optional
-            Set to save the trail catalog in a fits table. Default is None,
-            which defers to self attribute of same name.
-        save_diagnostic : bool, optional
-            Set to save a diagnostic plot (png) showing the identified trails.
-            Default is None, which defers to self attribute of same name.
         close_plot : bool
-            Close the plot instance after ``save_diagnostic`` is done.
+            Close the plot instance after `save_diagnostic` is done.
 
         '''
-        # check inputs, update class attributes as needed
-        if output_dir is None:
-            output_dir = self.output_dir
-        else:
-            self.output_dir = output_dir
-        if save_mrt is None:
-            save_mrt = self.save_mrt
-        else:
-            self.save_mrt = save_mrt
-        if save_mask is None:
-            save_mask = self.save_mask
-        else:
-            self.save_mask = save_mask
-        if save_diagnostic is None:
-            save_diagnostic = self.save_diagnostic
-        else:
-            self.save_diagnostic = save_diagnostic
-        if save_catalog is None:
-            save_catalog = self.save_catalog
-        else:
-            self.save_catalog = save_catalog
-
         # save the MRT image
-        if save_mrt:
+        if self.save_mrt:
             if self.mrt is not None:
-                mrt_filename = os.path.join(output_dir, f'{self.root}_mrt.fits')
+                mrt_filename = os.path.join(self.output_dir, f'{self.root}_mrt.fits')
                 LOG.info('writing MRT to {}'.format(mrt_filename))
                 fits.writeto(mrt_filename, self.mrt, overwrite=True)
             else:
                 LOG.error('No MRT to save')
 
         # save the bool mask image
-        if save_mask:
+        if self.save_mask:
             if self.mask is not None and self.segment is not None:
                 hdu0 = fits.PrimaryHDU()
                 if self.header is not None:
@@ -997,14 +1031,14 @@ class TrailFinder:
                 hdu1 = fits.ImageHDU(self.mask.astype(int))
                 hdu2 = fits.ImageHDU(self.segment.astype(int))
                 hdul = fits.HDUList([hdu0, hdu1, hdu2])
-                mask_filename = os.path.join(output_dir, f'{self.root}_mask.fits')
+                mask_filename = os.path.join(self.output_dir, f'{self.root}_mask.fits')
                 hdul.writeto(mask_filename, overwrite=True)
                 LOG.info('writing mask to {}'.format(mask_filename))
             else:
                 LOG.error('No mask to save')
 
         # save the diagnostic plot
-        if save_diagnostic and (plt is not None):
+        if self.save_diagnostic and (plt is not None):
             LOG.info('writing diagnostic plot')
 
             fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(20, 10))
@@ -1032,13 +1066,13 @@ class TrailFinder:
             ax3.set_xlim(ax3_xlim)
             ax3.set_ylim(ax3_ylim)
             plt.tight_layout()
-            plt.savefig(os.path.join(output_dir, f'{self.root}_diagnostic.png'))
+            plt.savefig(os.path.join(self.output_dir, f'{self.root}_diagnostic.png'))
             if close_plot:
                 plt.close()
 
         # save the catalog of trails
-        if save_catalog:
-            cat_filename = os.path.join(output_dir, f'{self.root}_catalog.fits')
+        if self.save_catalog:
+            cat_filename = os.path.join(self.output_dir, f'{self.root}_catalog.fits')
             LOG.info(f'writing catalog {cat_filename}')
             if self.source_list is not None:
                 # there's some meta data called "version" that cannot be added
@@ -1067,7 +1101,8 @@ class TrailFinder:
 
             # Append the original data header to this catalog too.
             has_pri_hdr = isinstance(self.header, fits.Header)
-            has_dat_hdr = isinstance(self.image_header, fits.Header) and (len(self.save_image_header_keys) > 0)
+            has_dat_hdr = (isinstance(self.image_header, fits.Header) and
+                           (len(self.save_image_header_keys) > 0))
             if has_pri_hdr or has_dat_hdr:
                 with fits.open(cat_filename, mode='update') as h:
                     if has_pri_hdr:
@@ -1079,40 +1114,26 @@ class TrailFinder:
                             if k in self.image_header:
                                 h[1].header[k] = self.image_header[k]
 
-    def _remove_angles(self, ignore_theta_range=None):
+    def _remove_angles(self):
         '''
         Remove a range (or set of ranges) of angles from the trail catalog
+        by updating ``self.source_list`` in-place.
+        This uses `ignore_theta_range`, so update it first, if needed.
 
         This routine is primarily for removing trails at angles known to
         be overwhelmingly dominated by features that are not of interest, e.g.,
         for removing diffraction spikes.
 
-        Parameters
-        ----------
-        ignore_theta_range : list of tuples, optional
-            List of angle ranges to avoid.
-            Format is [(min angle1,max angle1),(min angle2, max angle2) ... ].
-            Default is None, which defers to self attribute of same name.
-
-        Returns
-        -------
-        source_list, Table
-            The source list with the specified angles removed.
-
         '''
-
-        # update keyword values/class attributes as needed
-        if ignore_theta_range is None:
-            ignore_theta_range == self.ignore_theta_range
-        else:
-            self.ignore_theta_range = ignore_theta_range
+        if self.source_list is None:  # Nothing to do
+            return
 
         if self.ignore_theta_range is None:
             LOG.error('No angles set to ignore')
             return
 
         # add some checks to be sure ignore_ranges is the right type
-        remove = np.zeros(len(self.source_list)).astype(bool)
+        remove = np.zeros(len(self.source_list), dtype=bool)
         for r in self.ignore_theta_range:
             r = np.sort(r)
             LOG.info('ignoring angles between {} and {}'.format(r[0], r[1]))
@@ -1121,69 +1142,65 @@ class TrailFinder:
 
         self.source_list = self.source_list[~remove]
 
-    def run_all(self, **kwargs):
+    def run_all(self, trim_catalog=False, plot=False, plot_streak=False, close_plot=True):
         '''
         Run the entire pipeline to identify, filter, and mask trails.
+        This calls the following methods in the given order:
 
-        Parameters
-        ----------
-        **kwargs : dict, optional
-            Additional keyword arguments run_mrt, find_mrt_sources,
-            filter_sources, mask_mask, and save_output
+        1. :meth:`run_mrt`
+        2. :meth:`find_mrt_sources`
+        3. :meth:`filter_sources`
+        4. :meth:`make_mask`
+        5. :meth:`save_output`
 
-        Returns
-        -------
-        None.
+        See the documentation for methods above on how to use the
+        keyword options.
 
         '''
-
-        self.run_mrt(**kwargs)
-        self.find_mrt_sources(**kwargs)
-        self.filter_sources(**kwargs)
-        self.make_mask(**kwargs)
-        self.save_output(**kwargs)
+        self.run_mrt(plot=plot)
+        self.find_mrt_sources(plot=plot)
+        self.filter_sources(trim_catalog=trim_catalog, plot=plot, plot_streak=plot_streak)
+        self.make_mask(plot=plot)
+        self.save_output(close_plot=close_plot)
 
 
 class WfcWrapper(TrailFinder):
-
     '''
-    Wrapper for trail_finder designed specifically for ACS/WFC data.
+    Wrapper for `TrailFinder` designed specifically for ACS/WFC data.
 
     This class enables quick reading and preprocessing of standard
     full-frame ACS/WFC images.
 
     .. note::
 
-        * This class is not designed for use with subarray images.
+        This class is not designed for use with subarray images.
 
     Parameters
     ----------
-    image_file : string
-        ACS/WFC data file to read. Should be a fits file.
+    image_file : str
+        ACS/WFC data file to read. Should be a FITS file.
     extension : int, optional
-        Extension of input file to read. The default is None.
+        Extension of input file to read. The default is `None`.
     binsize : int, optional
-        Amount the input data should be binned by. The default is None
+        Amount the input data should be binned by. The default is `None`
         (no binning).
-    ignore_flags : list
-        DQ flags that lead to a pixel being ignored. Default is [4096,
-        8192, 16384]. Only relevant for flt/flc files.
+    ignore_flags : list of int
+        DQ flags that lead to a pixel being ignored. Default is
+        ``[4096, 8192, 16384]``. Only relevant for FLT/FLC files.
     preprocess : bool, optional
         Flag to run all the preprocessing steps (bad pixel flagging,
-        background subtraction, rebinning. The default is True.
+        background subtraction, rebinning). The default is `True`.
     execute : bool, optional
-        Flag to run the entire TrailFinder pipeline. The default is False.
+        Flag to run the entire `TrailFinder` pipeline. The default is `False`.
     **kwargs : dict, optional
-        Additional keyword arguments for TrailFinder.
+        Additional keyword arguments for `TrailFinder`.
 
     Raises
     ------
     ValueError
-        Image is subarray, image extension not recognized/specified, or
-        image type not recognized.
+        Image is subarray, or unrecognized image extension or type.
 
-        '''
-
+    '''
     def __init__(self,
                  image_file,
                  extension=None,
@@ -1192,8 +1209,6 @@ class WfcWrapper(TrailFinder):
                  preprocess=True,
                  execute=False,
                  **kwargs):
-
-        TrailFinder.__init__(self, **kwargs)
         self.image_file = image_file
         self.extension = extension
         self.binsize = binsize
@@ -1202,64 +1217,61 @@ class WfcWrapper(TrailFinder):
         self.execute = execute
 
         # open image
-        h = fits.open(self.image_file)
+        with fits.open(self.image_file) as h:
 
-        # check that image id not subarray
-        if h[0].header['SUBARRAY'] is True:
-            raise ValueError('This program does not yet work on subarrays')
+            # check that image ID not subarray
+            if h[0].header['SUBARRAY'] is True:
+                raise ValueError('This program does not yet work on subarrays')
 
-        # get suffix to determine how to process image
-        suffix = (self.image_file.split('.')[0]).split('_')[-1]
-        self.image_type = suffix
-        LOG.info('image type is {}'.format(self.image_type))
+            # get suffix to determine how to process image
+            suffix = (self.image_file.split('.')[0]).split('_')[-1].lower()
+            self.image_type = suffix
+            LOG.info('image type is {}'.format(self.image_type))
 
-        if suffix in ['flc', 'flt']:
-            if extension is None:
-                raise ValueError('flc/flt files must have extension specified')
-            elif extension not in [1, 4]:
-                raise ValueError('Valid Extensions are 1 or 4 for flc/flt \
-                                 images')
+            if suffix in ('flc', 'flt'):
+                if extension is None:
+                    raise ValueError('FLC/FLT files must have extension specified')
+                elif extension not in (1, 4):
+                    raise ValueError('Valid extensions are 1 or 4 for FLC/FLT images'
+                                     f'but got: {extension}')
 
-            self.image = h[extension].data  # main image
-            self.image_mask = h[extension+2].data  # dq array
+                image = h[extension].data  # main image
+                self.image_mask = h[extension + 2].data  # DQ array
 
-        elif suffix in ['drc', 'drz']:
-            extension = 1
-            self.image = h[extension].data  # main image
-            self.image_mask = h[extension+1].data  # weight array
+            elif suffix in ('drc', 'drz'):
+                extension = 1
+                image = h[extension].data  # main image
+                self.image_mask = h[extension + 1].data  # weight array
 
-        else:
-            raise ValueError('Image type not recognized')
+            else:
+                raise ValueError(f'Image type not recognized: {suffix}')
+
+        super().__init__(image, **kwargs)
 
         # go ahead and run the proprocessing steps if set to True
-        if preprocess is True:
+        if preprocess:
             self.run_preprocess()
 
-        # run the whole pipeline if set to true
-        if execute is True:
+        # run the whole pipeline if set to True
+        if execute:
             LOG.info('Running the trailfinding pipeline')
             self.run_all()
-
+# UNTIL HERE
     def mask_bad_pixels(self, ignore_flags=None):
         '''
-        Masks bad pixels
+        Masks bad pixels.
 
-        Bad pixels are replacing with nan. This code the bitmask arrays
-        for flc/flt images, and weight arrays for drc/drz images
+        Bad pixels are replacing with NaN. This uses the bitmask arrays
+        for FLC/FLT images, and weight arrays for DRC/DRZ images.
 
         Parameters
         ----------
         ignore_flags : list, optional
             List of DQ bitmasks to ignore when masking. Only relevant for
-            flc/flt files. The default is None, which defers to self attribute
+            FLC/FLT files. The default is `None`, which defers to self attribute
             of the same name.
 
-        Returns
-        -------
-        None.
-
         '''
-
         # check inputs, update class attributes as needed
         if ignore_flags is None:
             ignore_flags = self.ignore_flags
@@ -1268,29 +1280,20 @@ class WfcWrapper(TrailFinder):
 
         LOG.info('masking bad pixels')
 
-        if self.image_type in ['flc', 'flt']:
-
-            # for flc/flt, use dq array
+        if self.image_type in ('flc', 'flt'):
+            # for FLC/FLT, use DQ array
             mask = bitmask.bitfield_to_boolean_mask(self.image_mask,
                                                     ignore_flags=ignore_flags)
             self.image[mask] = np.nan
 
-        elif self.image_type in ['drz', 'drc']:
-
-            # for drz/drc, mask everything with weight=0
-            mask = self.image_mask == 0
-            self.image[mask] = np.nan
+        elif self.image_type in ('drz', 'drc'):
+            # for DRZ/DRC, mask everything with weight=0
+            self.image[self.image_mask == 0] = np.nan
 
     def subtract_background(self):
         '''
         Subtracts a median background from the image, ignoring NaNs.
-
-        Returns
-        -------
-        None.
-
         '''
-
         LOG.info('Subtracting median background')
 
         # setting a warning filter for the nanmedian calculations. These
@@ -1312,12 +1315,7 @@ class WfcWrapper(TrailFinder):
             Bin size. The default is None, which defers to the self attribute
             of the same name.
 
-        Returns
-        -------
-        None.
-
         '''
-
         # check onputs, update class attributes as needed
         if binsize is None:
             binsize = self.binsize
@@ -1344,14 +1342,9 @@ class WfcWrapper(TrailFinder):
         Parameters
         ----------
         **kwargs : dict, optional
-            Additional keyword arguments for rebin and mask_bad_pixels.
-
-        Returns
-        -------
-        None.
+            Additional keyword arguments for :meth:`rebin` and :meth:`mask_bad_pixels`.
 
         '''
-
         self.mask_bad_pixels(**kwargs)
         self.subtract_background()
         self.rebin(**kwargs)
@@ -1362,22 +1355,17 @@ class WfcWrapper(TrailFinder):
 
         .. note::
 
-            * This routine only works on flc/flt images.
+            This routine only works on FLC/FLT images.
 
         Parameters
         ----------
         **kwargs : dict, optional
             Additional keyword arguments for
-            acstools.utils_findsat_mrt.update_dq.
-
-        Returns
-        -------
-        None.
+            :func:`acstools.utils_findsat_mrt.update_dq`.
 
         '''
-
-        if self.image_type not in ['flc', 'flt']:
-            raise ValueError('DQ array can only be updated for flc/flt images')
+        if self.image_type not in ('flc', 'flt'):
+            raise ValueError('DQ array can only be updated for FLC/FLT images')
 
         update_dq(self.image_file, self.extension, self.mask,
                   dqval=16384, verbose=True)
