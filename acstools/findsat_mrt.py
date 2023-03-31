@@ -379,8 +379,9 @@ class TrailFinder:
     @kernels.setter
     def kernels(self, value):
         if value is None:
-            self._kernels = [get_pkg_data_filename(f'rt_line_kernel_width{k}.fits'
-                             for k in (15, 7, 3))]
+            self._kernels = [
+                get_pkg_data_filename(os.path.join('data', f'rt_line_kernel_width{k}.fits'))
+                for k in (15, 7, 3)]
         else:
             user_files = [v for v in value if os.path.isfile(v)]
             if len(user_files) < 1:
@@ -857,7 +858,7 @@ class TrailFinder:
                  'Max Width: {}\n'
                  'Min Length: {}\n'
                  'Check persistence: {}'.format(
-                     self.threshold, self.maxwidth, self.min_length, self.check_persistence))
+                     self.threshold, self.max_width, self.min_length, self.check_persistence))
 
         if self.check_persistence is True:
             LOG.info('Min persistence: {}'.format(self.min_persistence))
@@ -865,7 +866,7 @@ class TrailFinder:
         # run filtering routine
         properties = filter_sources(self.image,
                                     self.source_list['endpoints'],
-                                    max_width=self.maxwidth,
+                                    max_width=self.max_width,
                                     buffer=self.buffer,
                                     plot_streak=plot_streak,
                                     min_length=self.min_length,
@@ -878,7 +879,7 @@ class TrailFinder:
 
         # optionally trim the catalog of all rejected sources
         if trim_catalog:
-            sel = ((self.source_list['width'] < self.maxwidth) &
+            sel = ((self.source_list['width'] < self.max_width) &
                    (self.source_list['snr'] > self.threshold))
             self.source_list = self.source_list[sel]
 

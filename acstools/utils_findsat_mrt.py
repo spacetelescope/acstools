@@ -452,7 +452,10 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
 
         # make 1D profile of trail (looking down its axis) by taking a median
         # of all pixels in each row
-        medarr = np.nanmedian(subregion, axis=1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            medarr = np.nanmedian(subregion, axis=1)
 
         # get number of pixels being considered at each point; remove those
         # that are too small such that median unreliable
@@ -775,7 +778,10 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         ind0 = ii * dx
         ind1 = (ii + 1) * dx
 
-        chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore',
+                                    message='All-NaN slice encountered')
+            chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
 
         if plot_streak and (plt is not None):
             fig, ax = plt.subplots()
