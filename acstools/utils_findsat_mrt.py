@@ -667,10 +667,10 @@ def streak_endpoints(rho, theta, sz, plot=False):
     if (plot is True) & (plt is not None):
         fig, ax = plt.subplots(figsize=(10, 10))
 
-        ax.plot([0, sz[0]-1], [sz/2-0.5,
-                               sz/2-0.5], '--',
+        ax.plot([0, sz[1]-1], [sz[0]/2-0.5,
+                               sz[0]/2-0.5], '--',
                 color='gray')
-        ax.plot([sz/2-0.5, sz/2-0.5],
+        ax.plot([sz[1]/2-0.5, sz[1]/2-0.5],
                 [0, sz[0]-1], '--', color='gray')
 
         ax.plot([x0, x0+dx], [y0, y0+dy], color='red')
@@ -702,7 +702,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
     # update this is the slope is infinity
     if np.isfinite(slope_int) is False:
         yi = 0
-        yf = sz[1]-1
+        yf = sz[0]-1
         xi = x0+rho
         xf = x0+rho
 
@@ -1375,3 +1375,9 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     if outfile is not None:
         fits.writeto(outfile, cutout.data, overwrite=True)
     return cutout.data
+
+
+if __name__ == "__main__":
+    x=streak_endpoints(50, 0, (100,200), plot=True)
+
+    
