@@ -671,11 +671,20 @@ def streak_endpoints(rho, theta, sz, plot=False):
     # special values if the slope is infinity (when streak fully verticle)
     if ~np.isfinite(slope_int):
         no_slope = True
+        zero_slope = False
         yi = 0
         yf = sz0_m1
         xi = xf = x0 + rho
+    # special values if the slope is close to exactly zero (streak fully horizontal)
+    elif np.abs(slope_int) < 1e-10:
+        zero_slope = True
+        no_slope = False
+        yi = yf = y0 + rho
+        xi = 0
+        xf = sz1_m1
     else:
         no_slope = False
+        zero_slope = False
         b_int = y1 - slope_int * x1
 
         # get coordinates of streak. Start with x = 0 and max value
@@ -710,6 +719,9 @@ def streak_endpoints(rho, theta, sz, plot=False):
         if no_slope:
             xarr = [xi, xi]
             yarr = [0, sz0_m1]
+        elif zero_slope:
+            xarr = [xi, xf]
+            yarr = [yi, yf]
         else:
             xarr = np.array([0, sz1_m1])
             yarr = slope_int * xarr + b_int
