@@ -92,7 +92,7 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
     if n_tbls == 0:
         return
     elif n_tbls == 1:
-        return n_tbls[0]
+        return tbls[0]
 
     src = tbls[0]
     for t in tbls[1:]:
@@ -1039,7 +1039,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         at the pixel index ``radon_image.shape[0] // 2`` along the 0th
         dimension of ``radon_image``.
     length: ndarray, optional
-        Length of data array. This is only returned if ``return_length`` is `True`.
+        Length of data array. This is only returned if ``return_length`` is
+        `True`.
 
     Raises
     ------
