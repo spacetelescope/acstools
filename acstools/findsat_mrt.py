@@ -617,13 +617,13 @@ class TrailFinder:
                           aspect='auto')
 
         # write to file if interactive is off and plottin is on
-        if ~self._interactive:
+        if self.plot and ~self._interactive:
             file_name = os.path.join(self.output_dir, self.root + '_image')
             if overlay_mask:
                 file_name = file_name + '_mask'
             plt.savefig(file_name + '.png')
 
-    def plot_mrt(self, ax=None, scale=(-1, 5), show_sources=False):
+    def plot_mrt(self, ax=None, scale=(0, 10), show_sources=False):
         '''
         Plot the MRT.
 
@@ -679,12 +679,13 @@ class TrailFinder:
             ax.legend(loc='upper center')
 
         # send plot to file if interactive is off
-        if ~self._interactive:
+        if self.plot and ~self._interactive:
             file_name = os.path.join(self.output_dir, self.root + '_mrt')
             if show_sources:
                 file_name = file_name + '_sources'
             file_name = file_name + '.png'
             plt.savefig(file_name)
+            LOG.info('Saving MRT to '+file_name)
 
         return ax
 
@@ -721,7 +722,7 @@ class TrailFinder:
         ax.set_xlabel('angle(theta) pixel')
         ax.set_ylabel('offset(rho) pixel')
 
-        if ~self._interactive:
+        if self.plot and ~self._interactive:
             file_name = os.path.join(self.output_dir, self.root + '_mrt_snr.png')
             plt.savefig(file_name)
 
@@ -769,12 +770,16 @@ class TrailFinder:
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
-            try:
-                tbl = s.find_stars(snrmap, mask=snrmap_mask)
-            except Exception as e:
-                tbl = None
-                LOG.info('no sources found using kernel: {}'.format(repr(e)))
-            else:  # append to big table of sources
+            
+            tbl = s.find_stars(snrmap, mask=snrmap_mask)
+            if tbl is None:
+                nsources = 0
+            else:
+                nsources = len(tbl)
+            
+            LOG.info('{{no}} sources found using kernel: {}'.format(nsources))
+
+            if nsources > 0:
                 tbl = tbl[np.isfinite(tbl['xcentroid'])]
                 LOG.info('{} sources found using kernel'.format(len(tbl)))
                 if (len(tbls) > 0):
@@ -783,6 +788,20 @@ class TrailFinder:
                         # adding max ID number from last iteration to avoid
                         # duplicate ids
                 tbls.append(tbl)
+            # try:
+            #     tbl = s.find_stars(snrmap, mask=snrmap_mask)
+            # except Exception as e:
+            #     tbl = None
+            #     LOG.info('no sources found using kernel: {}'.format(repr(e)))
+            # else:  # append to big table of sources
+            #     tbl = tbl[np.isfinite(tbl['xcentroid'])]
+            #     LOG.info('{} sources found using kernel'.format(len(tbl)))
+            #     if (len(tbls) > 0):
+            #         if len(tbls[-1]['id']) > 0:
+            #             tbl['id'] += np.max(tbls[-1]['id'])
+            #             # adding max ID number from last iteration to avoid
+            #             # duplicate ids
+            #     tbls.append(tbl)
 
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
@@ -850,7 +869,7 @@ class TrailFinder:
             return
 
         # check inputs, update class attributes as needed
-        if ~self._interactive:
+        if self.plot and ~self._interactive:
             plot_streak = False
 
         LOG.info('Filtering sources...\n'
@@ -944,10 +963,11 @@ class TrailFinder:
         ax.imshow(self.mask, origin='lower', aspect='auto')
         ax.set_title('Mask')
 
-        # send mask to file if interactive off
-        if ~self._interactive:
+        # send mask to file if interactive off and plotting enabled
+        if self.plot and ~self._interactive:
             file_name = os.path.join(self.output_dir, self.root + '_mask.png')
             plt.savefig(file_name)
+            LOG.info('Saving mask to '+file_name)
 
         return ax
 
@@ -974,8 +994,8 @@ class TrailFinder:
             data[self.segment == uv] = counter
             counter += 1
 
-        data_min = np.min(data)
-        data_max = np.max(data)
+        data_min = np.min(data).astype(int)
+        data_max = np.max(data).astype(int)
         fig, ax = plt.subplots()
 
         # update the colormap to match the segmentation IDs
@@ -991,9 +1011,11 @@ class TrailFinder:
         ax.set_title('Segmentation Mask')
 
         # send to file if not interactive
-        if ~self._interactive:
+        if self.plot and ~self._interactive:
             file_name = os.path.join(self.output_dir, self.root + '_segment.png')
             plt.savefig(file_name)
+            LOG.info('Saving segmentation map to '+file_name)
+
 
         return ax
 
@@ -1018,8 +1040,8 @@ class TrailFinder:
         if self.save_mrt:
             if self.mrt is not None:
                 mrt_filename = os.path.join(self.output_dir, f'{self.root}_mrt.fits')
-                LOG.info('writing MRT to {}'.format(mrt_filename))
                 fits.writeto(mrt_filename, self.mrt, overwrite=True)
+                LOG.info('Wrote MRT to {}'.format(mrt_filename))
             else:
                 LOG.error('No MRT to save')
 
@@ -1034,13 +1056,12 @@ class TrailFinder:
                 hdul = fits.HDUList([hdu0, hdu1, hdu2])
                 mask_filename = os.path.join(self.output_dir, f'{self.root}_mask.fits')
                 hdul.writeto(mask_filename, overwrite=True)
-                LOG.info('writing mask to {}'.format(mask_filename))
+                LOG.info('Wrote mask to {}'.format(mask_filename))
             else:
                 LOG.error('No mask to save')
 
         # save the diagnostic plot
         if self.save_diagnostic and (plt is not None):
-            LOG.info('writing diagnostic plot')
 
             fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(20, 10))
             self.plot_image(ax=ax1)
@@ -1067,14 +1088,15 @@ class TrailFinder:
             ax3.set_xlim(ax3_xlim)
             ax3.set_ylim(ax3_ylim)
             plt.tight_layout()
-            plt.savefig(os.path.join(self.output_dir, f'{self.root}_diagnostic.png'))
+            diagnostic_filename = os.path.join(self.output_dir, f'{self.root}_diagnostic.png')
+            plt.savefig(diagnostic_filename)
+            LOG.info('Wrote diagnostic plot to {}'.format(diagnostic_filename))
             if close_plot:
                 plt.close()
 
         # save the catalog of trails
         if self.save_catalog:
             cat_filename = os.path.join(self.output_dir, f'{self.root}_catalog.fits')
-            LOG.info(f'writing catalog {cat_filename}')
             if self.source_list is not None:
                 # there's some meta data called "version" that cannot be added
                 # to the fits header (and it is not useful). It always throws
