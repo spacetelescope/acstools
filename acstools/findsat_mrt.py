@@ -172,14 +172,17 @@ class TrailFinder:
     plot : bool, optional
         Plot all intermediate steps. When set, plots of the input image, MRT
         with identified sources, and resulting image maks will be generated
-        after running :func:`acstools.findat_mrt.__init__`:,
-        :func:`acstools.findsat_mrt.run_mrt`:,
-        :func:`acstools.findsat_mrt.find_mrt_sources`:,
-        :func:`acstools.findsat_mrt.filtre_sources`:,
-        and :func:`acstools.findsat_mrt.make_mask`:. Users may also generate
-        these plots manually by calling :func:`acstools.findsat_mrt.plot_image`:,
-        :func:`acstools.findsat_mrt.plot_mrt`:, :func:`acstools.findsat_mrt.plot_mask`:,
-        and :func:`acstools.findsat_mrt.plot_segment`:. The default is `False`. 
+        after running :func:`acstools.findat_mrt.TrailFinder.__init__`:,
+        :func:`acstools.findsat_mrt.TrailFinder.run_mrt`:,
+        :func:`acstools.findsat_mrt.TrailFinder.find_mrt_sources`:,
+        :func:`acstools.findsat_mrt.TrailFinder.filter_sources`:,
+        and :func:`acstools.findsat_mrt.TrailFinder.make_mask`:. Users may also
+        generate these plots manually by calling 
+        :func:`acstools.findsat_mrt.TrailFinder.plot_image`:,
+        :func:`acstools.findsat_mrt.TrailFinder.plot_mrt`:,
+        :func:`acstools.findsat_mrt.TrailFinder.plot_mask`:, and
+        :func:`acstools.findsat_mrt.TrailFinder.plot_segment`:. The default is
+        `False`. 
     output_dir : str, optional
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.output_dir`.
         The default is ``'.'`` (current directory).
