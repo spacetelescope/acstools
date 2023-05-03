@@ -1293,7 +1293,7 @@ class WfcWrapper(TrailFinder):
 
     @property
     def ignore_flags(self):
-        """DQ flags that lead to a pixel being ignored when masking.
+        """DQ flags that are ignored when flagging bad pixels.
         Only relevant for FLT/FLC files.
         """
         return self._ignore_flags

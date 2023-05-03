@@ -833,7 +833,9 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
     # save the persistence score
     pscore = np.sum(persist) / len(persist)
 
-    LOG.info('persistance: {}'.format(pscore))
+    LOG.info('Number of sections analyzed: {}\n'
+             'Number of sections that passed: {}\n'
+             'persistance score: {}'.format(len(persist),np.sum(persist),pscore))
 
     return pscore
 
