@@ -170,9 +170,16 @@ class TrailFinder:
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.mask_include_status`.
         The default is ``[2]``.
     plot : bool, optional
-        Plot all intermediate steps. The default is `False`. Note that setting
-        this option can generate A LOT of plots. It is primarily for debugging
-        purposes.
+        Plot all intermediate steps. When set, plots of the input image, MRT
+        with identified sources, and resulting image maks will be generated
+        after running :func:`acstools.findat_mrt.__init__`:,
+        :func:`acstools.findsat_mrt.run_mrt`:,
+        :func:`acstools.findsat_mrt.find_mrt_sources`:,
+        :func:`acstools.findsat_mrt.filtre_sources`:,
+        and :func:`acstools.findsat_mrt.make_mask`:. Users may also generate
+        these plots manually by calling :func:`acstools.findsat_mrt.plot_image`:,
+        :func:`acstools.findsat_mrt.plot_mrt`:, :func:`acstools.findsat_mrt.plot_mask`:,
+        and :func:`acstools.findsat_mrt.plot_segment`:. The default is `False`. 
     output_dir : str, optional
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.output_dir`.
         The default is ``'.'`` (current directory).
@@ -515,15 +522,10 @@ class TrailFinder:
             raise ValueError(f"save_mask must be bool but got: {value}")
         self._save_mask = value
 
-    def run_mrt(self, plot=False):
+    def run_mrt(self):
         '''
         Run the median radon transform on the input image.
         This uses `theta` and `processes` for calculations, so update them first, if needed.
-
-        Parameters
-        ----------
-        plot : bool, optional
-            Flag to plot the resulting MRT. The default is `False`.
 
         '''
         # run MRT
@@ -565,7 +567,7 @@ class TrailFinder:
         self.rho = np.arange(rt.shape[0]) - rho0
 
         # plot if set
-        if plot and (plt is not None):
+        if self.plot and (plt is not None):
             self.plot_mrt()
 
     def plot_image(self, ax=None, scale=(-1, 5), overlay_mask=False):
@@ -728,15 +730,10 @@ class TrailFinder:
 
         return snr
 
-    def find_mrt_sources(self, plot=False):
+    def find_mrt_sources(self):
         '''
         Finds sources in the MRT consistent with satellite trails/streaks.
         This uses `kernels` and `threshold` for calculations, so update them first, if needed.
-
-        Parameters
-        ----------
-        plot : bool, optional
-            Flag to plot the MRT and overlay the sources found. The default is `False`.
 
         Returns
         -------
@@ -831,14 +828,14 @@ class TrailFinder:
             # print the total number of sources found
             LOG.info('{} final sources found'.format(len(self.source_list)))
             # plot sources if set
-            if plot and (plt is not None):
+            if self.plot and (plt is not None):
                 self.plot_mrt(show_sources=True)
         else:
             LOG.warning('No sources found')
 
         return self.source_list
 
-    def filter_sources(self, trim_catalog=False, plot=False, plot_streak=False):
+    def filter_sources(self, trim_catalog=False, plot_streak=False):
         '''
         Filters catalog of trails based on SNR, width, and persistence.
         This uses `threshold`, `max_width`, `min_length`, `buffer`,
@@ -850,9 +847,6 @@ class TrailFinder:
         trim_catalog : bool, optional
             Flag to remove all filtered trails from the source catalog. The
             default is `False`.
-        plot : bool, optional
-            Set to plot the MRT with the resulting filtered sources overlaid.
-            The default is `False`.
         plot_streak : bool, optional
             Set to plot diagnostics for each trail. Only works in interactive
             mode. Warning: this can generate a lot of plots depending on how
@@ -868,7 +862,7 @@ class TrailFinder:
         if self.source_list is None:  # Nothing to do.
             return
 
-        # check inputs, update class attributes as needed
+        # check inputs
         if self.plot and ~self._interactive:
             plot_streak = False
 
@@ -903,12 +897,12 @@ class TrailFinder:
             self.source_list = self.source_list[sel]
 
         # plot if triggered
-        if plot and (plt is not None):
+        if self.plot and (plt is not None):
             self.plot_mrt(show_sources=True)
 
         return self.source_list
 
-    def make_mask(self, plot=False):
+    def make_mask(self):
         '''
         Makes a satellite trail mask (bool) and a segmentation map.
         This uses `mask_include_status`, so update it first, if needed.
@@ -917,12 +911,6 @@ class TrailFinder:
         trail have values equal to the trail ID number.
 
         This updates ``self.segment`` and ``self.mask``.
-
-        Parameters
-        ----------
-        plot : bool, optional
-            Set to generate a plot images of the mask and segmentation image.
-            Default is `False`.
 
         '''
         # crate the mask/segmentation
@@ -940,7 +928,7 @@ class TrailFinder:
         self.mask = mask
 
         # plot if triggered
-        if plot and (plt is not None):
+        if self.plot and (plt is not None):
             self.plot_mask()
             self.plot_segment()
 
@@ -1165,7 +1153,7 @@ class TrailFinder:
 
         self.source_list = self.source_list[~remove]
 
-    def run_all(self, trim_catalog=False, plot=False, plot_streak=False, close_plot=True):
+    def run_all(self, trim_catalog=False, plot_streak=False, close_plot=True):
         '''
         Run the entire pipeline to identify, filter, and mask trails.
         This calls the following methods in the given order:
@@ -1180,10 +1168,10 @@ class TrailFinder:
         keyword options.
 
         '''
-        self.run_mrt(plot=plot)
-        self.find_mrt_sources(plot=plot)
-        self.filter_sources(trim_catalog=trim_catalog, plot=plot, plot_streak=plot_streak)
-        self.make_mask(plot=plot)
+        self.run_mrt()
+        self.find_mrt_sources()
+        self.filter_sources(trim_catalog=trim_catalog, plot_streak=plot_streak)
+        self.make_mask()
         self.save_output(close_plot=close_plot)
 
 
