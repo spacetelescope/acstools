@@ -232,8 +232,8 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     else:
         # if not fitting, subtract median using outer 50% of data
         ind = int(len(yarr) / 4)  # use to select outer quarter of data
-        # baseline level using outer 50% of channels
-        yarr_bkg = np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])  # estimate
+        # estimate baseline level using outer 50% of channels
+        yarr_bkg = np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])
 
     yarr = yarr - yarr_bkg
 
@@ -420,7 +420,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         * trail persistence
         * trail status (see :attr:`acstools.utils_findsat_mrt.TrailFinder.mask_include_status`)
 
-    '''
+    '''  # noqa
     # we'll save the newly measured parameters in the following arrays
     n_streaks = len(streak_positions)
     widths = np.zeros(n_streaks)
@@ -433,7 +433,8 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
     for ii, p in enumerate(streak_positions):
 
         # rotating so trail is horizontal
-        rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image, p)
+        rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image,
+                                                                         p)
 
         # update ry1/2 to include buffer region
         ry1_new = np.min([ry1, ry2]) - buffer
@@ -519,7 +520,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
                     dx = np.floor(subregion.shape[1] / nchunk)
 
                 LOG.info('breaking into {} sections for persistence check\n'
-                         'Section size for persistence check: {}'.format(nchunk, dx))
+                         'Section size for persistence check: {}'.format(nchunk, dx))  # noqa
 
                 persistence[ii] = streak_persistence(subregion, int(dx),
                                                      g.mean.value,
@@ -568,14 +569,16 @@ def create_mask(image, trail_id, endpoints, widths):
     for t, e, w in zip(trail_id, endpoints, widths):
 
         # rotate so trail is horizontal
-        rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image, e)
+        rotated, [[rx1, ry1], [rx2, ry2]], theta = rotate_image_to_trail(image,
+                                                                         e)
 
         # create submask using known width
-        ry = (ry1 + ry2) / 2.  # take average, although they should be about the same
+        ry = (ry1 + ry2) / 2.  # take avg, although they should be ~the same
         # max function used to ensure it stays within bounds
         mask_y1 = np.maximum(0, np.floor(ry - w / 2)).astype(int)
         # min function used to ensure it stays within bounds
-        mask_y2 = np.minimum(rotated.shape[0] - 1, np.ceil(ry + w / 2)).astype(int)
+        mask_y2 = np.minimum(rotated.shape[0] - 1,
+                             np.ceil(ry + w / 2)).astype(int)
 
         mask_x1 = np.maximum(0, np.floor(rx1)).astype(int)
         mask_x2 = np.minimum(rotated.shape[1] - 1, np.ceil(rx2)).astype(int)
@@ -612,8 +615,9 @@ def rotate(origin, point, angle):
     origin : tuple of float
         ``(x, y)`` coordinates of the origin about which rotation is centered.
     point : tuple, float
-        ``(x, y)`` coordinates (in the unrotated reference frame) of the point whose
-        new coordinates (in the rotated reference frame) will be calculated.
+        ``(x, y)`` coordinates (in the unrotated reference frame) of the point
+        whose new coordinates (in the rotated reference frame) will be
+        calculated.
     angle : float
         Angle of rotation in radians.
 
@@ -644,13 +648,14 @@ def streak_endpoints(rho, theta, sz, plot=False):
     theta : float
         Angle coordinate in degrees.
     sz : tuple of int
-        Size of image in ``(ny, nx)``. Streak endpoints will be truncated at the images edges.
+        Size of image in ``(ny, nx)``. Streak endpoints will be truncated at
+        the images edges.
 
     Returns
     -------
     pos : array
-        Array with form ``[p0, p1]`` where each ``p`` is ``(x, y)``, the x and y
-        coordinates of each end.
+        Array with form ``[p0, p1]`` where each ``p`` is ``(x, y)``, the x and
+        y coordinates of each end.
 
     '''
     x0 = sz[1] / 2 - 0.5
@@ -679,7 +684,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
         yi = 0
         yf = sz0_m1
         xi = xf = x0 + rho
-    # special values if the slope is close to exactly zero (streak fully horizontal)
+    # special values if the slope is close to zero (streak horizontal)
     elif np.abs(slope_int) < 1e-10:
         zero_slope = True
         no_slope = False
@@ -749,8 +754,8 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
     ----------
     cutout : ndarray
         Cutout of the trail. This should be the same cutout generated in
-        :func:`filter_sources` so that the trail is aligned horizontally across the
-        cutout.
+        :func:`filter_sources` so that the trail is aligned horizontally across
+        the cutout.
     dx : int
         Size of each chunk to be analyzed.
     streak_y0 : float
@@ -812,7 +817,8 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         if ax:
             ax.set_title(f'{ii}-snr={snr},width={width},mean={g.mean.value}')
 
-        LOG.info('Chunk SNR, width, mean: {}, {}, {}'.format(snr, width, g.mean.value))
+        LOG.info('Chunk SNR, width, mean: {}, {}, {}'.format(snr, width,
+                                                             g.mean.value))
         snr_arr.append(snr)
         width_arr.append(width)
         mean_arr.append(g.mean.value)
@@ -821,7 +827,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         success = (snr > 3) & np.isfinite(snr)
         if ii > 0:
             jj = ii - 1
-            success = success & (np.abs(mean_arr[ii] - mean_arr[jj]) < width_arr[jj])
+            success = success & (np.abs(mean_arr[ii] - mean_arr[jj]) < width_arr[jj])  # noqa
             if max_width is not None:
                 success = success & (width <= max_width)
         if success:
@@ -839,7 +845,8 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 
     LOG.info('Number of sections analyzed: {}\n'
              'Number of sections that passed: {}\n'
-             'persistance score: {}'.format(len(persist), np.sum(persist), pscore))
+             'persistance score: {}'.format(len(persist), np.sum(persist),
+                                            pscore))
 
     return pscore
 
@@ -863,8 +870,8 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
     theta : float or `None`, optional
         Trail angle in degrees with respect to x-axis. The default is `None`.
     endpoints : array of tuples or `None`, optional
-        Endpoints of the trail. Format is ``[(x0, y0), (x1, y1)]``. The default is
-        `None`.
+        Endpoints of the trail. Format is ``[(x0, y0), (x1, y1)]``. The default
+        is `None`.
     psf_sigma : float or `None`, optional
         Sigma of Gaussian model PSF to be convolved with trail image. The
         default is `None`, in which case no convolution is performed.
@@ -881,10 +888,12 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
             endpoints = streak_endpoints(rho, theta, image.shape)
             LOG.info('calculated endpoints: {}'.format(endpoints))
         else:
-            LOG.error('Both rho and theta must be set but got rho={} and theta={}'.format(rho, theta))
+            LOG.error('Both rho and theta must be set but got rho={} and '
+                      'theta={}'.format(rho, theta))
             return image
     elif (rho is not None) or (theta is not None):
-        LOG.warning('rho/theta and endpoints set, defaulting to using endpoints')
+        LOG.warning('rho/theta and endpoints set, defaulting to using '
+                    'endpoints')
 
     # rotate image so trail horizontal
     rotated, newendpoints, rot_theta = rotate_image_to_trail(image, endpoints)
@@ -1071,9 +1080,9 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     total_warp_time = 0.
 
     if median is True:
-        LOG.info('Calculating median Radon Transform with {} processes'.format(processes))
+        LOG.info('Calculating median Radon Transform with {} processes'.format(processes))  # noqa
     else:
-        LOG.info('Calculating standard Radon Transform with {} processes'.format(processes))
+        LOG.info('Calculating standard Radon Transform with {} processes'.format(processes))  # noqa
     if image.ndim != 2:
         raise ValueError('The input image must be 2-D')
     if theta is None:
@@ -1085,7 +1094,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         shape_min = min(image.shape)
         radius = shape_min // 2
         img_shape = np.array(image.shape)
-        coords = np.array(np.ogrid[:image.shape[0], :image.shape[1]], dtype=object)
+        coords = np.array(np.ogrid[:image.shape[0], :image.shape[1]],
+                          dtype=object)
         dist = ((coords - img_shape // 2) ** 2).sum(0)
         outside_reconstruction_circle = dist > radius ** 2
         if np.any(image[outside_reconstruction_circle]):
@@ -1135,8 +1145,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
             lengths[:, i] = np.sum(np.isfinite(rotated), axis=0)
 
     else:
-        # splitting calculation up among many processes to speed up. Each thread
-        # rotates and sums/medians at a specific angle
+        # splitting calculation up among many processes to speed up. Each
+        # thread rotates and sums/medians at a specific angle
         p = Pool(processes)
         angles = np.deg2rad(theta)
         images = [padded_image for i in range(len(angles))]
@@ -1158,8 +1168,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         p.close()
 
     if print_calc_times:
-        LOG.info('Total time to warp images = {} seconds'.format(total_warp_time))
-        LOG.info('Total time to calculate medians = {} seconds'.format(total_median_time))
+        LOG.info('Total time to warp images = {} seconds'.format(total_warp_time))  # noqa
+        LOG.info('Total time to calculate medians = {} seconds'.format(total_median_time))  # noqa
 
     if return_length is True:
         return radon_image, lengths
@@ -1351,7 +1361,8 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         new_theta_grid, new_rho_grid = np.meshgrid(new_theta_arr, new_rho_arr)
 
         # inteprolate onto new grid
-        f = interpolate.interp2d(theta_grid, rho_grid, cutout.data, kind='cubic')
+        f = interpolate.interp2d(theta_grid, rho_grid, cutout.data,
+                                 kind='cubic')
         cutout = f(new_theta_arr, new_rho_arr)  # overwrite old cutout
 
     if ax:

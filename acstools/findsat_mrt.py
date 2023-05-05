@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This module identifies satellite trails in ACS/WFC imaging with the Median Radon Transform (MRT).
+This module identifies satellite trails in ACS/WFC imaging with the Median
+Radon Transform (MRT).
 
-It contains a class called `~acstools.findsat_mrt.TrailFinder` that is used to identify
-satellite trails and/or other linear features in astronomical image data. To
-accomplish this goal, the MRT is calculated for an
-image. Point sources are then extracted from the MRT and filtered to yield a
-final catalog of trails, which can then be used to create a mask.
+It contains a class called `~acstools.findsat_mrt.TrailFinder` that is used to
+identify satellite trails and/or other linear features in astronomical image
+data. To accomplish this goal, the MRT is calculated for an image. Point
+sources are then extracted from the MRT and filtered to yield a final catalog
+of trails, which can then be used to create a mask.
 
 A second class called `~acstools.findsat_mrt.WfcWrapper` is designed explicitly
 to make ACS/WFC data easy to process.
@@ -15,8 +16,8 @@ to make ACS/WFC data easy to process.
 This algorithm is found to be roughly 10x more sensitive compared to the
 current satellite trail finding code included with acstools, :ref:`satdet`.
 However, this approach can struggle with dense fields, while the performance
-of :ref:`satdet` in these fields may be more reliable (but this has not yet been
-tested).
+of :ref:`satdet` in these fields may be more reliable (but this has not yet
+been tested).
 
 For further details on this algorithm and tests of its performance, see the
 `ISR ACS 2022-8 <https://ui.adsabs.harvard.edu/abs/2022acs..rept....8S/abstract>`_.
@@ -24,8 +25,8 @@ For further details on this algorithm and tests of its performance, see the
 Examples
 --------
 
-**Example 1:** Identification of trails in an ACS/WFC image, ``j97006j5q_flc.fits``
-(the second science and DQ extensions).
+**Example 1:** Identification of trails in an ACS/WFC image,
+``j97006j5q_flc.fits`` (the second science and DQ extensions).
 
 To load the data:
 
@@ -37,8 +38,8 @@ To load the data:
 >>>     image = h['SCI', 2].data
 >>>     dq = h['DQ', 2].data
 
-Mask some bad pixels, remove median background, and rebin the data to speed up MRT
-calculation:
+Mask some bad pixels, remove median background, and rebin the data to speed up
+MRT calculation:
 
 >>> from astropy.nddata import bitmask, block_reduce
 >>> mask = bitmask.bitfield_to_boolean_mask(
@@ -72,8 +73,8 @@ the following:
 
 **Example 3:** Run identification/masking using the WFC wrapper.
 
-`~acstools.findsat_mrt.WfcWrapper` can automatically do the binning, background subtraction, and
-bad pixel flagging:
+`~acstools.findsat_mrt.WfcWrapper` can automatically do the binning, background
+subtraction, and bad pixel flagging:
 
 >>> from acstools.findsat_mrt import WfcWrapper
 >>> w = WfcWrapper('jc8m32j5q_flc.fits', preprocess=True, extension=4, binsize=2)
@@ -91,7 +92,7 @@ Or the entire process can be run in a single line with
 >>> w = WfcWrapper('jc8m32j5q_flc.fits', preprocess=True, extension=4, binsize=2,
 ...                execute=True)
 
-"""
+"""  # noqa
 import logging
 import multiprocessing
 import os
@@ -103,8 +104,9 @@ from astropy.nddata import bitmask, block_reduce
 from astropy.table import Table
 from astropy.utils.data import get_pkg_data_filename
 
-from acstools.utils_findsat_mrt import (create_mask, filter_sources, merge_tables,
-                                        radon, streak_endpoints, update_dq)
+from acstools.utils_findsat_mrt import (create_mask, filter_sources,
+                                        merge_tables, radon, streak_endpoints,
+                                        update_dq)
 
 # test for matplotlib, turn off plotting if it does not exist
 try:
@@ -134,10 +136,10 @@ class TrailFinder:
     image : ndarray
         Input image.
     header : `astropy.io.fits.Header`, optional
-        The primary header for the input data (usually the 0th extension). This is not used for
-        anything during the analysis, but it is saved with the output mask
-        and satellite trail catalog so information about the original
-        observation can be easily retrieved. Default is `None`.
+        The primary header for the input data (usually the 0th extension). This
+        is not used for anything during the analysis, but it is saved with the
+        output mask and satellite trail catalog so information about the
+        original observation can be easily retrieved. Default is `None`.
     image_header : `astropy.io.fits.Header`, optional
         The specific header for the FITS extension being used. This is
         added onto the catalog. Default is `None`.
@@ -211,7 +213,7 @@ class TrailFinder:
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_mask`.
         Default is `False`.
 
-    '''
+    '''  # noqa
     def __init__(
             self,
             image,
@@ -286,8 +288,8 @@ class TrailFinder:
 
     @property
     def save_image_header_keys(self):
-        """List of header keys from ``self.image_header`` to save in the output trail
-        catalog header.
+        """List of header keys from ``self.image_header`` to save in the output
+        trail catalog header.
         """
         return self._save_image_header_keys
 
@@ -296,7 +298,7 @@ class TrailFinder:
         if value is None:
             value = []
         elif not isinstance(value, (list, tuple)):
-            raise ValueError(f"save_image_header_keys must be list or tuple but got: {value}")
+            raise ValueError(f"save_image_header_keys must be list or tuple but got: {value}")  # noqa
         else:
             value = np.squeeze(value).tolist()
         self._save_image_header_keys = value
@@ -363,7 +365,7 @@ class TrailFinder:
     @threshold.setter
     def threshold(self, value):
         if value <= 0:
-            raise ValueError(f"SNR threshold must be positive but got: {value}")
+            raise ValueError(f"SNR threshold must be positive but got: {value}")  # noqa
         self._threshold = value
 
     @property
@@ -373,7 +375,8 @@ class TrailFinder:
 
     @theta.setter
     def theta(self, value):
-        # NOTE: Not all assumptions used in find_mrt_sources method are enforced here.
+        # NOTE: Not all assumptions used in find_mrt_sources method are
+        # enforced here.
         if value is None:
             self._theta = np.arange(0, 180, 0.5)
         elif len(value) > 1:
@@ -390,7 +393,7 @@ class TrailFinder:
     def kernels(self, value):
         if value is None:
             self._kernels = [
-                get_pkg_data_filename(os.path.join('data', f'rt_line_kernel_width{k}.fits'))
+                get_pkg_data_filename(os.path.join('data', f'rt_line_kernel_width{k}.fits'))  # noqa
                 for k in (15, 7, 3)]
         else:
             user_files = [v for v in value if os.path.isfile(v)]
@@ -413,7 +416,7 @@ class TrailFinder:
     @mask_include_status.setter
     def mask_include_status(self, value):
         if (not isinstance(value, list)) or (set(value) > {1, 2, 3}):
-            raise ValueError(f"Status list elements must be 1, 2, or 3 but got: {value}")
+            raise ValueError(f"Status list elements must be 1, 2, or 3 but got: {value}")  # noqa
         self._mask_include_status = value
 
     @property
@@ -424,7 +427,7 @@ class TrailFinder:
     @output_dir.setter
     def output_dir(self, value):
         if not os.path.isdir(value):
-            raise ValueError(f"output_dir must be a directory but got: {value}")
+            raise ValueError(f"output_dir must be a directory but got: {value}")  # noqa
         self._output_dir = value
 
     @property
@@ -446,27 +449,27 @@ class TrailFinder:
     @check_persistence.setter
     def check_persistence(self, value):
         if not isinstance(value, bool):
-            raise ValueError(f"check_persistence must be bool but got: {value}")
+            raise ValueError(f"check_persistence must be bool but got: {value}")  # noqa
         self._check_persistence = value
 
     @property
     def min_persistence(self):
-        """Minimum persistence of a "true" satellite trail to be considered robust.
-        Note that this does not reject satellite trails from the output catalog,
-        but highlights them in a different color in the output plot.
+        """Minimum persistence of a "true" satellite trail to be considered
+        robust. Note that this does not reject satellite trails from the output
+        catalog, but highlights them in a different color in the output plot.
         """
         return self._min_persistence
 
     @min_persistence.setter
     def min_persistence(self, value):
         if value < 0 or value > 1:
-            raise ValueError(f"min_persistence must be between 0 and 1 but got: {value}")
+            raise ValueError(f"min_persistence must be between 0 and 1 but got: {value}")  # noqa
         self._min_persistence = value
 
     @property
     def ignore_theta_range(self):
-        """List of ranges in `theta` to ignore when identifying satellite trails.
-        This parameter is most useful for avoiding false positives
+        """List of ranges in `theta` to ignore when identifying satellite
+        trails. This parameter is most useful for avoiding false positives
         due to diffraction spikes that always create streaks around the
         same angle for a given telescope/instrument. Format should be a
         list of tuples, e.g., ``[(theta0_a, theta1_a), (theta0_b, theta1_b)]``.
@@ -494,7 +497,8 @@ class TrailFinder:
 
     @property
     def save_diagnostic(self):
-        """Save a diagnotic plot showing the input image and identified trails to a PNG file."""
+        """Save a diagnotic plot showing the input image and identified trails
+        to a PNG file."""
         return self._save_diagnostic
 
     @save_diagnostic.setter
@@ -528,7 +532,8 @@ class TrailFinder:
     def run_mrt(self):
         '''
         Run the median radon transform on the input image.
-        This uses `theta` and `processes` for calculations, so update them first, if needed.
+        This uses `theta` and `processes` for calculations, so update them
+        first, if needed.
 
         '''
         # run MRT
@@ -552,7 +557,8 @@ class TrailFinder:
             # median
             self._medrt = np.nanmedian(rt)
             # median abs deviation
-            self._madrt = np.nanmedian(np.abs(rt[np.abs(rt) > 0]) - self._medrt)
+            self._madrt = np.nanmedian(np.abs(rt[np.abs(rt) > 0]) -
+                                       self._medrt)
 
             # calculate the approximate uncertainty of the MRT at each point
             self._image_mad = np.nanmedian(np.abs(self.image))
@@ -728,7 +734,8 @@ class TrailFinder:
         ax.set_ylabel('offset(rho) pixel')
 
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root + '_mrt_snr.png')
+            file_name = os.path.join(self.output_dir, self.root +
+                                     '_mrt_snr.png')
             plt.savefig(file_name)
 
         return snr
@@ -736,20 +743,21 @@ class TrailFinder:
     def find_mrt_sources(self):
         '''
         Finds sources in the MRT consistent with satellite trails/streaks.
-        This uses `kernels` and `threshold` for calculations, so update them first, if needed.
+        This uses `kernels` and `threshold` for calculations, so update them
+        first, if needed.
 
         Returns
         -------
         source_list : `~astropy.table.QTable` or `None`
-            Catalog containing information about detected trails, if applicable.
-            This is the same info as ``self.source_list``.
+            Catalog containing information about detected trails, if
+            applicable. This is the same info as ``self.source_list``.
 
         '''
         # test for photutils
         try:
             from photutils.detection import StarFinder
         except ImportError:
-            LOG.error('photutils not installed. Source detection will not work.')
+            LOG.error('photutils not installed. Source detection will not work.')  # noqa
             return
 
         LOG.info('Detection threshold: {}'.format(self.threshold))
@@ -766,7 +774,8 @@ class TrailFinder:
 
                 # detect sources
                 s = StarFinder(self.threshold, kernel, min_separation=20,
-                               exclude_border=False, brightest=None, peakmax=None)
+                               exclude_border=False, brightest=None,
+                               peakmax=None)
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
@@ -788,20 +797,6 @@ class TrailFinder:
                         # adding max ID number from last iteration to avoid
                         # duplicate ids
                 tbls.append(tbl)
-            # try:
-            #     tbl = s.find_stars(snrmap, mask=snrmap_mask)
-            # except Exception as e:
-            #     tbl = None
-            #     LOG.info('no sources found using kernel: {}'.format(repr(e)))
-            # else:  # append to big table of sources
-            #     tbl = tbl[np.isfinite(tbl['xcentroid'])]
-            #     LOG.info('{} sources found using kernel'.format(len(tbl)))
-            #     if (len(tbls) > 0):
-            #         if len(tbls[-1]['id']) > 0:
-            #             tbl['id'] += np.max(tbls[-1]['id'])
-            #             # adding max ID number from last iteration to avoid
-            #             # duplicate ids
-            #     tbls.append(tbl)
 
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
@@ -814,15 +809,18 @@ class TrailFinder:
         # add the theta and rho values to the table
         if self.source_list is not None:
             dtheta = self.theta[1] - self.theta[0]
-            self.source_list['theta'] = self.theta[0] + dtheta * self.source_list['xcentroid']
-            self.source_list['rho'] = self.rho[0] + self.source_list['ycentroid']
+            self.source_list['theta'] = self.theta[0] + \
+                dtheta * self.source_list['xcentroid']
+            self.source_list['rho'] = self.rho[0] + \
+                self.source_list['ycentroid']
 
             # Add the status array and endpoints array. Status will be zero
             # because no additional checks have been done yet.
             self.source_list['endpoints'] = [
                 streak_endpoints(t['rho'], -t['theta'], self.image.shape)
                 for t in self.source_list]
-            self.source_list['status'] = np.zeros(len(self.source_list), dtype=int)
+            self.source_list['status'] = np.zeros(len(self.source_list),
+                                                  dtype=int)
 
             # run the routine to remove angles if any bad ranges are specified
             if self.ignore_theta_range is not None:
@@ -874,7 +872,8 @@ class TrailFinder:
                  'Max Width: {}\n'
                  'Min Length: {}\n'
                  'Check persistence: {}'.format(
-                     self.threshold, self.max_width, self.min_length, self.check_persistence))
+                     self.threshold, self.max_width, self.min_length,
+                     self.check_persistence))
 
         if self.check_persistence is True:
             LOG.info('Min persistence: {}'.format(self.min_persistence))
@@ -918,11 +917,13 @@ class TrailFinder:
         '''
         # crate the mask/segmentation
         if self.source_list is not None:
-            include = [s['status'] in self.mask_include_status for s in self.source_list]
+            include = [s['status'] in self.mask_include_status for s in
+                       self.source_list]
             trail_id = self.source_list['id'][include]
             endpoints = self.source_list['endpoints'][include]
             widths = self.source_list['width'][include]
-            segment, mask = create_mask(self.image, trail_id, endpoints, widths)
+            segment, mask = create_mask(self.image, trail_id, endpoints,
+                                        widths)
         else:
             mask = np.zeros(self.image.shape, dtype=bool)
             segment = np.zeros(self.image.shape, dtype=int)
@@ -964,7 +965,8 @@ class TrailFinder:
 
     def plot_segment(self):
         '''
-        Generates a segmentation image of the identified trails (``self.segment``).
+        Generates a segmentation image of the identified trails
+        (``self.segment``).
 
         Returns
         -------
@@ -997,23 +999,26 @@ class TrailFinder:
         # tell the colorbar to tick at integers
         ticks = np.arange(len(unique_vals) + 1)
         cax = plt.colorbar(mat, ticks=ticks)
-        cax.ax.set_yticklabels(np.concatenate([unique_vals, [unique_vals[-1] + 1]]))
+        cax.ax.set_yticklabels(np.concatenate([unique_vals,
+                                               [unique_vals[-1] + 1]]))
         cax.ax.set_ylabel('trail ID')
         ax.set_title('Segmentation Mask')
 
         # send to file if not interactive
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root + '_segment.png')
+            file_name = os.path.join(self.output_dir, self.root +
+                                     '_segment.png')
             plt.savefig(file_name)
             LOG.info('Saving segmentation map to '+file_name)
-            
+
         return ax
 
     def save_output(self, close_plot=True):
         '''
         Save output. Any existing file will be overwritten.
-        This uses `root`, `output_dir`, `save_mrt`, `save_catalog`, and `save_diagnostic`,
-        so update them first, if needed. Output includes optionally:
+        This uses `root`, `output_dir`, `save_mrt`, `save_catalog`, and
+        `save_diagnostic`, so update them first, if needed. Output includes
+        optionally:
 
         1. MRT
         2. Mask/segementation image
@@ -1029,7 +1034,8 @@ class TrailFinder:
         # save the MRT image
         if self.save_mrt:
             if self.mrt is not None:
-                mrt_filename = os.path.join(self.output_dir, f'{self.root}_mrt.fits')
+                mrt_filename = os.path.join(self.output_dir,
+                                            f'{self.root}_mrt.fits')
                 fits.writeto(mrt_filename, self.mrt, overwrite=True)
                 LOG.info('Wrote MRT to {}'.format(mrt_filename))
             else:
@@ -1044,7 +1050,8 @@ class TrailFinder:
                 hdu1 = fits.ImageHDU(self.mask.astype(int))
                 hdu2 = fits.ImageHDU(self.segment.astype(int))
                 hdul = fits.HDUList([hdu0, hdu1, hdu2])
-                mask_filename = os.path.join(self.output_dir, f'{self.root}_mask.fits')
+                mask_filename = os.path.join(self.output_dir,
+                                             f'{self.root}_mask.fits')
                 hdul.writeto(mask_filename, overwrite=True)
                 LOG.info('Wrote mask to {}'.format(mask_filename))
             else:
@@ -1053,11 +1060,13 @@ class TrailFinder:
         # save the diagnostic plot
         if self.save_diagnostic and (plt is not None):
 
-            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(20, 10))
+            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2,
+                                                         figsize=(20, 10))
             self.plot_image(ax=ax1)
             self.plot_mrt(ax=ax2)
             self.plot_image(ax=ax3)
-            ax3.imshow(self.mask, alpha=0.5, origin='lower', aspect='auto', cmap='Reds')
+            ax3.imshow(self.mask, alpha=0.5, origin='lower', aspect='auto',
+                       cmap='Reds')
             ax3_xlim = ax3.get_xlim()
             ax3_ylim = ax3.get_ylim()
 
@@ -1078,7 +1087,8 @@ class TrailFinder:
             ax3.set_xlim(ax3_xlim)
             ax3.set_ylim(ax3_ylim)
             plt.tight_layout()
-            diagnostic_filename = os.path.join(self.output_dir, f'{self.root}_diagnostic.png')
+            diagnostic_filename = os.path.join(self.output_dir,
+                                               f'{self.root}_diagnostic.png')
             plt.savefig(diagnostic_filename)
             LOG.info('Wrote diagnostic plot to {}'.format(diagnostic_filename))
             if close_plot:
@@ -1086,13 +1096,15 @@ class TrailFinder:
 
         # save the catalog of trails
         if self.save_catalog:
-            cat_filename = os.path.join(self.output_dir, f'{self.root}_catalog.fits')
+            cat_filename = os.path.join(self.output_dir,
+                                        f'{self.root}_catalog.fits')
             if self.source_list is not None:
                 # there's some meta data called "version" that cannot be added
                 # to the fits header (and it is not useful). It always throws
                 # an inconsequential warning so we suppress it here.
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', message='Attribute `version` of')
+                    warnings.filterwarnings('ignore',
+                                            message='Attribute `version` of')
                     self.source_list.write(cat_filename, overwrite=True)
             else:
                 # create an empty catalog and write that. It helps to have this
@@ -1244,10 +1256,10 @@ class WfcWrapper(TrailFinder):
 
             if suffix in ('flc', 'flt'):
                 if extension is None:
-                    raise ValueError('FLC/FLT files must have extension specified')
+                    raise ValueError('FLC/FLT files must have extension specified')  # noqa
                 elif extension not in (1, 4):
-                    raise ValueError('Valid extensions are 1 or 4 for FLC/FLT images'
-                                     f'but got: {extension}')
+                    raise ValueError('Valid extensions are 1 or 4 for FLC/FLT'
+                                     f'images but got: {extension}')
 
                 image = h[extension].data  # main image
                 self.image_mask = h[extension + 2].data  # DQ array
@@ -1291,8 +1303,10 @@ class WfcWrapper(TrailFinder):
 
     @ignore_flags.setter
     def ignore_flags(self, value):
-        if not isinstance(value, list) or not all(isinstance(v, int) for v in value):
-            raise ValueError(f"ignore_flags must be list of int but got: {value}")
+        if not isinstance(value, list) or not all(isinstance(v, int) for v in
+                                                  value):
+            raise ValueError(f"ignore_flags must be list of int but got:"
+                             f"{value}")
         self._ignore_flags = value
 
     def mask_bad_pixels(self):
@@ -1310,7 +1324,7 @@ class WfcWrapper(TrailFinder):
         if self.image_type in ('flc', 'flt'):
             # for FLC/FLT, use DQ array
             mask = bitmask.bitfield_to_boolean_mask(self.image_mask,
-                                                    ignore_flags=self.ignore_flags)
+                                                    ignore_flags=self.ignore_flags)  # noqa
             self.image[mask] = np.nan
 
         elif self.image_type in ('drz', 'drc'):
@@ -1389,6 +1403,7 @@ class WfcWrapper(TrailFinder):
 
         '''
         if self.image_type not in ('flc', 'flt'):
-            raise ValueError(f'DQ array can only be updated for FLC/FLT images, not {self.image_type}')
+            raise ValueError(f'DQ array can only be updated for FLC/FLT images, not {self.image_type}')  # noqa
 
-        update_dq(self.image_file, self.extension + 2, self.mask, dqval=dqval, verbose=verbose)
+        update_dq(self.image_file, self.extension + 2, self.mask, dqval=dqval,
+                  verbose=verbose)

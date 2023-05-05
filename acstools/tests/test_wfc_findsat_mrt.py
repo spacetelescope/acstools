@@ -19,8 +19,9 @@ def test_WfcWrapper(tmp_path):
         package='acstools.tests', show_progress=False, remote_timeout=timeout)
     actual = tmp_path / f'{rootname}_flc_mask.fits'
 
-    # If the machine does not have 8 cores, it will only use up to what is available.
-    # We save the catalog to make sure that code runs but we do not compare catalog.
+    # If the machine does not have 8 cores, it will only use up to what is
+    # available. We save the catalog to make sure that code runs but we do not
+    # compare catalog.
     WfcWrapper(inputfile, binsize=4, extension=4,
                output_root=f'{rootname}_flc',
                output_dir=tmp_path, max_width=75/2.,
