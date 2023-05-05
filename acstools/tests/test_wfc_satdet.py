@@ -4,6 +4,7 @@
 
 """
 from acstools import satdet
+from acstools.utils_findsat_mrt import update_dq
 from acstools.tests.helpers import BaseACSTOOLS
 
 
@@ -26,7 +27,7 @@ class TestSatDet(BaseACSTOOLS):
         trail = ((1199, 1357), (2841, 1023))
         mask = satdet.make_mask(inputfile, sciext, trail, plot=False,
                                 verbose=False)
-        satdet.update_dq(inputfile, dqext, mask, verbose=False)
+        update_dq(inputfile, dqext, mask, verbose=False)
 
         # Compare results.
         self.compare_outputs([(inputfile, truthfile)])

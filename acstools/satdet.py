@@ -18,7 +18,8 @@ within an ACS/WFC image as published in
 
 Examples
 --------
->>> from acstools.satdet import detsat, make_mask, update_dq
+>>> from acstools.satdet import detsat, make_mask
+>>> from acstools.utils_findsat_mrt import update_dq
 
 Find trail segments for a single image and extension without multiprocessing,
 and display plots (not shown) and verbose information:
@@ -172,7 +173,7 @@ except ImportError:
 __version__ = '0.3.3'
 __vdate__ = '11-Jul-2017'
 __author__ = 'David Borncamp, Pey Lian Lim'
-__all__ = ['detsat', 'make_mask', 'update_dq']
+__all__ = ['detsat', 'make_mask']
 
 
 def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
@@ -529,7 +530,8 @@ def _rotate_point(point, angle, ishape, rshape, reverse=False):
 def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
               sigma=4, pad=10, plot=False, verbose=False):
     """Create DQ mask for an image for a given satellite trail.
-    This mask can be added to existing DQ data using :func:`update_dq`.
+    This mask can be added to existing DQ data using
+    :func:`acstools.utils_findsat_mrt.update_dq`.
 
     .. note::
 
@@ -865,58 +867,6 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         print(f'Run time: {t_end - t_beg} s')
 
     return mask
-
-
-def update_dq(filename, ext, mask, dqval=16384, verbose=True):
-    """Update the given image and DQ extension with the given
-    satellite trails mask and flag.
-
-    Parameters
-    ----------
-    filename : str
-        FITS image filename to update.
-
-    ext : int, str, or tuple
-        DQ extension, as accepted by ``astropy.io.fits``, to update.
-
-    mask : ndarray
-        Boolean mask, with `True` marking the satellite trail(s).
-        This can be the result(s) from :func:`make_mask`.
-
-    dqval : int, optional
-        DQ value to use for the trail. Default value of 16384 is
-        tailored for ACS/WFC.
-
-    verbose : bool, optional
-        Print extra information to the terminal.
-
-    """
-    with fits.open(filename, mode='update') as pf:
-        dqarr = pf[ext].data
-        old_mask = (dqval & dqarr) != 0  # Existing flagged trails
-        new_mask = mask & ~old_mask  # Only flag previously unflagged trails
-        npix_updated = np.count_nonzero(new_mask)
-
-        # Update DQ extension only if necessary
-        if npix_updated > 0:
-            pf[ext].data[new_mask] += dqval
-            pf['PRIMARY'].header.add_history(
-                f'{time.ctime()} satdet v{__version__}({__vdate__})')
-            pf['PRIMARY'].header.add_history(
-                f'  Updated {npix_updated} px in EXT {ext} with DQ={dqval}')
-
-    if verbose:
-        fname = f'{filename}[{ext}]'
-
-        print(f'DQ flag value is {dqval}\n'
-              f'Input... flagged NPIX={np.count_nonzero(mask)}\n'
-              f'Existing flagged NPIX={np.count_nonzero(old_mask)}\n'
-              f'Newly... flagged NPIX={npix_updated}')
-
-        if npix_updated > 0:
-            print(f'{fname} updated')
-        else:
-            print(f'No updates necessary for {fname}')
 
 
 # ############################ from decttest.py ############################# #

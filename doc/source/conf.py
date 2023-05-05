@@ -203,7 +203,7 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-    'skimage': ('https://scikit-image.org/docs/0.11.x/', None),
+    'skimage': ('https://scikit-image.org/docs/stable/', None),
     'matplotlib': ('https://matplotlib.org/', None),
     'astropy': ('https://docs.astropy.org/en/stable/', None)
 }
