@@ -79,7 +79,7 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
         List of `~astropy.table.Table` to compare.
     theta_sep : float, optional
         Minimum separation in ``xcentroid`` between catalog entries. Note that
-        ``xcentroid`` is the pixel number in the ``theta`` direction. The 
+        ``xcentroid`` is the pixel number in the ``theta`` direction. The
         default is 10.
     rho_sep : float, optional
         Minimum separation in ``ycentroid`` between catalog entries. Note that
@@ -839,7 +839,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
 
     LOG.info('Number of sections analyzed: {}\n'
              'Number of sections that passed: {}\n'
-             'persistance score: {}'.format(len(persist),np.sum(persist),pscore))
+             'persistance score: {}'.format(len(persist), np.sum(persist), pscore))
 
     return pscore
 

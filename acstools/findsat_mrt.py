@@ -177,12 +177,12 @@ class TrailFinder:
         :func:`acstools.findsat_mrt.TrailFinder.find_mrt_sources`:,
         :func:`acstools.findsat_mrt.TrailFinder.filter_sources`:,
         and :func:`acstools.findsat_mrt.TrailFinder.make_mask`:. Users may also
-        generate these plots manually by calling 
+        generate these plots manually by calling
         :func:`acstools.findsat_mrt.TrailFinder.plot_image`:,
         :func:`acstools.findsat_mrt.TrailFinder.plot_mrt`:,
         :func:`acstools.findsat_mrt.TrailFinder.plot_mask`:, and
         :func:`acstools.findsat_mrt.TrailFinder.plot_segment`:. The default is
-        `False`. 
+        `False`.
     output_dir : str, optional
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.output_dir`.
         The default is ``'.'`` (current directory).
@@ -770,13 +770,13 @@ class TrailFinder:
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
-            
+
             tbl = s.find_stars(snrmap, mask=snrmap_mask)
             if tbl is None:
                 nsources = 0
             else:
                 nsources = len(tbl)
-            
+
             LOG.info('{{no}} sources found using kernel: {}'.format(nsources))
 
             if nsources > 0:
@@ -1006,8 +1006,7 @@ class TrailFinder:
             file_name = os.path.join(self.output_dir, self.root + '_segment.png')
             plt.savefig(file_name)
             LOG.info('Saving segmentation map to '+file_name)
-
-
+            
         return ax
 
     def save_output(self, close_plot=True):
@@ -1195,7 +1194,7 @@ class WfcWrapper(TrailFinder):
         ACS/WFC data file to read. Should be a FITS file.
     extension : int, optional
         Extension of input file to read. This keyword is required if the input
-        image is an FLC/FLT file. The default is `None`. 
+        image is an FLC/FLT file. The default is `None`.
     binsize : int or `None`, optional
         See :attr:`~acstools.utils_findsat_mrt.WfcWrapper.binsize`.
         The default is `None` (no binning).
