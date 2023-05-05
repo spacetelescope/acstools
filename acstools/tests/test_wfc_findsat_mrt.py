@@ -23,7 +23,7 @@ def test_WfcWrapper(tmp_path):
     # We save the catalog to make sure that code runs but we do not compare catalog.
     WfcWrapper(inputfile, binsize=4, extension=4,
                output_root=f'{rootname}_flc',
-               output_dir=tmp_path,
+               output_dir=tmp_path, max_width=75/2.,
                processes=8, execute=True, save_mask=True,
                save_diagnostic=False, save_catalog=True)
 
