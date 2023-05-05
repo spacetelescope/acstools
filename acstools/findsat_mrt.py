@@ -1194,7 +1194,8 @@ class WfcWrapper(TrailFinder):
     image_file : str
         ACS/WFC data file to read. Should be a FITS file.
     extension : int, optional
-        Extension of input file to read. The default is `None`.
+        Extension of input file to read. This keyword is required if the input
+        image is an FLC/FLT file. The default is `None`. 
     binsize : int or `None`, optional
         See :attr:`~acstools.utils_findsat_mrt.WfcWrapper.binsize`.
         The default is `None` (no binning).

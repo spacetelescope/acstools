@@ -78,9 +78,13 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
     tbls : list
         List of `~astropy.table.Table` to compare.
     theta_sep : float, optional
-        Minimum separation in ``xcentroid`` between catalog entries. The default is 10.
+        Minimum separation in ``xcentroid`` between catalog entries. Note that
+        ``xcentroid`` is the pixel number in the ``theta`` direction. The 
+        default is 10.
     rho_sep : float, optional
-        Minimum separation in ``ycentroid`` between catalog entries. The default is 10.
+        Minimum separation in ``ycentroid`` between catalog entries. Note that
+        ``ycentroid`` is the pixel number in the ``rho`` direction. The default
+        is 10.
 
     Returns
     -------
