@@ -175,7 +175,7 @@ class TrailFinder:
         Plot all intermediate steps. When set, plots of the input image, MRT
         with identified sources, and resulting image maks will be generated
         after running the constructor,
-        :func:`acstools.findsat_mrt.TrailFinder.run_mrt`:,
+        :func:`acstools.findsat_mrt.TrailFinder.run_mrt`,
         :func:`acstools.findsat_mrt.TrailFinder.find_mrt_sources`:,
         :func:`acstools.findsat_mrt.TrailFinder.filter_sources`:,
         and :func:`acstools.findsat_mrt.TrailFinder.make_mask`:. Users may also
