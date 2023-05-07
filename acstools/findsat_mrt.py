@@ -176,14 +176,14 @@ class TrailFinder:
         with identified sources, and resulting image maks will be generated
         after running the constructor,
         :func:`acstools.findsat_mrt.TrailFinder.run_mrt`,
-        :func:`acstools.findsat_mrt.TrailFinder.find_mrt_sources`:,
-        :func:`acstools.findsat_mrt.TrailFinder.filter_sources`:,
-        and :func:`acstools.findsat_mrt.TrailFinder.make_mask`:. Users may also
+        :func:`acstools.findsat_mrt.TrailFinder.find_mrt_sources`,
+        :func:`acstools.findsat_mrt.TrailFinder.filter_sources`,
+        and :func:`acstools.findsat_mrt.TrailFinder.make_mask`. Users may also
         generate these plots manually by calling
-        :func:`acstools.findsat_mrt.TrailFinder.plot_image`:,
-        :func:`acstools.findsat_mrt.TrailFinder.plot_mrt`:,
-        :func:`acstools.findsat_mrt.TrailFinder.plot_mask`:, and
-        :func:`acstools.findsat_mrt.TrailFinder.plot_segment`:. The default is
+        :func:`acstools.findsat_mrt.TrailFinder.plot_image`,
+        :func:`acstools.findsat_mrt.TrailFinder.plot_mrt`,
+        :func:`acstools.findsat_mrt.TrailFinder.plot_mask`, and
+        :func:`acstools.findsat_mrt.TrailFinder.plot_segment`. The default is
         `False`.
     output_dir : str, optional
         See :attr:`~acstools.utils_findsat_mrt.TrailFinder.output_dir`.
