@@ -685,7 +685,7 @@ def streak_endpoints(rho, theta, sz, plot=False):
         yf = sz0_m1
         xi = xf = x0 + rho
     # special values if the slope is close to zero (streak horizontal)
-    elif np.abs(slope_int) < 1e-10:
+    elif np.allclose(slope_int, 0):
         zero_slope = True
         no_slope = False
         yi = yf = y0 + rho
