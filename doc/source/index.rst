@@ -40,6 +40,7 @@ To install the development version of this package::
    acszpt
    acsphotcte
    satdet
+   findsat_mrt
    polarization_tools
    utils_calib
 
