@@ -215,7 +215,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     # clean up the small objects, will make less noise
     morph.remove_small_objects(edge, min_size=small_edge, connectivity=8,
-                               in_place=True)
+                               out=edge)
 
     # create an array of angles from 0 to 180, exactly 0 will get bad columns
     # but it is unlikely that a satellite will be exactly at 0 degrees, so
