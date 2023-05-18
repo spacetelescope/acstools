@@ -4,7 +4,8 @@ that calls the ACSCTE forward model executable.
 Use this function to facilitate batch runs of the forward model.
 
 Only WFC full-frame and some 2K subarrays are currently supported. See
-`ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb>`_ for more details.
+`Table 7.6 in the ACS Instrument Handbook <https://hst-docs.stsci.edu/acsihb/chapter-7-observing-techniques/7-3-operating-modes#id-7.3OperatingModes-table7.6>`_
+for more details.
 
 For guidance on running the CTE forward model, see the Jupyter notebook
 `ACS CTE Forward Model Example <https://github.com/spacetelescope/acs-notebook/blob/master/acs_cte_forward_model/acs_cte_forward_model_example.ipynb>`_.
