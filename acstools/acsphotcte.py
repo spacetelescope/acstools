@@ -26,10 +26,10 @@ sources in a single request.
 
 Examples
 --------
-In this example, we obtain the CTE-corrected FLT photometry for a list of 1000 
+In this example, we obtain the CTE-corrected FLT photometry for a list of 1000
 artificial sources. For each parameter, we generate 1000 random values in the interval [0, 1) and
-then scale the random data by a realistic value for stellar fluxes, 
-y-transfers, and local sky backgrounds. An arbitrary MJD is defined, and 
+then scale the random data by a realistic value for stellar fluxes,
+y-transfers, and local sky backgrounds. An arbitrary MJD is defined, and
 we assume an aperture radius of 3 pixels.
 
 >>> import numpy as np
