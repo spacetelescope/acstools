@@ -208,9 +208,6 @@ For post-SM4 full-frame WFC exposures, this also includes:
 Sink Pixel Flagging (SINKCORR)
 ------------------------------
 
-Sink Pixel Flagging (SINKCORR)
-------------------------------
-
 SINKCORR flags sink pixels and adjacent affected pixels with the value
 1024 in the DQ array of WFC images using the SNKCFILE. It is only performed on images
 taken after January 2015.
