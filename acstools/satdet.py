@@ -11,7 +11,7 @@ within an ACS/WFC image as published in
 
     :func:`skimage.transform.probabilistic_hough_line` gives
     slightly different results from run to run, but this should
-    not matter since :func:`detsat` only provides crude
+    not matter since :func:`detsat` only provides a crude
     approximation of the actual trail(s).
 
     Performance is faster when ``plot=False``, where applicable.

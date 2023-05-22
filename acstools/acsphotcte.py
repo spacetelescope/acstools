@@ -21,17 +21,16 @@ followed when utilizing this tool. For each call to
 install the software, compute the CTE corrections, send the result back,
 and then terminate all resources. Hence, users should try to process as many
 sources as they can in a single function call. Testing has shown that the
-optimal number is < 25000, but the service can handle as many as 150,000
+optimal number is < 25,000, but the service can handle as many as 150,000
 sources in a single request.
 
 Examples
 --------
-In this example, we get the CTE corrected FLT photometry for a list of 1000
-sources. For each parameter, we generate 1000 random values in the interval [0, 1) and
-then scale each value to be in the typical range. We use arbitrary values for
-the fluxes, local sky backgrounds, and MJD. We assume a radius of 3 pixels was
-used to compute the aperture photometry. For the ACS/WFC CCD chips, the maximum
-number of Y transfers is 2048 and so we scale by 2048.
+In this example, we obtain the CTE-corrected FLT photometry for a list of 1000
+artificial sources. For each parameter, we generate 1000 random values in the interval [0, 1) and
+then scale the random data by a realistic value for stellar fluxes,
+y-transfers, and local sky backgrounds. An arbitrary MJD is defined, and
+we assume an aperture radius of 3 pixels.
 
 >>> import numpy as np
 >>> from acstools import acsphotcte

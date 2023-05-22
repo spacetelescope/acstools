@@ -18,7 +18,7 @@ is an ``astropy.units.quantity.Quantity`` object with the appropriate units atta
 Examples
 --------
 
-Retrieve the zeropoint information for all the filters on 2016-04-01 for WFC:
+Retrieve the zeropoint information for all of the WFC filters on 2016-04-01:
 
 >>> from acstools import acszpt
 >>> q = acszpt.Query(date="2016-04-01", detector="WFC")
@@ -41,7 +41,7 @@ Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag
 F850LP   9031.5                    1.5313e-19  25.937  24.323  24.851
  F892N   8914.8                    1.5105e-18  23.452  21.892  22.394
 
-Retrieve the zeropoint information for the F435W filter on 2016-04-01 for WFC:
+Retrieve the zeropoint information for the WFC/F435W filter on 2016-04-01:
 
 >>> from acstools import acszpt
 >>> q = acszpt.Query(date="2016-04-01", detector="WFC", filt="F435W")
@@ -52,7 +52,7 @@ Filter PHOTLAM             PHOTFLAM            STmag  VEGAmag  ABmag
 ------ -------- ----------------------------- ------- ------- -------
  F435W   4329.9                    3.1858e-19  25.142  25.767  25.652
 
-Retrieve the zeropoint information for the F435W filter for WFC at multiple dates:
+Retrieve the zeropoint information for the WFC/F435W filter on multiple dates:
 
 >>> from acstools import acszpt
 >>> dates = ['2004-10-13', '2011-04-01', '2014-01-17', '2018-05-23']

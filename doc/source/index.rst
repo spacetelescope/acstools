@@ -19,7 +19,7 @@ To install the development version of this package::
 
 .. note::
 
-    The information here reflect the *latest* software info and might not
+    The information here reflects the *latest* software and might not
     be in-sync with the
     `ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb>`_.
 

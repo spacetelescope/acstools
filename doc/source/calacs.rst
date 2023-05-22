@@ -56,7 +56,7 @@ CTE Forward Model
 =================
 
 This functionality is provided to simulate the CTE effects associated with
-readout of the WFC detectors. It is not part of the standard CALACS pipeline.
+readout of the WFC detectors. It is not involved in standard data calibration with the CALACS pipeline.
 
 .. automodapi:: acstools.acscteforwardmodel
     :no-heading:
@@ -66,9 +66,11 @@ readout of the WFC detectors. It is not part of the standard CALACS pipeline.
 PIXVALUE in FITS File
 =====================
 
-CALACS uses HSTIO that utilizes ``PIXVALUE`` keyword to represent a data
-extension with constant value. However, this is not a standard FITS behavior
-and is not recognized by ``astropy.io.fits``. While you should not encounter errors or warnings, constant value data extensions may exhibit unexpected behavior when reading, writing, or manipulating them with ``astropy.io.fits``. Therefore, if issues such as these arise, we recommend use of
+CALACS uses HSTIO, which utilizes the ``PIXVALUE`` keyword to represent a data
+extension with a constant value. However, this is not a standard FITS behavior
+and is not recognized by ``astropy.io.fits``. While you should not encounter errors or warnings, 
+constant value data extensions may exhibit unexpected behavior when reading, writing, or 
+manipulating them with ``astropy.io.fits``. Therefore, if issues such as these arise, we recommend use of
 ``stsci.tools.stpyfits``, which is distributed as part of ``stsci_python``,
 instead of `astropy.io.fits` when working with CALACS products.
 To use ``stpyfits`` in Python::
@@ -80,7 +82,7 @@ calacs.e (C Program)
 
 A detailed description of CALACS is available in the
 `ACS Data Handbook <https://hst-docs.stsci.edu/acsdhb>`_.
-If you have questions not answered in the documentation, please contact
+If you have questions not answered in the documentation, please contact the
 `STScI Help Desk <https://hsthelp.stsci.edu>`_.
 
 Where to Find CALACS
@@ -135,8 +137,9 @@ CALACS supports several command line options:
 * --ctegen <1|2>
 
     * Specify which generation CTE correction to use, the default is 2. Gen 1 (officially deprecated) refers to
-      the correction algorithm used in calacs version pre 9.2.0 in relation to
-      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the new CTE correction algorithm implemented in calacs version 9.2.0 (HSTCAL 1.3.0) in relation to `ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_.
+      the correction algorithm used in calacs version pre 9.2.0, described in
+      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the 
+      new CTE correction algorithm implemented in calacs version 9.2.0 (HSTCAL 1.3.0) described in `ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_.
 
 * --pctetab <filename>
 
@@ -195,7 +198,7 @@ Bias Level Correction (BLEVCORR)
 
 BLEVCORR is performed after BIASCORR. Calculations are done in ELECTRONS.
 
-For post-SM4 full-frame WFC exposures, it also includes:
+For post-SM4 full-frame WFC exposures, this also includes:
 
 * de-striping to remove stripes introduced by new hardware installed during
   SM-4 (`ACS ISR 2011-05 <https://ui.adsabs.harvard.edu/abs/2011acs..rept....5G/abstract>`_)
@@ -205,18 +208,19 @@ For post-SM4 full-frame WFC exposures, it also includes:
 Sink Pixel Flagging (SINKCORR)
 ------------------------------
 
-SINKCORR flags sink pixels and the adjacent affected pixels with the value
-1024 in the DQ array of WFC images using the SNKCFILE. Only performed on images
+SINKCORR flags sink pixels and adjacent affected pixels with the value
+1024 in the DQ array of WFC images using the SNKCFILE. It is only performed on images
 taken after January 2015.
 
 Pixel-Based CTE Correction (PCTECORR)
 -------------------------------------
 
-For all full-frame WFC exposures, pixel-based CTE correction (`ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_)
-is applied during ACSCTE that occurs after ACSCCD, specifically, after BLEVCORR.
+For all full-frame WFC exposures, pixel-based CTE correction 
+(`ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_)
+is applied during ACSCTE, which runs after BLEVCORR in ACSCCD.
 
 Because the CTE correction is applied before DARKCORR and FLSHCORR, it is
-necessary to use a CTE-corrected dark (DRKCFILE) if the PCTECORR step is enabled.
+necessary to use a CTE-corrected dark reference file (DRKCFILE) if the PCTECORR step is enabled.
 
 Parameters characterizing the CTE correction are stored in a reference table,
 PCTETAB.
@@ -284,7 +288,7 @@ not recommended unless you know what you are doing.**
 
 * PCTENFOR
 
-    * Number of iterations used for forward CTE model.
+    * Number of iterations used for the CTE forward model.
 
 Dark Current Subtraction (DARKCORR)
 -----------------------------------
@@ -307,7 +311,7 @@ Flat-Field Correction (FLATCORR)
 
 PFLTFILE is used for flat-field correction, which is a combination of the
 pixel-to-pixel flats and low-order flats. This corrects for pixel-to-pixel and
-large-scale sensitivity gradients across the detector by dividing the data with
+large-scale sensitivity gradients across the detector by dividing the data by
 the flat-field image.
 
 Photometry Keywords (PHOTCORR)
