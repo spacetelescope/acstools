@@ -98,11 +98,14 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12-dev'
     - name: Install and build
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install git+https://github.com/astropy/astropy.git#egg=astropy --upgrade --no-deps
+        pip install --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy>=0.0.dev0 --upgrade
+        pip install --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple scipy>=0.0.dev0 --upgrade
+        pip install --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple scikit-image>=0.0.dev0 --upgrade
+        pip install --extra-index-url https://pypi.anaconda.org/astropy/simple astropy>=0.0.dev0 --upgrade
         pip install git+https://github.com/spacetelescope/ci_watson.git --upgrade --no-deps
         python -m pip install -e .[test,all]
     - name: Test
