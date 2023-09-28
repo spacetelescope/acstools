@@ -111,7 +111,6 @@ jobs:
         pip install git+https://github.com/astropy/photutils.git --upgrade --no-deps
         pip install git+https://github.com/spacetelescope/ci_watson.git --upgrade --no-deps
         pip install git+https://github.com/spacetelescope/stsci.tools.git --upgrade --no-deps
-        pip install git+https://github.com/spacetelescope/stsci.imagestats.git --upgrade --no-deps
         python -m pip install -e .[test]
     - name: Test
       run: pytest --remote-data -v
