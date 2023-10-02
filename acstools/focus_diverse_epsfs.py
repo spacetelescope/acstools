@@ -22,18 +22,18 @@ Examples
 
 Retrieve a single 101x101x90 ePSF FITS file.
 
->>> download_location  = '/Users/ganand/Desktop/ePSFtool/batch-focus-work/single/'
+>>> download_location  = '/Users/username/download_folder/'
 >>> retrieved_download = psf_retriever('jds408jsq', download_location)
 
 Retrieve ePSFs based on flc images specified in an external text file (with one rootname per line).
 
 >>>input_list = 'input_ipsoots.txt'
->>>download_location  = '/Users/ganand/Desktop/ePSFtool/batch-focus-work/batch/'
+>>> download_location  = '/Users/username/download_folder/'
 >>>retrieved_downloads = multi_psf_retriever(input_list, download_location, fromTextFile = True)
 
 Retrieve ePSFs using rootnames obtained from an astroquery. 
 
->>>download_location  = '/Users/ganand/Desktop/ePSFtool/batch-focus-work/astroquery/'
+>>> download_location  = '/Users/username/download_folder/'
 >>>obsTable = Observations.query_criteria(obs_collection = 'HST', proposal_id="13376", instrument_name = "ACS/WFC",
                                        provenance_name = "CALACS")
 
@@ -64,15 +64,26 @@ More details for these examples are provided in a Jupyter notebook, which can be
 
 """
 
+import logging
+
 import dask
 import numpy as np
-
 import requests
 
 from dask.diagnostics import ProgressBar
-from scipy import ndimage
 from requests.auth import HTTPBasicAuth
+from scipy import ndimage
 from urllib.request import urlopen, urlretrieve
+
+__taskname__ = "focus_diverse_epsfs"
+__author__   = "Gagandeep Anand, Yotam Cohen"
+__version__  = "1.0"
+__vdate__    = "02-Oct-2023"
+
+# Initialize the logger
+logging.basicConfig()
+LOG = logging.getLogger(f'{__taskname__}.Query')
+LOG.setLevel(logging.INFO)
 
 
 def psf_retriever(ipsoot, download_location):
@@ -167,32 +178,38 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
 
     # input error checking
     if x not in range(0, 4096):
-        print("The x coordinate should be an integer between 0 and 4096. \n \
+        msg = ("The x coordinate should be an integer between 0 and 4096. \n \
             Please double-check your inputs.")
+        LOG.error(msg)
         return
 
     if y not in range(0, 4096):
-        print("The y coordinate should be an integer between 0 and 4096. \n \
+        msg = ("The y coordinate should be an integer between 0 and 4096. \n \
             Please double-check your inputs.")
+        LOG.error(msg)
         return
 
     if subpixel_x < 0.0 or subpixel_x > 0.99:
-        print("Subpixel shifts should be between 0 and 0.99. \n \
+        msg = ("Subpixel shifts should be between 0 and 0.99. \n \
             Please double-check your inputs.")
+        LOG.error(msg)
         return
 
     if subpixel_y < 0.0 or subpixel_y > 0.99:
-        print("Subpixel shifts should be between 0 and 0.99. \n \
+        msg = ("Subpixel shifts should be between 0 and 0.99. \n \
             Please double-check your inputs.")
+        LOG.error(msg)
         return
 
     if pixel_space not in [True, False]:
-        print("pixel_space should be True or False.\n \
+        msg = ("pixel_space should be True or False.\n \
             Please double-check your inputs.")
+        LOG.error(msg)
         return
 
     if pixel_space == False and (subpixel_x != 0 or subpixel_y != 0):
-        print('Please set pixel_space = True to use the subpixel phase offsets.')
+        msg = ('Please set pixel_space = True to use the subpixel phase offsets.')
+        LOG.error(msg)
         return
 
     # round subpixel_x and subpixel_y to second decimal
@@ -322,12 +339,8 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
 
         P_sub_down = ndimage.shift(P_sub_down, (y_int_shift, x_int_shift))
 
-
-        ### TEST ###
-
-        # P_sub_down = P_sub_down[1:-1, 1:-1]
-
-        ### #### ###
+        # remove 1 pixel border
+        P_sub_down = P_sub_down[1:-1, 1:-1]
 
         # and return downsampled version, with any shifts (if specified)
         return P_sub_down
