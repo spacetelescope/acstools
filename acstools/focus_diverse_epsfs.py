@@ -1,21 +1,21 @@
 """
 
 This module first contains two functions that were implemented to provide
-users with means to programmatically query the `ACS/WFC 
+users with means to programmatically query the `ACS/WFC
 Focus-Diverse ePSF Generator <acspsf.stsci.edu>`_ API.
-The first function (psf_retriever) provides the user with the ability 
-to perform downloads for a single image rootname, whereas the 
+The first function (psf_retriever) provides the user with the ability
+to perform downloads for a single image rootname, whereas the
 second function (multi_psf_retriever) provides the ability to do so
-for many rootnames. In all cases, the focus-diverse ePSFs will be 
-downloaded to a location specified by the user in the function call 
+for many rootnames. In all cases, the focus-diverse ePSFs will be
+downloaded to a location specified by the user in the function call
 (download_location).
 
 
 Additionally, this module also contains a function (interp_epsf) that allows
-users to interpolate the provided ePSF arrays to any arbitrary (x,y) 
-coordinates. This function can be called with "pixel_space" = True to 
+users to interpolate the provided ePSF arrays to any arbitrary (x,y)
+coordinates. This function can be called with "pixel_space" = True to
 downsample the ePSF into detector space. Subpixel phase shifts can be applied by
-setting subpixel_x and subpixel_y between 0.00 and 0.99. 
+setting subpixel_x and subpixel_y between 0.00 and 0.99.
 
 Examples
 --------
@@ -31,7 +31,7 @@ Retrieve ePSFs based on flc images specified in an external text file (with one 
 >>> download_location  = '/Users/username/download_folder/'
 >>>retrieved_downloads = multi_psf_retriever(input_list, download_location, fromTextFile = True)
 
-Retrieve ePSFs using rootnames obtained from an astroquery. 
+Retrieve ePSFs using rootnames obtained from an astroquery.
 
 >>> download_location  = '/Users/username/download_folder/'
 >>>obsTable = Observations.query_criteria(obs_collection = 'HST', proposal_id="13376", instrument_name = "ACS/WFC",
@@ -45,8 +45,8 @@ Retrieve ePSFs using rootnames obtained from an astroquery.
 >>>retrieved_downloads = multi_psf_retriever(obs_rootnames, download_location)
 
 
-Interpolate a given ePSF to x,y = (2000,4048), which is near the middle of the detector along the x-axis, 
-and near the top of the WFC1 chip (and the detector overall). 
+Interpolate a given ePSF to x,y = (2000,4048), which is near the middle of the detector along the x-axis,
+and near the top of the WFC1 chip (and the detector overall).
 
 >>>x = 2000
 >>>y = 4048
@@ -59,7 +59,7 @@ Do the same as the previous example, but now in detector space and with subpixel
 >>>P = interp_epsf(ePSFs, x, y, pixel_space = True, subpixel_x = 0.77, subpixel_y = 0.33)
 
 
-More details for these examples are provided in a Jupyter notebook, which can be found at LINK. 
+More details for these examples are provided in a Jupyter notebook, which can be found at LINK.
 
 
 """
@@ -94,7 +94,7 @@ def psf_retriever(ipsoot, download_location):
     Returns
     -------
 
-    Downloads the ePSF FITS file to download_location. The explicit return is 
+    Downloads the ePSF FITS file to download_location. The explicit return is
     the name of the downloaded FITS file.
 
     """
@@ -130,23 +130,23 @@ def psf_retriever(ipsoot, download_location):
 
 def multi_psf_retriever(input_list, download_location, n_PROC=8, fromTextFile=False):
     """
-    Function to batch query the API on AWS API Gateway for multiple ePSFs 
+    Function to batch query the API on AWS API Gateway for multiple ePSFs
     simultaneously.
 
     Returns
     -------
 
-    Downloads the ePSF FITS files to download_location. The explicit return is 
+    Downloads the ePSF FITS files to download_location. The explicit return is
     a list of the downloaded FITS files.
 
     """
 
     # select if either choosing to provide inputs via a text file or list
-    if fromTextFile == True:
+    if fromTextFile is True:
         with open(input_list) as file:
             lines = [line.rstrip() for line in file]
 
-    if fromTextFile == False:
+    if fromTextFile is False:
         lines = input_list
 
     # perform multiprocessing with dask
@@ -166,13 +166,13 @@ def multi_psf_retriever(input_list, download_location, n_PROC=8, fromTextFile=Fa
 
 def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
     """
-    Function to perform further spatial interpolations given the input ePSF array from 
-    the previous retriever functions. The routine uses bi-linear interpolation for the 
+    Function to perform further spatial interpolations given the input ePSF array from
+    the previous retriever functions. The routine uses bi-linear interpolation for the
     integer pixel shifts, and bi-cubic interpolation for any specified subpixel phase shifts.
 
     Returns
     -------
-    An ePSF array with the specified interpolation parameters.  
+    An ePSF array with the specified interpolation parameters.
 
     """
 
@@ -207,7 +207,7 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
         LOG.error(msg)
         return
 
-    if pixel_space == False and (subpixel_x != 0 or subpixel_y != 0):
+    if pixel_space is False and (subpixel_x != 0 or subpixel_y != 0):
         msg = ('Please set pixel_space = True to use the subpixel phase offsets.')
         LOG.error(msg)
         return
@@ -314,7 +314,7 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
     P = Q11*c_Q11 + Q21*c_Q21 + Q12*c_Q12 + Q22*c_Q22
 
     # if the user wants the ePSF in pixel space, return that with any subpixel offsets, instead of P.
-    if pixel_space == True:
+    if pixel_space is True:
 
         # shift the ePSF by the specified subpixel amount (assumes no subpixel shift by default)
         P_sub = ndimage.shift(P, (subpixel_y*4, subpixel_x*4), order=3)
