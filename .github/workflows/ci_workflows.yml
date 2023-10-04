@@ -41,24 +41,24 @@ jobs:
         jref: "https://ssb.stsci.edu/trds_open/jref"
       submodules: false
       coverage: ''
-    envs: |
-      - name: Lint with flake8
-        linux: codestyle
+      envs: |
+        - name: Lint with flake8
+          linux: codestyle
 
-      # Make sure that packaging will work
-      - name: pep517 build
-        linux: twine
+        # Make sure that packaging will work
+        - name: pep517 build
+          linux: twine
 
-      - name: Security audit
-        linux: bandit
+        - name: Security audit
+          linux: bandit
 
-      - name: Check links
-        linux: linkcheck
+        - name: Check links
+          linux: linkcheck
 
-      - name: Python 3.9 with remote data and all dependencies
-        linux: py39-test-alldeps
-        posargs: --remote-data -v
+        - name: Python 3.9 with remote data and all dependencies
+          linux: py39-test-alldeps
+          posargs: --remote-data -v
 
-      - name: Python 3.12 with remote data
-        linux: py312-test-devdeps
-        posargs: --remote-data -v
+        - name: Python 3.12 with remote data
+          linux: py312-test-devdeps
+          posargs: --remote-data -v
