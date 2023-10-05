@@ -1,16 +1,42 @@
-name: Publish to PyPI
+name: Wheel building
 
 on:
-  release:
-    types: [released]
+  pull_request:
+    # We also want this workflow triggered if the 'Build all wheels'
+    # label is added or present when PR is updated
+    types:
+      - synchronize
+      - labeled
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+
+permissions:
+  contents: read
 
 jobs:
-  publish:
-    uses: spacetelescope/action-publish_to_pypi/.github/workflows/workflow.yml@master
+  build_and_publish:
+    # This job builds the wheels and publishes them to PyPI for all
+    # tags. For PRs with the "Build wheels" label, wheels are built,
+    # but are not uploaded to PyPI.
+
+    permissions:
+      contents: none
+
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/publish_pure_python.yml@v1
+
+    if: (github.repository == 'spacetelescope/acstools' && (github.event_name == 'push' ||  contains(github.event.pull_request.labels.*.name, 'Build wheels')))
     with:
-      test: false
-      build_platform_wheels: false # Set to true if your package contains a C extension
+      env: |
+        jref: "https://ssb.stsci.edu/trds_open/jref"
+
+      # We upload to PyPI for all tag pushes
+      upload_to_pypi: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' }}
+
+      test_extras: test,all
+      test_command: pytest -p no:warnings --pyargs acstools.tests --remote-data -v
+
     secrets:
-      user: ${{ secrets.PYPI_USERNAME_STSCI_MAINTAINER }}
-      password: ${{ secrets.PYPI_PASSWORD_STSCI_MAINTAINER }} # WARNING: Do not hardcode secret values here! If you want to use a different user or password, you can override this secret by creating one with the same name in your Github repository settings.
-      test_password: ${{ secrets.PYPI_PASSWORD_STSCI_MAINTAINER_TEST }}
+      pypi_token: ${{ secrets.PYPI_TOKEN }}
