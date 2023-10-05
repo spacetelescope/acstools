@@ -36,7 +36,7 @@ jobs:
       upload_to_pypi: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' }}
 
       test_extras: test,all
-      test_command: pytest -p no:warnings --pyargs acstools --remote-data -v
+      test_command: pytest -p no:warnings --pyargs acstools.tests --remote-data -v
 
     secrets:
       pypi_token: ${{ secrets.PYPI_TOKEN }}
