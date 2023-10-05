@@ -1250,7 +1250,7 @@ class WfcWrapper(TrailFinder):
                 raise ValueError('This program does not yet work on subarrays')
 
             # get suffix to determine how to process image
-            suffix = (self.image_file.split('.')[0]).split('_')[-1].lower()
+            suffix = (self.image_file.split('.')[-2]).split('_')[-1].lower()
             self.image_type = suffix
             LOG.info('image type is {}'.format(self.image_type))
 
