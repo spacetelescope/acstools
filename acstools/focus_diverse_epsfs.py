@@ -27,36 +27,36 @@ Retrieve a single 101x101x90 ePSF FITS file.
 
 Retrieve ePSFs based on flc images specified in an external text file (with one rootname per line).
 
->>>input_list = 'input_ipsoots.txt'
+>>> input_list = 'input_ipsoots.txt'
 >>> download_location  = '/Users/username/download_folder/'
->>>retrieved_downloads = multi_psf_retriever(input_list, download_location, fromTextFile = True)
+>>> retrieved_downloads = multi_psf_retriever(input_list, download_location, fromTextFile = True)
 
 Retrieve ePSFs using rootnames obtained from an astroquery.
 
 >>> download_location  = '/Users/username/download_folder/'
->>>obsTable = Observations.query_criteria(obs_collection = 'HST', proposal_id="13376", instrument_name = "ACS/WFC",
+>>> obsTable = Observations.query_criteria(obs_collection = 'HST', proposal_id="13376", instrument_name = "ACS/WFC",
                                        provenance_name = "CALACS")
 
->>>dataProducts = Observations.get_product_list(obsTable)
->>>dataProducts = dataProducts[(dataProducts['productSubGroupDescription'] == 'FLC') &
+>>> dataProducts = Observations.get_product_list(obsTable)
+>>> dataProducts = dataProducts[(dataProducts['productSubGroupDescription'] == 'FLC') &
              (dataProducts['type'] == 'S')]
 
->>>obs_rootnames = list(dataProducts['obs_id'])
->>>retrieved_downloads = multi_psf_retriever(obs_rootnames, download_location)
+>>> obs_rootnames = list(dataProducts['obs_id'])
+>>> retrieved_downloads = multi_psf_retriever(obs_rootnames, download_location)
 
 
 Interpolate a given ePSF to x,y = (2000,4048), which is near the middle of the detector along the x-axis,
 and near the top of the WFC1 chip (and the detector overall).
 
->>>x = 2000
->>>y = 4048
->>>P = interp_epsf(ePSFs, x, y)
+>>> x = 2000
+>>> y = 4048
+>>> P = interp_epsf(ePSFs, x, y)
 
 Do the same as the previous example, but obtain the ePSF in detector space (instead of with 4x supersampling).
->>>P = interp_epsf(ePSFs, x, y, pixel_space = True)
+>>> P = interp_epsf(ePSFs, x, y, pixel_space = True)
 
 Do the same as the previous example, but now in detector space and with subpixel offsets.
->>>P = interp_epsf(ePSFs, x, y, pixel_space = True, subpixel_x = 0.77, subpixel_y = 0.33)
+>>> P = interp_epsf(ePSFs, x, y, pixel_space = True, subpixel_x = 0.77, subpixel_y = 0.33)
 
 
 More details for these examples are provided in a Jupyter notebook, which can be found at LINK.
@@ -90,6 +90,14 @@ def psf_retriever(ipsoot, download_location):
     """
     Function to query API on AWS API Gateway for the ePSF FITS file that
     corresponds to a given image rootname.
+
+    Parameters
+    -------
+    ipsoot : string
+        String of the image rootname/IPPPSSOOT.
+
+    download_location : string
+        String with the user's preferred download path/location.
 
     Returns
     -------
@@ -132,6 +140,22 @@ def multi_psf_retriever(input_list, download_location, n_PROC=8, fromTextFile=Fa
     """
     Function to batch query the API on AWS API Gateway for multiple ePSFs
     simultaneously.
+   
+    Parameters
+    -------
+    input_list : list (if fromTextFile=False, default) or text file name (if fromTextFile=True) 
+        A list or text file with the image rootnames. See fromTextfile description for more 
+        information.
+
+    download_location : string
+        String with the user's preferred download path/location.
+
+    n_PROC : int
+        Integer
+
+    fromTextFile : Boolean
+        Boolean. Should be set to True if input_list is a text file (with one ipsoot on each line).
+        Alternatively, should be set to False if the input_list is a Python list. 
 
     Returns
     -------
@@ -169,6 +193,28 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
     Function to perform further spatial interpolations given the input ePSF array from
     the previous retriever functions. The routine uses bi-linear interpolation for the
     integer pixel shifts, and bi-cubic interpolation for any specified subpixel phase shifts.
+
+    Parameters
+    -------
+    ePSFs : numpy.ndarray
+        Array with the ePSFs read in (e.g via astropy.fits.getdata).
+
+    x : integer
+        X-coordinate of the desired output ePSF. 
+
+    y : integer
+        Y-coordinate of the desired output ePSF. Please note that the range here is between 
+        0 and 4096, i.e. WFC1 runs from 2048-4096.
+
+    pixel_space : Boolean
+        Boolean describing whether the user wants to further interpolate to a subpixel position.
+
+    subpixel_x : Float (between 0.00 and 0.99)
+        Float giving the desired subpixel-x coordinate.
+
+    subpixel_y : Float (between 0.00 and 0.99)
+        Float giving the desired subpixel-y coordinate.
+
 
     Returns
     -------
