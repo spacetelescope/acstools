@@ -10,29 +10,36 @@ for many rootnames. In all cases, the focus-diverse ePSFs will be
 downloaded to a location specified by the user in the function call
 (download_location).
 
-
 Additionally, this module also contains a function (interp_epsf) that allows
 users to interpolate the provided ePSF arrays to any arbitrary (x,y)
 coordinates. This function can be called with "pixel_space" = True to
 downsample the ePSF into detector space. Subpixel phase shifts can be applied by
 setting subpixel_x and subpixel_y between 0.00 and 0.99.
 
+We strongly recommend you read ACS ISR 2018-08 by A. Bellini et al. and
+ACS ISR 2023-XY by G. Anand et al. (LINK WHEN LIVE) for more details 
+on these ePSF models and tools before using them.
+
 Examples
 --------
 
 Retrieve a single 101x101x90 ePSF FITS file.
 
+>>> from focus_diverse_epsfs import psf_retriever
 >>> download_location  = '/Users/username/download_folder/'
 >>> retrieved_download = psf_retriever('jds408jsq', download_location)
 
 Retrieve ePSFs based on flc images specified in an external text file (with one rootname per line).
 
+>>> from focus_diverse_epsfs import multi_psf_retriever
 >>> input_list = 'input_ipsoots.txt'
 >>> download_location  = '/Users/username/download_folder/'
 >>> retrieved_downloads = multi_psf_retriever(input_list, download_location, fromTextFile = True)
 
 Retrieve ePSFs using rootnames obtained from an astroquery.
 
+>>> from astroquery.mast import Observations
+>>> from focus_diverse_epsfs import multi_psf_retriever
 >>> download_location  = '/Users/username/download_folder/'
 >>> obsTable = Observations.query_criteria(obs_collection = 'HST', proposal_id="13376", instrument_name = "ACS/WFC",
                                        provenance_name = "CALACS")
@@ -44,18 +51,20 @@ Retrieve ePSFs using rootnames obtained from an astroquery.
 >>> obs_rootnames = list(dataProducts['obs_id'])
 >>> retrieved_downloads = multi_psf_retriever(obs_rootnames, download_location)
 
-
 Interpolate a given ePSF to x,y = (2000,4048), which is near the middle of the detector along the x-axis,
 and near the top of the WFC1 chip (and the detector overall).
 
+>>> from focus_diverse_epsfs import interp_epsf
 >>> x = 2000
 >>> y = 4048
 >>> P = interp_epsf(ePSFs, x, y)
 
 Do the same as the previous example, but obtain the ePSF in detector space (instead of with 4x supersampling).
+>>> from focus_diverse_epsfs import interp_epsf
 >>> P = interp_epsf(ePSFs, x, y, pixel_space = True)
 
 Do the same as the previous example, but now in detector space and with subpixel offsets.
+>>> from focus_diverse_epsfs import interp_epsf
 >>> P = interp_epsf(ePSFs, x, y, pixel_space = True, subpixel_x = 0.77, subpixel_y = 0.33)
 
 
@@ -131,6 +140,7 @@ def psf_retriever(ipsoot, download_location):
                         content_disposition.split(';')[1].split('=')[1].split('-')[1].split('/')[-1])
 
     # download file
+    download_location = download_location + '/' if not download_location.endswith('/') else download_location
     urlretrieve(url, download_location + desired_filename)
 
     return desired_filename
@@ -174,6 +184,7 @@ def multi_psf_retriever(input_list, download_location, n_PROC=8, fromTextFile=Fa
         lines = input_list
 
     # perform multiprocessing with dask
+    download_location = download_location + '/' if not download_location.endswith('/') else download_location
     download_locations = [download_location] * len(lines)
     zipped_inputs = list(zip(lines, download_locations))
 
