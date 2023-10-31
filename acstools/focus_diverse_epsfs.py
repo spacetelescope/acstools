@@ -103,7 +103,7 @@ def _validate_acs_ipsoot(line):
     return isinstance(line, str) and len(line) == 9 and line.startswith("j")
 
 
-def psf_retriever(ipsoot, download_location):
+def psf_retriever(ipsoot, download_location, timeout=60):
     """Function to query API on AWS API Gateway for the ePSF FITS file that
     corresponds to a given image rootname.
 
@@ -121,6 +121,9 @@ def psf_retriever(ipsoot, download_location):
     download_location : str
         Directory name where the file will be downloaded to.
         It must exist and you must have write permission to it.
+
+    timeout : float
+        Seconds before query timeout.
 
     Returns
     -------
@@ -147,7 +150,7 @@ def psf_retriever(ipsoot, download_location):
 
     # send up post request with ipsoot event
     myobj = {'ipsoot': ipsoot}
-    result = requests.post(api_url, json=myobj, auth=auth)
+    result = requests.post(api_url, json=myobj, auth=auth, timeout=timeout)
 
     if not result.ok:
         LOG.error("Query failed: %d %s" % (result.status_code, result.reason))
@@ -159,7 +162,10 @@ def psf_retriever(ipsoot, download_location):
 
     # grab url from result
     url = result.text[1:-1]
-    with urlopen(url) as remotefile:
+    if not url.startswith("http"):
+        LOG.error("URL is not HTTP.")
+        return
+    with urlopen(url) as remotefile:  # nosec (already checked above)
         # determine readable name for file
         content_disposition = remotefile.info()['Content-Disposition']
 
@@ -175,7 +181,7 @@ def psf_retriever(ipsoot, download_location):
         return
 
     # download file
-    urlretrieve(url, filename=desired_filename)
+    urlretrieve(url, filename=desired_filename)  # nosec (already checked above)
 
     return desired_filename
 

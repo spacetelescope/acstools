@@ -42,7 +42,7 @@ To install the development version of this package::
    satdet
    findsat_mrt
    polarization_tools
-   focus_diverse_epsf
+   focus_diverse_epsfs
    utils_calib
 
 ******************
