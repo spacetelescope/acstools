@@ -1,6 +1,6 @@
 """This module contains two functions that provide
 means to programmatically query the `ACS/WFC
-Focus-Diverse ePSF Generator <acspsf.stsci.edu>`_ API.
+Focus-Diverse ePSF Generator <https://acspsf.stsci.edu>`_ API.
 
 1. :func:`psf_retriever` provides the user with the ability
    to perform downloads for a single image rootname, whereas
@@ -298,7 +298,7 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
     P : numpy.ndarray or `None`
         An ePSF array with the specified interpolation parameters, if successful.
 
-    Also see
+    See Also
     --------
     psf_retriever, multi_psf_retriever
 
