@@ -1104,7 +1104,7 @@ class TrailFinder:
                 # an inconsequential warning so we suppress it here.
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore',
-                                            message='Attribute `version` of')
+                                            message='Attribute `version.*` of')
                     self.source_list.write(cat_filename, overwrite=True)
             else:
                 # create an empty catalog and write that. It helps to have this
