@@ -292,6 +292,9 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
 
     subpixel_x, subpixel_y : float
         The desired subpixel coordinate, between 0 and 0.99.
+        ``pixel_space`` must be set to `True` to use this option.
+        The defaults for both x and y are 0, and are relative to the central pixel of the ePSF.
+        By default, ePSFs are centered on the central pixel.
 
     Returns
     -------
