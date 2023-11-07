@@ -11,7 +11,7 @@ In all cases, the focus-diverse ePSFs will be
 downloaded to a location specified by the user.
 
 Additionally, this module also contains a function, :func:`interp_epsf`, that allows
-users to interpolate the provided ePSF arrays to any arbitrary
+users to interpolate the provided ePSF arrays to any arbitrary pixel
 coordinates, downsample the ePSF into detector space, or apply subpixel phase shifts.
 
 We strongly recommend you read
@@ -61,17 +61,18 @@ Interpolate a given ePSF to the given pixel location (0-indexed):
 
 >>> from acstools.focus_diverse_epsfs import interp_epsf
 >>> x = 2000  # near the middle of the detector along the X-axis
->>> y = 4048  # near the top of the WFC1 chip (and the detector overall)
->>> interpolated_epsf = interp_epsf(ePSFs, x, y)
+>>> y = 2000  # near the top of the WFC1 chip
+>>> chip = "WFC1" # must specify we are interested in WFC1
+>>> interpolated_epsf = interp_epsf(ePSFs, x, y, chip)
 
 Similar to above but obtain the ePSF in detector space (instead of 4x supersampling):
 
->>> interpolated_epsf = interp_epsf(ePSFs, x, y, pixel_space=True)
+>>> interpolated_epsf = interp_epsf(ePSFs, x, y, chip, pixel_space=True)
 
 Similar to above but obtain the ePSF in detector space and with subpixel offsets:
 
 >>> interpolated_epsf = interp_epsf(
-...     ePSFs, x, y, pixel_space=True, subpixel_x=0.77, subpixel_y=0.33)
+...     ePSFs, x, y, chip, pixel_space=True, subpixel_x=0.77, subpixel_y=0.33)
 
 """  # noqa: E501
 import logging
@@ -156,10 +157,6 @@ def psf_retriever(ipsoot, download_location, timeout=60):
         LOG.error("Query failed: %d %s" % (result.status_code, result.reason))
         return
 
-    # NOTE: This function could be made smarter with caching but original author
-    #       deemed it unnecessary.
-    # Also see: https://docs.astropy.org/en/latest/utils/data.html
-
     # grab url from result
     url = result.text[1:-1]
     if not url.startswith("http"):
@@ -241,7 +238,6 @@ def multi_psf_retriever(input_list, download_location, num_workers=8):
     if n_lines < num_workers:  # No need that many workers
         num_workers = n_lines
 
-    # FIXME: Is dask really necessary here? Do you want to make it that easy for DDoS attacks?
     # perform multiprocessing with dask
     dask_results = [dask.delayed(psf_retriever)(line, download_location) for line in lines]
 
@@ -253,7 +249,7 @@ def multi_psf_retriever(input_list, download_location, num_workers=8):
     return results
 
 
-def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
+def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0):
     """Function to perform further spatial interpolations given the input ePSF array.
     It uses bi-linear interpolation for the
     integer pixel shifts, and bi-cubic interpolation for any specified subpixel phase shifts.
@@ -261,7 +257,10 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
     This function allows users to interpolate the provided ePSF arrays
     to any arbitrary ``(x, y)`` coordinates. It can be called with ``pixel_space=True`` to
     downsample the ePSF into detector space. Subpixel phase shifts can be applied by
-    setting ``subpixel_x`` and ``subpixel_y`` between 0 and 0.99.
+    setting ``subpixel_x`` and ``subpixel_y`` between 0 and 0.99. Note that a 1 pixel border
+    is removed from the subpixel phase shifted ePSF, such that the final dimensions are 23x23.
+    Results from this subpixel phase shift routine may differ from other algorithmic
+    implementations, typically at the level of <0.5% in the core of the ePSF.
 
     .. note::
 
@@ -270,7 +269,7 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
 
     .. note::
 
-        This function only works with 4096x4096 ACS/WFC frame.
+        This function requires users to specify the WFC chip (WFC1 or WFC2).
 
     Parameters
     ----------
@@ -282,7 +281,11 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
 
     y : int
         Y-coordinate (0-indexed) of the desired output ePSF. Please note that the range here is between
-        0 and 4095, inclusive; i.e., WFC1 runs from 2048-4095, inclusive.
+        0 and 2048, inclusive.
+
+    chip : str
+        String corresponding to which ACS/WFC detector the user is specifying the coordinates on,
+        either "WFC1" or "WFC2".
 
     pixel_space : bool
         If `True`, downsample the ePSF into detector space.
@@ -300,14 +303,15 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
     psf_retriever, multi_psf_retriever
 
     """
-    valid_wfc_pixels = range(0, 4096)
+    valid_wfc_x_pixels = range(0, 4097)
+    valid_wfc_y_pixels = range(0, 2049)
 
-    if x not in valid_wfc_pixels:
+    if x not in valid_wfc_x_pixels:
         LOG.error("The X coordinate should be an integer between 0 and 4096.")
         return
 
-    if y not in valid_wfc_pixels:
-        LOG.error("The Y coordinate should be an integer between 0 and 4096.")
+    if y not in valid_wfc_y_pixels:
+        LOG.error("The Y coordinate should be an integer between 0 and 2048.")
         return
 
     if subpixel_x < 0 or subpixel_x > 0.99 or subpixel_y < 0.0 or subpixel_y > 0.99:
@@ -326,26 +330,16 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
     subpixel_x = round(subpixel_x, 2)
     subpixel_y = round(subpixel_y, 2)
 
-    # if user inputs coordinates for WFC1 (y >= 2048), then adjust down and set chip = "WFC1",
-    # otherwise assume chip = "WFC2"
-    chip = "WFC2"
-    if y >= 2048:
-        y = y - 2048
-        chip = "WFC1"
-
-    # FIXME: Confirm that these are actually correct in a 0-indexed system.
     # give positions of ePSFs based on Andrea's coordinate system
     acs_xCoords = np.array([0, 512, 1024, 1536, 2168, 2800, 3192, 3584, 4096])
     acs_yCoords = np.array([0, 512, 1024, 1536, 2048])
 
     # now, need to find closest four PSFs to any user-defined position
 
-    # FIXME: Confirm that <= and >= resulting in x in both lists is intentional.
     # first, find coordinates of ePSFs surrounding userCoords
     xLow = acs_xCoords[acs_xCoords <= x].max()
     xHigh = acs_xCoords[acs_xCoords >= x].min()
 
-    # FIXME: Confirm that <= and >= resulting in y in both lists is intentional.
     yLow = acs_yCoords[acs_yCoords <= y].max()
     yHigh = acs_yCoords[acs_yCoords >= y].min()
 
@@ -431,8 +425,6 @@ def interp_epsf(ePSFs, x, y, pixel_space=False, subpixel_x=0, subpixel_y=0):
         # create blank array for downsampled ePSF
         P_sub_down = np.zeros((25, 25))
 
-        # FIXME: Can we use https://docs.astropy.org/en/stable/api/astropy.nddata.block_reduce.html ?
-        #        Or at least vectorize to get rid of nested loops in Python?
         # then downsample
         for i in range(25):
             for j in range(25):
