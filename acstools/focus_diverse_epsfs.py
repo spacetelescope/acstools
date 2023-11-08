@@ -251,15 +251,17 @@ def multi_psf_retriever(input_list, download_location, num_workers=8):
 
 def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0):
     """Function to perform further spatial interpolations given the input ePSF array.
-    It uses bi-linear interpolation for the
-    integer pixel shifts, and bi-cubic interpolation for any specified subpixel phase shifts.
+    It uses bi-linear interpolation for the integer pixel shifts, and 
+    bi-cubic interpolation for any specified subpixel phase shifts.
 
     This function allows users to interpolate the provided ePSF arrays
-    to any arbitrary ``(x, y)`` coordinates. It can be called with ``pixel_space=True`` to
-    downsample the ePSF into detector space. Subpixel phase shifts can be applied by
-    setting ``subpixel_x`` and ``subpixel_y`` between 0 and 0.99. Note that a 1 pixel border
-    is removed from the subpixel phase shifted ePSF, such that the final dimensions are 23x23.
-    Results from this subpixel phase shift routine may differ from other algorithmic
+    to any arbitrary ``(x, y)`` pixel coordinates. It can be called with 
+    ``pixel_space=True`` to downsample the ePSF into detector space. 
+
+    Subpixel phase shifts can be applied by setting ``subpixel_x`` and ``subpixel_y`` 
+    between 0 and 0.99. Note that a 1 pixel border is removed from the subpixel 
+    phase shifted ePSF, such that the final dimensions are 23x23. Results from this 
+    subpixel phase shift routine may differ from other algorithmic
     implementations, typically at the level of <0.5% in the core of the ePSF.
 
     .. note::
@@ -277,11 +279,12 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
         Array with the ePSFs.
 
     x : int
-        X-coordinate (0-indexed) of the desired output ePSF.
+        X-coordinate (1-indexed) of the desired output ePSF. Please note that the range here is between 
+        1 and 4096, inclusive. The ePSF grid begins off the detector, at (0,0).
 
     y : int
-        Y-coordinate (0-indexed) of the desired output ePSF. Please note that the range here is between
-        0 and 2048, inclusive.
+        Y-coordinate (1-indexed) of the desired output ePSF. Please note that the range here is between
+        1 and 2048, inclusive. The ePSF grid begins off the detector, at (0,0).
 
     chip : str
         String corresponding to which ACS/WFC detector the user is specifying the coordinates on,
@@ -306,15 +309,15 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
     psf_retriever, multi_psf_retriever
 
     """
-    valid_wfc_x_pixels = range(0, 4097)
-    valid_wfc_y_pixels = range(0, 2049)
+    valid_wfc_x_pixels = range(1, 4097)
+    valid_wfc_y_pixels = range(1, 2049)
 
     if x not in valid_wfc_x_pixels:
-        LOG.error("The X coordinate should be an integer between 0 and 4096.")
+        LOG.error("The X coordinate should be an integer between 1 and 4096.")
         return
 
     if y not in valid_wfc_y_pixels:
-        LOG.error("The Y coordinate should be an integer between 0 and 2048.")
+        LOG.error("The Y coordinate should be an integer between 1 and 2048.")
         return
 
     if subpixel_x < 0 or subpixel_x > 0.99 or subpixel_y < 0.0 or subpixel_y > 0.99:
@@ -333,7 +336,8 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
     subpixel_x = round(subpixel_x, 2)
     subpixel_y = round(subpixel_y, 2)
 
-    # give positions of ePSFs based on Andrea's coordinate system
+    # give positions of ePSFs based on Andrea and Jay's coordinate system
+    # 0,0 is off the detector, but that is where the ePSF definitions begin
     acs_xCoords = np.array([0, 512, 1024, 1536, 2168, 2800, 3192, 3584, 4096])
     acs_yCoords = np.array([0, 512, 1024, 1536, 2048])
 
