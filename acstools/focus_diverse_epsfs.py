@@ -251,16 +251,16 @@ def multi_psf_retriever(input_list, download_location, num_workers=8):
 
 def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0):
     """Function to perform further spatial interpolations given the input ePSF array.
-    It uses bi-linear interpolation for the integer pixel shifts, and 
+    It uses bi-linear interpolation for the integer pixel shifts, and
     bi-cubic interpolation for any specified subpixel phase shifts.
 
     This function allows users to interpolate the provided ePSF arrays
-    to any arbitrary ``(x, y)`` pixel coordinates. It can be called with 
-    ``pixel_space=True`` to downsample the ePSF into detector space. 
+    to any arbitrary ``(x, y)`` pixel coordinates. It can be called with
+    ``pixel_space=True`` to downsample the ePSF into detector space.
 
-    Subpixel phase shifts can be applied by setting ``subpixel_x`` and ``subpixel_y`` 
-    between 0 and 0.99. Note that a 1 pixel border is removed from the subpixel 
-    phase shifted ePSF, such that the final dimensions are 23x23. Results from this 
+    Subpixel phase shifts can be applied by setting ``subpixel_x`` and ``subpixel_y``
+    between 0 and 0.99. Note that a 1 pixel border is removed from the subpixel
+    phase shifted ePSF, such that the final dimensions are 23x23. Results from this
     subpixel phase shift routine may differ from other algorithmic
     implementations, typically at the level of <0.5% in the core of the ePSF.
 
@@ -279,7 +279,7 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
         Array with the ePSFs.
 
     x : int
-        X-coordinate (1-indexed) of the desired output ePSF. Please note that the range here is between 
+        X-coordinate (1-indexed) of the desired output ePSF. Please note that the range here is between
         1 and 4096, inclusive. The ePSF grid begins off the detector, at (0,0).
 
     y : int
