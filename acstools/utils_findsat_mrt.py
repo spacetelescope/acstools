@@ -108,7 +108,9 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
             drho = np.abs(t['ycentroid'] - s['ycentroid'])
             sel = (dtheta < theta_sep) & (drho < rho_sep)
             keep[sel] = False
-        src = vstack([src, t[keep]])
+        # Silence MergeConflictWarning for "date" metadata because
+        # the tables were created with different timestamps. The last entry is kept.
+        src = vstack([src, t[keep]], metadata_conflicts="silent")
     return src
 
 
