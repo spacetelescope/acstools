@@ -2,7 +2,7 @@ name: Wheel building
 
 on:
   pull_request:
-    # We also want this workflow triggered if the 'Build all wheels'
+    # We also want this workflow triggered if the 'Build wheels'
     # label is added or present when PR is updated
     types:
       - synchronize
@@ -13,9 +13,12 @@ on:
     tags:
       - '*'
 
-permissions:
-  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+# NOTE: Cannot use OpenAstronomy workflow due to
+#       https://github.com/OpenAstronomy/github-actions-workflows/issues/168
 jobs:
   build_and_publish:
     # This job builds the wheels and publishes them to PyPI for all
@@ -25,18 +28,37 @@ jobs:
     permissions:
       contents: none
 
-    uses: OpenAstronomy/github-actions-workflows/.github/workflows/publish_pure_python.yml@v1
-
+    runs-on: ubuntu-latest
     if: (github.repository == 'spacetelescope/acstools' && (github.event_name == 'push' ||  contains(github.event.pull_request.labels.*.name, 'Build wheels')))
-    with:
-      env: |
-        jref: "https://ssb.stsci.edu/trds_open/jref"
 
-      # We upload to PyPI for all tag pushes
-      upload_to_pypi: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      test_extras: test,all
-      test_command: pytest -p no:warnings --pyargs acstools.tests --remote-data -v
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-    secrets:
-      pypi_token: ${{ secrets.PYPI_TOKEN }}
+    - name: Install python-build and twine
+      run: python -m pip install build "twine>=3.3"
+
+    - name: Build package
+      run: python -m build --sdist --wheel .
+
+    - name: List result
+      run: ls -l dist
+
+    - name: Check dist
+      run: python -m twine check --strict dist/*
+
+    # FOR DEBUGGING ONLY: repository_url (TestPyPI) and verbose;
+    # Use appropriate token if debugging with TestPyPI
+    - name: Publish distribution 📦 to PyPI
+      if: (startsWith(github.ref, 'refs/tags/') && github.event_name == 'push')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_TOKEN }}
+        #repository_url: https://test.pypi.org/legacy/
+        #verbose: true
