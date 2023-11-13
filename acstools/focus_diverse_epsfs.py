@@ -17,7 +17,7 @@ coordinates, downsample the ePSF into detector space, or apply subpixel phase sh
 We strongly recommend you read
 `ACS ISR 2018-08 <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr1808.pdf>`_
 by A. Bellini et al. and
-`ACS ISR 2023-06 <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2306.pdf>`_ 
+`ACS ISR 2023-06 <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/acs/documentation/instrument-science-reports-isrs/_documents/isr2306.pdf>`_
 by G. Anand et al. for more details
 on these ePSF models and tools before using them.
 
