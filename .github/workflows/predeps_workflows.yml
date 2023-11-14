@@ -18,8 +18,8 @@ jobs:
         jref: "https://ssb.stsci.edu/trds_open/jref"
       submodules: false
       coverage: ''
-    # TODO: Enable more OSes when possible.
-    envs: |
-      - name: Python 3.11 with pre-release
-        linux: py311-test-predeps
-        posargs: --remote-data -v
+      # TODO: Enable more OSes when possible.
+      envs: |
+        - name: Python 3.11 with pre-release
+          linux: py311-test-predeps
+          posargs: --remote-data -v
