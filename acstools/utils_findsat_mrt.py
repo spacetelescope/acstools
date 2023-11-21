@@ -20,8 +20,8 @@ try:
     from skimage import transform
     from skimage.transform._warps import warp
     from skimage._shared.utils import convert_to_float
-except ImportError:
-    warnings.warn('skimage not installed. MRT calculation will not work.')
+except ImportError as e:
+    warnings.warn(f'skimage not installed. MRT calculation will not work: {repr(e)}')
 
 # check for scipy
 try:
