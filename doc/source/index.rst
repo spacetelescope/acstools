@@ -5,7 +5,7 @@ ACSTOOLS
 ########
 
 Software tools for
-`Advanced Camera for Surveys (ACS) <http://www.stsci.edu/hst/acs/>`_.
+`Advanced Camera for Surveys (ACS) <https://www.stsci.edu/hst/acs/>`_.
 
 Different ways to install the latest release of this package::
 
