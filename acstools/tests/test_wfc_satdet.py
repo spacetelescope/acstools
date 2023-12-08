@@ -3,9 +3,13 @@
 .. note:: Cannot test ``detsat()`` because PHT results change from run to run!
 
 """
+import pytest
+
 from acstools import satdet
 from acstools.utils_findsat_mrt import update_dq
 from acstools.tests.helpers import BaseACSTOOLS
+
+pytest.importorskip("skimage")
 
 
 class TestSatDet(BaseACSTOOLS):

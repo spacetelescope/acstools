@@ -26,7 +26,9 @@ class TestDestripe(BaseACSTOOLS):
                                mask1=masks[0], mask2=masks[1])
 
         # Compare results
-        self.compare_outputs([(outputfile, truthfile)], rtol=1e-6)
+        # NOTE: atol instead of rtol was set due to numpy 2.0,
+        # see https://github.com/spacetelescope/acstools/issues/184
+        self.compare_outputs([(outputfile, truthfile)], atol=0.01)
 
     # jb5g05ubq = calibrated post-SM4 WFC full-frame exposures without masks
     # ja0x03ojq = calibrated polarizer WFC subarray exposures
