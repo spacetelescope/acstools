@@ -1,10 +1,13 @@
 '''Test satellite trail detection and masking using findsat_mrt.'''
 import os
 
+import pytest
 from astropy.io.fits import FITSDiff
 from astropy.utils.data import get_pkg_data_filename
 
 from acstools.findsat_mrt import WfcWrapper
+
+pytest.importorskip("skimage")
 
 
 def test_WfcWrapper(tmp_path):
