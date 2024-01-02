@@ -59,6 +59,6 @@ jobs:
           linux: py39-test-alldeps
           posargs: --remote-data -v
 
-        - name: Python 3.12 with remote data
+        - name: Python 3.12 with remote data and dev dependencies
           linux: py312-test-devdeps
           posargs: --remote-data -v
