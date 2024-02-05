@@ -128,7 +128,6 @@ jc8m10syq_flc.fits[6] updated
 #
 
 # STDLIB
-from enum import KEEP
 import glob
 import multiprocessing
 import time
