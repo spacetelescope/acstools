@@ -285,7 +285,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         trail_angle = trail_angle[mask]
         result = result[mask]
 
-        ang, num = stats.mode(round_angle)
+        ang, num = stats.mode(round_angle, keepdims=True)
 
         # do the filtering
         truth = round_angle == ang[0]
