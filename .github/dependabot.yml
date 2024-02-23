@@ -3,12 +3,17 @@ updates:
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: ".github/workflows"
     target-branch: "master"
     schedule:
       interval: monthly
-      time: "03:00"
-      
+      time: "03:10"
+    groups:
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+
   # Maintain dependencies for pip
   - package-ecosystem: "pip"
     directory: "/"
@@ -16,5 +21,8 @@ updates:
     schedule:
       interval: monthly
       time: "03:00"
+    groups:
+      actions:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
-
