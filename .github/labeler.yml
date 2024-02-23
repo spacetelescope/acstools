@@ -1,43 +1,61 @@
 docs:
-  - .github/**/*.md
-  - .readthedocs.yaml
-  - doc/**/*
-  - '*.md'
-  - any: ['*.rst', '!CHANGES.rst']
+- changed-files:
+  - any-glob-to-any-file:
+    - .github/**/*.md
+    - .readthedocs.yaml
+    - doc/**/*
+    - '*.md'
+  - all-globs-to-any-file:
+    - '*.rst'
+    - '!CHANGES.rst'
 
 testing:
-  - .bandit.yaml
-  - .github/**/*.yml
-  - conftest.py
-  - acstools/tests/**/*
-  - Jenkinsfile
-  - JenkinsfileRT
+- changed-files:
+  - any-glob-to-any-file:
+    - .bandit.yaml
+    - .github/**/*.yml
+    - conftest.py
+    - acstools/tests/**/*
 
 CALACS:
-  - acstools/acs2d.py
-  - acstools/acsccd.py
-  - acstools/acscteforwardmodel.py
-  - acstools/acscte.py
-  - acstools/acsrej.py
-  - acstools/acssum.py
-  - acstools/calacs.py
-  - acstools/utils_calib.py
+- changed-files:
+  - any-glob-to-any-file:
+    - acstools/acs2d.py
+    - acstools/acsccd.py
+    - acstools/acscteforwardmodel.py
+    - acstools/acscte.py
+    - acstools/acsrej.py
+    - acstools/acssum.py
+    - acstools/calacs.py
+    - acstools/utils_calib.py
 
 CTE:
-  - acstools/acscteforwardmodel.py
-  - acstools/acscte.py
-  - acstools/acsphotcte.py
+- changed-files:
+  - any-glob-to-any-file:
+    - acstools/acscteforwardmodel.py
+    - acstools/acscte.py
+    - acstools/acsphotcte.py
 
 Destripe:
-  - acstools/acs_destripe_plus.py
-  - acstools/acs_destripe.py
+- changed-files:
+  - any-glob-to-any-file:
+    - acstools/acs_destripe_plus.py
+    - acstools/acs_destripe.py
 
 Polarization:
-  - acstools/polarization_tools.py
-  - acstools/data/polarizer_tables.yaml
+- changed-files:
+  - any-glob-to-any-file:
+    - acstools/polarization_tools.py
+    - acstools/data/polarizer_tables.yaml
 
 Satellite Detection:
-  - acstools/satdet.py
+- changed-files:
+  - any-glob-to-any-file:
+    - acstools/satdet.py
+    - acstools/findsat_mrt.py
+    - acstools/utils_findsat_mrt.py
 
 Zeropoints:
-  - acstools/acszpt.py
+- changed-files:
+  - any-glob-to-any-file:
+    - acstools/acszpt.py
