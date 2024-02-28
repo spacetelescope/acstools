@@ -1360,6 +1360,11 @@ class WfcWrapper(TrailFinder):
 
         LOG.info('Rebinning the data by {}'.format(self.binsize))
 
+        # trigger a warning if the image dimensions are not even
+        if (self.image.shape[0] % self.binsize != 0) | (self.image.shape[1] % self.binsize != 0):
+            LOG.warning('Warning: image dimensions do not evenly divide by bin size.\n'
+                        'Extra rows/columns will be trimmed first')
+
         # setting a warning filter for the nansum calculations. These
         # warnings are inconsequential and already accounted for in the code
         with warnings.catch_warnings():
