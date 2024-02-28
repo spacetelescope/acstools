@@ -1361,9 +1361,10 @@ class WfcWrapper(TrailFinder):
         LOG.info('Rebinning the data by {}'.format(self.binsize))
 
         # trigger a warning if the image dimensions are not even
-        if (self.image.shape[0] % self.binsize != 0) | (self.image.shape[1] % self.binsize != 0):
-            LOG.warning('Warning: image dimensions do not evenly divide by bin size.\n'
-                        'Extra rows/columns will be trimmed first')
+        if ((self.image.shape[0] % self.binsize != 0)) | \
+           ((self.image.shape[1] % self.binsize != 0)):
+            LOG.warning('Warning: image dimensions do not evenly divide by bin'
+                        'size.\n Extra rows/columns will be trimmed first')
 
         # setting a warning filter for the nansum calculations. These
         # warnings are inconsequential and already accounted for in the code
@@ -1411,4 +1412,4 @@ class WfcWrapper(TrailFinder):
             raise ValueError(f'DQ array can only be updated for FLC/FLT images, not {self.image_type}')  # noqa
 
         update_dq(self.image_file, self.extension + 2, self.mask, dqval=dqval,
-                  verbose=verbose)
+                  verbose=verbose, expand_mask=True)

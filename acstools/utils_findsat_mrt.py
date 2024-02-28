@@ -1179,7 +1179,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         return radon_image
 
 
-def update_dq(filename, ext, mask, dqval=16384, verbose=True, expand_mask=False):
+def update_dq(filename, ext, mask, dqval=16384, verbose=True,
+              expand_mask=False):
     """Update the given image and DQ extension with the given
     satellite trails mask and flag.
 
@@ -1212,34 +1213,40 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True, expand_mask=False)
         same_size = mask.shape == dqarr.shape
 
         if not same_size:
-            LOG.info('Inconsistent mask sizes: \n' 
-                     'Input mask: {} \n' 
+            LOG.info('Inconsistent mask sizes: \n'
+                     'Input mask: {} \n'
                      'DQ array: {}'.format(mask.shape, dqarr.shape))
             if not expand_mask:
                 LOG.warning('Cannot proceed due to size mismatch.\n'
-                            'Set expand_mask=True if the mask was generated with \n'
-                            'binned data and needs to be enlarged to the original size')
+                            'Set expand_mask=True if the mask was generated'
+                            'with binned data and needs to be enlarged to the'
+                            'original size')
                 return
             else:
                 LOG.info('Enlarging mask to original size')
                 factor_x = np.floor(dqarr.shape[1]/mask.shape[1]).astype(int)
                 factor_y = np.floor(dqarr.shape[0]/mask.shape[0]).astype(int)
-                mask = block_replicate(mask, [factor_y,factor_x], conserve_sum=False)
+                mask = block_replicate(mask, [factor_y, factor_x],
+                                       conserve_sum=False)
 
-                # for original data that had odd dimensions before binning, the 
-                # mask still will not match the original. Duplicate end rows/columns in this case
+                # for original data that had odd dimensions before binning, the
+                # mask still will not match the original. Duplicate end
+                # rows/columns in this case
 
                 same_size = mask.shape == dqarr.shape
                 if not same_size:
-                    LOG.info('Still inconsistent mask sizes: \n' 
-                             'Input mask: {} \n' 
+                    LOG.info('Still inconsistent mask sizes: \n'
+                             'Input mask: {} \n'
                              'DQ array: {}'.format(mask.shape, dqarr.shape))
-                    LOG.info('Duplicating end rows/columns to match original size')
+                    LOG.info('Duplicating end rows/columns to match orig size')
                     while mask.shape[0] != dqarr.shape[0]:
-                        mask = np.vstack([mask,mask[-1,:]])
+                        mask = np.vstack([mask,
+                                          mask[-1, :]])
 
                     while mask.shape[1] != dqarr.shape[1]:
-                        mask = np.hstack([mask,mask[:,-1].reshape(mask.shape[0],1)])
+                        mask = np.hstack([mask,
+                                          mask[:, -1].reshape(mask.shape[0],
+                                                              1)])
 
         old_mask = (dqval & dqarr) != 0  # Existing flagged trails
         new_mask = mask & ~old_mask  # Only flag previously unflagged trails
