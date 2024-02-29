@@ -1218,8 +1218,8 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
                      'DQ array: {}'.format(mask.shape, dqarr.shape))
             if not expand_mask:
                 LOG.warning('Cannot proceed due to size mismatch.\n'
-                            'Set expand_mask=True if the mask was generated'
-                            'with binned data and needs to be enlarged to the'
+                            'Set expand_mask=True if the mask was generated '
+                            'with binned data and needs to be enlarged to the '
                             'original size')
                 return
             else:
