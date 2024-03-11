@@ -1200,10 +1200,10 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
         tailored for ACS/WFC.
     verbose : bool, optional
         Print extra information to the terminal.
-    expand_mask: int, optional
+    expand_mask: bool, optional
         Allows the mask to be expanded to match the size of the original mask.
         This is relevant for masks that were generated used binned versions of
-        the original image
+        the original image.
 
     """
     with fits.open(filename, mode='update') as pf:
@@ -1220,10 +1220,10 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
                 LOG.warning('Cannot proceed due to size mismatch.\n'
                             'Set expand_mask=True if the mask was generated '
                             'with binned data and needs to be enlarged to the '
-                            'original size')
+                            'original size.')
                 return
             else:
-                LOG.info('Enlarging mask to original size')
+                LOG.info('Enlarging mask to original size.')
                 factor_x = np.floor(dqarr.shape[1]/mask.shape[1]).astype(int)
                 factor_y = np.floor(dqarr.shape[0]/mask.shape[0]).astype(int)
                 mask = block_replicate(mask, [factor_y, factor_x],
