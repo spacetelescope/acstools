@@ -1234,29 +1234,41 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
                 return
             else:
                 LOG.info('Enlarging mask to original size.')
+
+                # Determine factor by which to scale-up the image. Scales should
+                # be the same for the x and y dimensions, after we round down
+                # to the nearest integer in case there are extra rows/columns 
+                # that do not divide evenly. These extra rows/columns will be 
+                # added back at the end. This approach is the reverse of
+                # astropy.nddata.block_reduce, which trims extra rows/cols
+                # first. 
+
                 factor_x = np.floor(dqarr.shape[1]/mask.shape[1]).astype(int)
                 factor_y = np.floor(dqarr.shape[0]/mask.shape[0]).astype(int)
-                mask = block_replicate(mask, [factor_y, factor_x],
+                if factor_x != factor_y:
+                    raise ValueError('Mask dimensions require scaling by'
+                                     'different amounts in order to match the DQ'
+                                     'array but this is not allowed.')
+                else:
+                    factor = factor_x
+
+                # assess whether there will be extra rows/columns after scaling
+                extra_cols = dqarr.shape[1] - mask.shape[1]*factor
+                extra_rows = dqarr.shape[0] - mask.shape[0]*factor
+
+                mask = block_replicate(mask, factor,
                                        conserve_sum=False)
 
-                # for original data that had odd dimensions before binning, the
-                # mask still will not match the original. Duplicate end
-                # rows/columns in this case
-
-                same_size = mask.shape == dqarr.shape
-                if not same_size:
-                    LOG.info('Still inconsistent mask sizes: \n'
-                             'Input mask: {} \n'
-                             'DQ array: {}'.format(mask.shape, dqarr.shape))
-                    LOG.info('Duplicating end rows/columns to match orig size')
+                if extra_rows > 0:
+                    LOG.info('Duplicating end rows to match orig size')
                     while mask.shape[0] != dqarr.shape[0]:
-                        mask = np.vstack([mask,
-                                          mask[-1, :]])
+                        mask = np.vstack([mask, mask[-1, :]])
 
+                if extra_cols > 0:
+                    LOG.info('Duplicating end columns to match orig size')
                     while mask.shape[1] != dqarr.shape[1]:
                         mask = np.hstack([mask,
-                                          mask[:, -1].reshape(mask.shape[0],
-                                                              1)])
+                                          mask[:, -1].reshape(mask.shape[0],1)])
 
         old_mask = (dqval & dqarr) != 0  # Existing flagged trails
         new_mask = mask & ~old_mask  # Only flag previously unflagged trails
