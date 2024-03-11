@@ -1290,8 +1290,8 @@ class WfcWrapper(TrailFinder):
 
     @binsize.setter
     def binsize(self, value):
-        if value is not None and not isinstance(value, int):
-            raise ValueError(f"binsize must be None or int but got: {value}")
+        if value is not None and not (isinstance(value, int) and value >= 1):
+            raise ValueError(f"binsize must be None or int >= 1 but got: {value}")  # noqa
         self._binsize = value
 
     @property
@@ -1361,8 +1361,8 @@ class WfcWrapper(TrailFinder):
         LOG.info('Rebinning the data by {}'.format(self.binsize))
 
         # trigger a warning if the image dimensions are not even
-        if ((self.image.shape[0] % self.binsize != 0)) |
-           ((self.image.shape[1] % self.binsize != 0)):
+        if (((self.image.shape[0] % self.binsize != 0)) |
+           ((self.image.shape[1] % self.binsize != 0))):
             LOG.warning('Image dimensions do not evenly divide by bin size.'
                         '\nExtra rows/columns will be trimmed first.')
 
