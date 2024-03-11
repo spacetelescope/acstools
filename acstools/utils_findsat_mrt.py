@@ -1203,7 +1203,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
     expand_mask: bool, optional
         Allows the mask to be expanded to match the size of the original mask.
         This is relevant for masks that were generated used binned versions of
-        the original image.
+        the original image. 
 
     """
     with fits.open(filename, mode='update') as pf:
@@ -1211,13 +1211,23 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
 
         # check that the old mask and new mask are the same size
         same_size = mask.shape == dqarr.shape
+        mask_larger = np.any([mask.shape[i] > dqarr.shape[i] 
+                              for i in range(mask.ndim)])
 
+        # provide informative error messages depending on mask/dqarr size
         if not same_size:
             LOG.info('Inconsistent mask sizes: \n'
                      'Input mask: {} \n'
                      'DQ array: {}'.format(mask.shape, dqarr.shape))
-            if not expand_mask:
-                LOG.warning('Cannot proceed due to size mismatch.\n'
+            
+            if mask_larger:
+                LOG.error('Mask is larger than the DQ array in one or more '
+                          'dimensions.\nThis routine cannot currently rescale'
+                          'masks that are larger than the origin input image')
+                return
+
+            elif not mask_larger and not expand_mask:
+                LOG.error('Cannot proceed due to size mismatch.\n'
                             'Set expand_mask=True if the mask was generated '
                             'with binned data and needs to be enlarged to the '
                             'original size.')
