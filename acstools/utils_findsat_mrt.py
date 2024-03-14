@@ -10,7 +10,7 @@ import numpy as np
 from astropy.convolution import convolve, Gaussian2DKernel
 from astropy.io import fits
 from astropy.modeling import models, fitting
-from astropy.nddata import Cutout2D
+from astropy.nddata import Cutout2D, block_replicate
 from astropy.stats import sigma_clip
 from astropy.table import Table, vstack
 from astropy.utils.exceptions import AstropyUserWarning
@@ -21,7 +21,7 @@ try:
     from skimage.transform._warps import warp
     from skimage._shared.utils import convert_to_float
 except ImportError as e:
-    warnings.warn(f'skimage not installed. MRT calculation will not work: {repr(e)}')
+    warnings.warn(f'skimage not installed. MRT calculation will not work: {repr(e)}')  # noqa
 
 # check for scipy
 try:
@@ -108,8 +108,8 @@ def merge_tables(tbls, theta_sep=10, rho_sep=10):
             drho = np.abs(t['ycentroid'] - s['ycentroid'])
             sel = (dtheta < theta_sep) & (drho < rho_sep)
             keep[sel] = False
-        # Silence MergeConflictWarning for "date" metadata because
-        # the tables were created with different timestamps. The last entry is kept.
+        # Silence MergeConflictWarning for "date" metadata because the tables
+        # were created with different timestamps. The last entry is kept.
         src = vstack([src, t[keep]], metadata_conflicts="silent")
     return src
 
@@ -1179,7 +1179,8 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
         return radon_image
 
 
-def update_dq(filename, ext, mask, dqval=16384, verbose=True):
+def update_dq(filename, ext, mask, dqval=16384, verbose=True,
+              expand_mask=False):
     """Update the given image and DQ extension with the given
     satellite trails mask and flag.
 
@@ -1199,10 +1200,85 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True):
         tailored for ACS/WFC.
     verbose : bool, optional
         Print extra information to the terminal.
+    expand_mask : bool, optional
+        Allows the mask to be expanded to match the size of the original mask.
+        This is relevant for masks that were generated used binned versions of
+        the original image.
 
     """
     with fits.open(filename, mode='update') as pf:
         dqarr = pf[ext].data
+
+        # check that the old mask and new mask are the same size
+        same_size = mask.shape == dqarr.shape
+        mask_larger = np.any([mask.shape[i] > dqarr.shape[i]
+                              for i in range(mask.ndim)])
+
+        # provide informative error messages depending on mask/dqarr size
+        if not same_size:
+            LOG.info('Inconsistent mask sizes: \n'
+                     'Input mask: {} \n'
+                     'DQ array: {}'.format(mask.shape, dqarr.shape))
+
+            if mask_larger:
+                LOG.error('Mask is larger than the DQ array in one or more '
+                          'dimensions.\nThis routine cannot currently rescale '
+                          'masks that are larger than the origin input image')
+                return
+
+            elif not mask_larger and not expand_mask:
+                LOG.error('Cannot proceed due to size mismatch.\n'
+                          'Set expand_mask=True if the mask was generated '
+                          'with binned data and needs to be enlarged to the '
+                          'original size.')
+                return
+            else:
+                LOG.info('Enlarging mask to original size.')
+
+                # Determine factor by which to scale-up image. Scales should
+                # be the same for the x and y dimensions, after we round down
+                # to the nearest integer in case there are extra rows/columns
+                # that do not divide evenly. These extra rows/columns will be
+                # added back at the end. This approach is the reverse of
+                # astropy.nddata.block_reduce, which trims extra rows/cols
+                # first.
+
+                factor_x = np.floor(dqarr.shape[1]/mask.shape[1]).astype(int)
+                factor_y = np.floor(dqarr.shape[0]/mask.shape[0]).astype(int)
+                if factor_x != factor_y:
+
+                    mask_aspect = mask.shape[1]/mask.shape[0]
+                    dq_aspect = dqarr.shape[1]/dqarr.shape[0]
+
+                    raise ValueError('Mask and DQ array axis aspect ratios are'
+                                     ' too different\n'
+                                     'Mask dimensions (x,y) = {}\n'
+                                     'Mask aspect ratio (x/y) = {}\n'
+                                     'DQ array dimensions (y,x) = {}\n'
+                                     'DQ array aspect ratio (x/y) = {}'
+                                     .format(mask.shape, mask_aspect,
+                                             dqarr.shape, dq_aspect))
+
+                else:
+                    factor = factor_x
+
+                # assess whether there will be extra rows/columns after scaling
+                extra_cols = dqarr.shape[1] - mask.shape[1]*factor
+                extra_rows = dqarr.shape[0] - mask.shape[0]*factor
+
+                mask = block_replicate(mask, factor,
+                                       conserve_sum=False)
+
+                if extra_rows > 0:
+                    LOG.info('Duplicating end rows to match orig size')
+                    while mask.shape[0] != dqarr.shape[0]:
+                        mask = np.vstack([mask, mask[-1, :]])
+
+                if extra_cols > 0:
+                    LOG.info('Duplicating end columns to match orig size')
+                    while mask.shape[1] != dqarr.shape[1]:
+                        mask = np.hstack([mask, mask[:, -1].reshape(mask.shape[0], 1)])  # noqa
+
         old_mask = (dqval & dqarr) != 0  # Existing flagged trails
         new_mask = mask & ~old_mask  # Only flag previously unflagged trails
         npix_updated = np.count_nonzero(new_mask)
