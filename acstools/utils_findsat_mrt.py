@@ -1222,7 +1222,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
 
             if mask_larger:
                 LOG.error('Mask is larger than the DQ array in one or more '
-                          'dimensions.\nThis routine cannot currently rescale'
+                          'dimensions.\nThis routine cannot currently rescale '
                           'masks that are larger than the origin input image')
                 return
 
@@ -1246,9 +1246,19 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
                 factor_x = np.floor(dqarr.shape[1]/mask.shape[1]).astype(int)
                 factor_y = np.floor(dqarr.shape[0]/mask.shape[0]).astype(int)
                 if factor_x != factor_y:
-                    raise ValueError('Mask dimensions require scaling by'
-                                     'different amounts in order to match the'
-                                     'DQ array but this is not allowed.')
+
+                    mask_aspect = mask.shape[1]/mask.shape[0]
+                    dq_aspect = dqarr.shape[1]/dqarr.shape[0]
+
+                    raise ValueError('Mask and DQ array axis aspect ratios are'
+                                     ' too different\n'
+                                     'Mask dimensions (x,y) = {}\n'
+                                     'Mask aspect ratio (x/y) = {}\n'
+                                     'DQ array dimensions (y,x) = {}\n'
+                                     'DQ array aspect ratio (x/y) = {}'
+                                     .format(mask.shape, mask_aspect,
+                                             dqarr.shape, dq_aspect))
+
                 else:
                     factor = factor_x
 
