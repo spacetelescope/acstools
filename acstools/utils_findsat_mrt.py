@@ -1200,7 +1200,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
         tailored for ACS/WFC.
     verbose : bool, optional
         Print extra information to the terminal.
-    expand_mask: bool, optional
+    expand_mask : bool, optional
         Allows the mask to be expanded to match the size of the original mask.
         This is relevant for masks that were generated used binned versions of
         the original image.
