@@ -52,3 +52,10 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+******************
+Citation
+******************
+
+* Please cite `acstools <https://ui.adsabs.harvard.edu/abs/2020ascl.soft11024L/abstract>` if you have used it in your work. 
+
