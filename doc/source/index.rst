@@ -57,5 +57,5 @@ Indices and tables
 Citation
 ******************
 
-* Please cite `acstools <https://ui.adsabs.harvard.edu/abs/2020ascl.soft11024L/abstract>` if you have used it in your work. 
+* Please cite `acstools <https://ui.adsabs.harvard.edu/abs/2020ascl.soft11024L/abstract>`_ if you have used it in your work. 
 
