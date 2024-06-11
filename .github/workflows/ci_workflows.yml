@@ -35,26 +35,13 @@ jobs:
 
   tests:
     needs: initial_checks
-    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
+    uses: zacharyburnett/github-actions-workflows/.github/workflows/tox.yml@tox/coverage_github_actions
     with:
       setenv: |
         jref: "https://ssb.stsci.edu/trds_open/jref"
       submodules: false
-      coverage: ''
+      coverage: github
       envs: |
-        - name: Lint with flake8
-          linux: codestyle
-
-        # Make sure that packaging will work
-        - name: pep517 build
-          linux: twine
-
-        - name: Security audit
-          linux: bandit
-
-        - name: Check links
-          linux: linkcheck
-
         - name: Python 3.9 with remote data and all dependencies
           linux: py39-test-alldeps
           posargs: --remote-data -v
