@@ -1,4 +1,149 @@
+[project]
+name = "acstools"
+description = "Python Tools for HST ACS"
+requires-python = ">=3.8"
+authors = [
+    { name = "Matt Davis", email = "help@stsci.edu" },
+    { name = "Warren Hack" },
+    { name = "Norman Grogin" },
+    { name = "Pey Lian Lim" },
+    { name = "Sara Ogaz" },
+    { name = "Leonardo Ubeda" },
+    { name = "Mihai Cara" },
+    { name = "David Borncamp" },
+    { name = "Nathan Miles" },
+    { name = "Tyler Desjardins" },
+    { name = "Jenna Ryon" },
+    { name = "David Stark" },
+    { name = "Gagandeep Anand" },
+    { name = "Yotam Cohen" },
+]
+keywords = [
+    "astronomy",
+    "astrophysics",
+    "calibration",
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "numpy",
+    "astropy>=3.1",
+    "requests",
+    "PyYAML",
+]
+dynamic = [
+    "version",
+]
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.license]
+file = "LICENSE.md"
+content-type = "text/plain"
+
+[project.urls]
+Homepage = "https://github.com/spacetelescope/acstools"
+"Bug Reports" = "https://github.com/spacetelescope/acstools/issues/"
+Source = "https://github.com/spacetelescope/acstools/"
+Help = "https://hsthelp.stsci.edu"
+
+[project.scripts]
+acs_destripe = "acstools.acs_destripe:main"
+acs_destripe_plus = "acstools.acs_destripe_plus:main"
+
+[project.optional-dependencies]
+all = [
+    "matplotlib",
+    "scipy",
+    "scikit-image",
+    "stsci.tools",
+    "stsci.imagestats",
+    "photutils",
+    "dask",
+]
+test = [
+    "pytest",
+    "pytest-astropy-header",
+    "pytest-remotedata",
+    "ci-watson",
+]
+docs = [
+    "sphinx",
+    "sphinx-automodapi",
+    "sphinx-rtd-theme",
+]
+
 [build-system]
-requires = ["setuptools>=30.3.0",
-            "setuptools_scm"]
+requires = [
+    "setuptools>=30.3.0",
+    "setuptools_scm",
+]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+license-files = [
+    "LICENSE.md",
+]
+
+[tool.setuptools.packages.find]
+namespaces = false
+
+[tool.setuptools.package-data]
+acstools = [
+    "data/*",
+]
+"acstools.tests" = [
+    "data/input/*.fits",
+    "data/truth/*.fits",
+]
+
+[tool.setuptools_scm]
+version_file = "acstools/version.py"
+
+[tool.pytest.ini_options]
+minversion = "5"
+testpaths = [
+    "\"acstools\"",
+    "\"doc\"",
+]
+norecursedirs = [
+    "build",
+    "doc/build",
+]
+astropy_header = true
+xfail_strict = true
+filterwarnings = [
+    "error",
+    "ignore:numpy\\.ndarray size changed:RuntimeWarning",
+    "ignore:unclosed file:ResourceWarning",
+    "ignore:distutils Version classes are deprecated:DeprecationWarning",
+    "ignore:Deprecation Warning.*timeout.*parameter no longer needed:UserWarning",
+    "ignore:Deprecated call to.*pkg_resources\\.declare_namespace.*:DeprecationWarning",
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    "ignore:.*utcfromtimestamp:DeprecationWarning",
+    "ignore:.*numpy\\.core.*:DeprecationWarning",
+    "ignore:skimage not installed",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "E221",
+    "E226",
+    "E262",
+    "E265",
+    "E501",
+    "E704",
+    "W504",
+]
