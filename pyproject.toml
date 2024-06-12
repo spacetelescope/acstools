@@ -109,6 +109,9 @@ acstools = [
     "data/truth/*.fits",
 ]
 
+[tool.setuptools_scm]
+version_file = "acstools/version.py"
+
 [tool.pytest.ini_options]
 minversion = "5"
 testpaths = [
