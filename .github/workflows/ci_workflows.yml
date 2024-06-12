@@ -35,7 +35,7 @@ jobs:
 
   tests:
     needs: initial_checks
-    uses: pllim/github-actions-workflows/.github/workflows/tox.yml@tst-oa-pr207
+    uses: pllim/github-actions-workflows/.github/workflows/tox.yml@pr-to-pr207
     with:
       setenv: |
         jref: "https://ssb.stsci.edu/trds_open/jref"
