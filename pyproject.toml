@@ -134,7 +134,7 @@ filterwarnings = [
     "ignore:skimage not installed",
 ]
 
-[tool.flake8]
+[tool.ruff.lint]
 ignore = [
     "E221",
     "E226",
