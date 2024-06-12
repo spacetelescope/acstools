@@ -35,7 +35,7 @@ jobs:
 
   tests:
     needs: initial_checks
-    uses: zacharyburnett/github-actions-workflows/.github/workflows/tox.yml@tox/coverage_github_actions
+    uses: pllim/github-actions-workflows/.github/workflows/tox.yml@tst-oa-pr207
     with:
       setenv: |
         jref: "https://ssb.stsci.edu/trds_open/jref"
@@ -44,8 +44,8 @@ jobs:
       envs: |
         - name: Python 3.9 with remote data and all dependencies
           linux: py39-test-alldeps
-          posargs: --remote-data -v
+          posargs: -v
 
         - name: Python 3.12 with remote data and dev dependencies
           linux: py312-test-devdeps
-          posargs: --remote-data -v
+          posargs: -v
