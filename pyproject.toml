@@ -42,8 +42,6 @@ dependencies = [
 dynamic = [
     "version",
 ]
-edit-on-github = "False"
-github-project = "spacetelescope/acstools"
 
 [project.readme]
 file = "README.rst"
