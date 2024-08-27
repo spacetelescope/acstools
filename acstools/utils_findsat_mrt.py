@@ -1432,16 +1432,24 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         LOG.info('Inteprolating onto new grid to center kernel')
         theta_arr = np.arange(cutout.shape[1])
         rho_arr = np.arange(cutout.shape[0])
-        theta_grid, rho_grid = np.meshgrid(theta_arr, rho_arr)
 
         new_theta_arr = theta_arr + theta_shift
         new_rho_arr = rho_arr + rho_shift
         new_theta_grid, new_rho_grid = np.meshgrid(new_theta_arr, new_rho_arr)
 
-        # inteprolate onto new grid
-        f = interpolate.interp2d(theta_grid, rho_grid, cutout.data,
-                                 kind='cubic')
-        cutout = f(new_theta_arr, new_rho_arr)  # overwrite old cutout
+        f = interpolate.RegularGridInterpolator((rho_arr, theta_arr),
+                                                cutout.data,
+                                                bounds_error=False,
+                                                fill_value=0,
+                                                method='cubic')
+
+        # unable to provide 2D grid of points for interpolation. Switching to
+        # 1D, and then will switch back
+        points = [[r, t] for r, t in zip(np.ravel(new_rho_grid),
+                                         np.ravel(new_theta_grid))]
+
+        # return to original shape and replace the old cutout
+        cutout = np.reshape(f(points), cutout.data.shape)
 
     if ax:
         fig4, ax4 = plt.subplots()
