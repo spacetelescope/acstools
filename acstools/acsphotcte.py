@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 The ACS Photometric CTE API is a programmatic interface for the
-`ACS Photometric CTE Webtool <https://acsphotometriccte.stsci.edu>`_.
+ACS Photometric CTE Webtool (currently unavailable).
 The API is a cloud-based service that employs a serverless approach on AWS
 with API Gateway and Lambda to compute the photometric CTE corrections
 using the model described in `ACS ISR 2022-06 <https://ui.adsabs.harvard.edu/abs/2022acs..rept....6C/abstract>`_.
