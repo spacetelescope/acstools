@@ -211,6 +211,7 @@ intersphinx_mapping = {
 # -- Options for linkcheck output ---------------------------------------------
 linkcheck_retry = 5
 linkcheck_ignore = [
+    'https://hst-docs.stsci.edu',
     'https://hsthelp.stsci.edu',
     'https://acszeropoints.stsci.edu',
     'https://acspsf.stsci.edu']
