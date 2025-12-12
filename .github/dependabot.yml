@@ -12,7 +12,8 @@ updates:
       actions:
         patterns:
           - "*"
-    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
 
   # Maintain dependencies for pip
   - package-ecosystem: "pip"
@@ -25,4 +26,5 @@ updates:
       actions:
         patterns:
           - "*"
-    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
