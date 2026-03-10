@@ -817,10 +817,14 @@ class TrailFinder:
         # add the theta and rho values to the table
         if self.source_list is not None:
             dtheta = self.theta[1] - self.theta[0]
-            self.source_list['theta'] = (self.theta[0] +
-                dtheta * self.source_list['xcentroid'])
-            self.source_list['rho'] = (self.rho[0] +
-                self.source_list['ycentroid'])
+            self.source_list['theta'] = (
+                self.theta[0] +
+                dtheta * self.source_list['xcentroid']
+            )
+            self.source_list['rho'] = (
+                self.rho[0] +
+                self.source_list['ycentroid']
+            )
 
             # Add the status array and endpoints array. Status will be zero
             # because no additional checks have been done yet.
