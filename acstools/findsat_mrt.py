@@ -779,11 +779,11 @@ class TrailFinder:
 
                 # detect sources
                 if PHOTUTILS_LT_3:
-                    kwargs = {"brightest": None}
+                    kwargs = {"brightest": None, "peakmax": None}
                 else:
-                    kwargs = {"n_brightest": None}
+                    kwargs = {"n_brightest": None, "peak_max": None}
                 s = StarFinder(self.threshold, kernel, min_separation=20,
-                               exclude_border=False, peakmax=None, **kwargs)
+                               exclude_border=False, **kwargs)
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
