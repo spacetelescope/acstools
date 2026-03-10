@@ -755,10 +755,15 @@ class TrailFinder:
         '''
         # test for photutils
         try:
+            import photutils
             from photutils.detection import StarFinder
         except ImportError:
             LOG.error('photutils not installed. Source detection will not work.')  # noqa
             return
+
+        from astropy.utils import minversion
+
+        PHOTUTILS_LT_3 = not minversion(photutils, "2.3.1.dev")  # dev tag a little off
 
         LOG.info('Detection threshold: {}'.format(self.threshold))
 
@@ -771,11 +776,14 @@ class TrailFinder:
             with fits.open(k) as h:
                 kernel = h[0].data
                 LOG.info('Using kernel {}'.format(k))
-
+            
                 # detect sources
+                if PHOTUTILS_LT_3:
+                    kwargs = {"brightest": None}
+                else:
+                    kwargs = {"n_brightest": None}
                 s = StarFinder(self.threshold, kernel, min_separation=20,
-                               exclude_border=False, brightest=None,
-                               peakmax=None)
+                               exclude_border=False, peakmax=None, **kwargs)
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
@@ -809,10 +817,10 @@ class TrailFinder:
         # add the theta and rho values to the table
         if self.source_list is not None:
             dtheta = self.theta[1] - self.theta[0]
-            self.source_list['theta'] = self.theta[0] + \
-                dtheta * self.source_list['xcentroid']
-            self.source_list['rho'] = self.rho[0] + \
-                self.source_list['ycentroid']
+            self.source_list['theta'] = (self.theta[0] +
+                dtheta * self.source_list['xcentroid'])
+            self.source_list['rho'] = (self.rho[0] +
+                self.source_list['ycentroid'])
 
             # Add the status array and endpoints array. Status will be zero
             # because no additional checks have been done yet.
