@@ -776,7 +776,7 @@ class TrailFinder:
             with fits.open(k) as h:
                 kernel = h[0].data
                 LOG.info('Using kernel {}'.format(k))
-            
+
                 # detect sources
                 if PHOTUTILS_LT_3:
                     kwargs = {"brightest": None}
