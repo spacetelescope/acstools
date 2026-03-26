@@ -1075,7 +1075,6 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     Notes
     -----
     Based on code of Justin K. Romberg
-    (https://www.clear.rice.edu/elec431/projects96/DSP/bpanalysis.html)
 
     """
     total_median_time = 0.
