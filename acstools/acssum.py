@@ -38,7 +38,7 @@ def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
 
     output : str
         Output filename.
-        If ``output`` is '' and `input` is '\*_asn.fits',
+        If ``output`` is '' and ``input`` is '\*_asn.fits',
         ``output`` will be automatically set to '\*_sfl.fits'.
         Otherwise, it is an error not to provide a specific ``output``.
 
