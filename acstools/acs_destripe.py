@@ -232,7 +232,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         The string to use to add to each input file name to
         indicate an output product. This string will be appended
         to the suffix in each input filename to create the
-        new output filename. For example, setting `suffix='csck'`
+        new output filename. For example, setting ``suffix='csck'``
         will create '\*_csck.fits' images.
 
     stat : { 'pmode1', 'pmode2', 'mean', 'mode', 'median', 'midpt' } (Default = 'pmode1')
@@ -286,7 +286,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         Histogram's bin width, in sigma units, used to sample the
         distribution of pixel brightness values in order to compute the
         background statistics. This parameter is aplicable *only* to *stat*
-        parameter values of `'mode'` or `'midpt'`.
+        parameter values of ``'mode'`` or ``'midpt'``.
 
     clobber : bool
         Specify whether or not to 'clobber' (delete then replace)
@@ -307,7 +307,7 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         computations. For example, if pixels in the DQ array can be
         combinations of 1, 2, 4, and 8 flags and one wants to consider
         DQ "defects" having flags 2 and 4 as being acceptable for de-striping
-        computations, then `dqbits` should be set to 2+4=6. Then a DQ pixel
+        computations, then ``dqbits`` should be set to 2+4=6. Then a DQ pixel
         having values 2,4, or 6 will be considered a good pixel, while a DQ
         pixel with a value, e.g., 1+2=3, 4+8=12, etc. will be flagged
         as a "bad" pixel.
@@ -315,30 +315,30 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
         Alternatively, one can enter a comma- or '+'-separated list of
         integer bit flags that should be added to obtain the final
         "good" bits. For example, both ``4,8`` and ``4+8`` are equivalent to
-        setting `dqbits` to 12.
+        setting ``dqbits`` to 12.
 
-        | Set `dqbits` to 0 to make *all* non-zero pixels in the DQ
+        | Set ``dqbits`` to 0 to make *all* non-zero pixels in the DQ
           mask to be considered "bad" pixels, and the corresponding image
           pixels not to be used for de-striping computations.
 
         | Default value (`None`) will turn off the use of image's DQ array
           for de-striping computations.
 
-        | In order to reverse the meaning of the `dqbits`
+        | In order to reverse the meaning of the ``dqbits``
           parameter from indicating values of the "good" DQ flags
           to indicating the "bad" DQ flags, prepend '~' to the string
           value. For example, in order not to use pixels with
           DQ flags 4 and 8 for sky computations and to consider
           as "good" all other pixels (regardless of their DQ flag),
-          set `dqbits` to ``~4+8``, or ``~4,8``. To obtain the
+          set ``dqbits`` to ``~4+8``, or ``~4,8``. To obtain the
           same effect with an `int` input value (except for 0),
           enter -(4+8+1)=-9. Following this convention,
-          a `dqbits` string value of ``'~0'`` would be equivalent to
+          a ``dqbits`` string value of ``'~0'`` would be equivalent to
           setting ``dqbits=None``.
 
         .. note::
             DQ masks (if used), *will be* combined with user masks specified
-            in the `mask1` and `mask2` parameters (if any).
+            in the ``mask1`` and ``mask2`` parameters (if any).
 
     rpt_clean : int
         An integer indicating how many *additional* times stripe cleaning
@@ -346,8 +346,8 @@ def clean(input, suffix, stat="pmode1", maxiter=15, sigrej=2.0,
 
     atol : float, None
         The threshold for maximum absolute value of bias stripe correction
-        below which repeated cleanings can stop. When `atol` is `None`
-        cleaning will be repeated `rpt_clean` number of times.
+        below which repeated cleanings can stop. When ``atol`` is `None`
+        cleaning will be repeated ``rpt_clean`` number of times.
         Default = 0.01 [e].
 
     verbose : bool

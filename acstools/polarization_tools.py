@@ -259,7 +259,7 @@ class PolarizerTables:
 
         Returns
         -------
-        pol_tables : `~acstools.polarizer_tools.PolarizerTables`
+        pol_tables : `~acstools.polarization_tools.PolarizerTables`
         """
         with open(yaml_file, 'r') as yf:
             input_dict = yaml.safe_load(yf)
@@ -273,7 +273,7 @@ class PolarizerTables:
 
         Returns
         -------
-        pol_tables : `~acstools.polarizer_tools.PolarizerTables`
+        pol_tables : `~acstools.polarization_tools.PolarizerTables`
         """
         filename = get_pkg_data_filename(os.path.join('data', 'polarizer_tables.yaml'))
         return cls.from_yaml(filename)

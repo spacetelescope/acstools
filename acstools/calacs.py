@@ -56,7 +56,7 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     exe_args : list, optional
         Arbitrary arguments passed to underlying executable call.
         Note: Implementation uses subprocess.call and whitespace is not
-        permitted. E.g. use exe_args=['--nThreads', '1']
+        permitted. E.g., use exe_args=['--nThreads', '1']
 
     """
     if exec_path:

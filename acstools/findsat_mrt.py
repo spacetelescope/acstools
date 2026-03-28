@@ -144,32 +144,32 @@ class TrailFinder:
         The specific header for the FITS extension being used. This is
         added onto the catalog. Default is `None`.
     save_image_header_keys : list, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_image_header_keys`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.save_image_header_keys`.
         Default is an empty list (nothing saved from ``image_header``).
     processes : int, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.processes`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.processes`.
         The default is 2.
     min_length : int, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.min_length`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.min_length`.
         The default is 25 pixels.
     max_width : int, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.max_width`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.max_width`.
         The default is 75 pixels.
     buffer : int, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.buffer`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.buffer`.
         The default is 250 pixels on each side.
     threshold : float, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.threshold`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.threshold`.
         The default is 5.
     theta : ndarray, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.theta`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.theta`.
         The default is `None`, which sets to ``numpy.arange(0, 180, 0.5)``.
     kernels : list, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.kernels`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.kernels`.
         The default is `None`, which reverts to using the 3-, 7-, and 15-pixel
         wide kernels included with this package.
     mask_include_status : list, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.mask_include_status`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.mask_include_status`.
         The default is ``[2]``.
     plot : bool, optional
         Plot all intermediate steps. When set, plots of the input image, MRT
@@ -186,31 +186,31 @@ class TrailFinder:
         :func:`acstools.findsat_mrt.TrailFinder.plot_segment`. The default is
         `False`.
     output_dir : str, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.output_dir`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.output_dir`.
         The default is ``'.'`` (current directory).
     output_root : string, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.root`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.root`.
         The default is ``''`` (no prefix).
     check_persistence : bool, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.check_persistence`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.check_persistence`.
         The default is `True`.
     min_persistence : float, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.min_persistence`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.min_persistence`.
         Must be between 0 and 1. The default is 0.5.
     ignore_theta_range : list of tuples or `None`, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.ignore_theta_range`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.ignore_theta_range`.
         Default is `None`.
     save_catalog : bool, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_catalog`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.save_catalog`.
         Default is `True`.
     save_diagnostic : bool, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_diagnostic`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.save_diagnostic`.
         Default is `True`.
     save_mrt : bool, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_mrt`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.save_mrt`.
         Default is `False`.
     save_mask : bool, optional
-        See :attr:`~acstools.utils_findsat_mrt.TrailFinder.save_mask`.
+        See :attr:`~acstools.findsat_mrt.TrailFinder.save_mask`.
         Default is `False`.
 
     '''  # noqa
@@ -1220,10 +1220,10 @@ class WfcWrapper(TrailFinder):
         Extension of input file to read. This keyword is required if the input
         image is an FLC/FLT file. The default is `None`.
     binsize : int or `None`, optional
-        See :attr:`~acstools.utils_findsat_mrt.WfcWrapper.binsize`.
+        See :attr:`~acstools.findsat_mrt.WfcWrapper.binsize`.
         The default is `None` (no binning).
     ignore_flags : list of int
-        See :attr:`~acstools.utils_findsat_mrt.WfcWrapper.ignore_flags`.
+        See :attr:`~acstools.findsat_mrt.WfcWrapper.ignore_flags`.
         Default is ``[4096, 8192, 16384]``.
     preprocess : bool, optional
         Flag to run all the preprocessing steps (bad pixel flagging,
