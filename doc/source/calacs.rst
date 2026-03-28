@@ -68,8 +68,8 @@ PIXVALUE in FITS File
 
 CALACS uses HSTIO, which utilizes the ``PIXVALUE`` keyword to represent a data
 extension with a constant value. However, this is not a standard FITS behavior
-and is not recognized by ``astropy.io.fits``. While you should not encounter errors or warnings, 
-constant value data extensions may exhibit unexpected behavior when reading, writing, or 
+and is not recognized by ``astropy.io.fits``. While you should not encounter errors or warnings,
+constant value data extensions may exhibit unexpected behavior when reading, writing, or
 manipulating them with ``astropy.io.fits``. Therefore, if issues such as these arise, we recommend use of
 ``stsci.tools.stpyfits``, which is distributed as part of ``stsci_python``,
 instead of `astropy.io.fits` when working with CALACS products.
@@ -138,7 +138,7 @@ CALACS supports several command line options:
 
     * Specify which generation CTE correction to use, the default is 2. Gen 1 (officially deprecated) refers to
       the correction algorithm used in calacs version pre 9.2.0, described in
-      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the 
+      `ACS ISR 2010-03 <https://ui.adsabs.harvard.edu/abs/2010PASP..122.1035A/abstract>`_. Gen 2 refers to the
       new CTE correction algorithm implemented in calacs version 9.2.0 (HSTCAL 1.3.0) described in `ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_.
 
 * --pctetab <filename>
@@ -165,7 +165,7 @@ Batch CALACS
 ------------
 
 The recommended method for running CALACS in batch mode is to use Python and
-the `acstools` package.
+the ``acstools`` package.
 
 For example::
 
@@ -215,7 +215,7 @@ taken after January 2015.
 Pixel-Based CTE Correction (PCTECORR)
 -------------------------------------
 
-For all full-frame WFC exposures, pixel-based CTE correction 
+For all full-frame WFC exposures, pixel-based CTE correction
 (`ACS ISR 2018-04 <https://ui.adsabs.harvard.edu/abs/2018acs..rept....4A/abstract>`_)
 is applied during ACSCTE, which runs after BLEVCORR in ACSCCD.
 

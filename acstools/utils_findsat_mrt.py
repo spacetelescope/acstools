@@ -420,7 +420,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         * trail width
         * trail SNR
         * trail persistence
-        * trail status (see :attr:`acstools.utils_findsat_mrt.TrailFinder.mask_include_status`)
+        * trail status (see :attr:`acstools.findsat_mrt.TrailFinder.mask_include_status`)
 
     '''  # noqa
     # we'll save the newly measured parameters in the following arrays
