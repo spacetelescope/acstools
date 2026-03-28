@@ -93,11 +93,18 @@ namespaces = false
 
 [build-system]
 requires = ["setuptools>=30.3.0",
-            "setuptools_scm"]
+            "setuptools_scm",
+            "wheel",
+            "extension-helpers==1.*",
+            "numpy>=2",
+            "cython>=3.0.0, <4"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 version_file = "acstools/version.py"
+
+[tool.extension-helpers]
+use_extension_helpers = true
 
 [tool.pytest]
 minversion = "9"

@@ -3,6 +3,8 @@
 *.a
 *.o
 *.so
+_radon.c
+_compiler.c
 __pycache__
 
 # Other generated files

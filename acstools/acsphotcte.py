@@ -250,7 +250,7 @@ class PhotCTEAPI:
 
         Returns
         -------
-        corrected_magnitudes : `numpy.array`, `None`
+        corrected_magnitudes : ndarray or `None`
             If the query is successful it returns the CTE corrected magnitudes
             for the sources. Otherwise, it returns `None`.
         """

@@ -4,7 +4,6 @@ Various helper functions for :ref:`findsat_mrt`.
 import logging
 import time
 import warnings
-from multiprocessing import Pool
 
 import numpy as np
 from astropy.convolution import convolve, Gaussian2DKernel
@@ -14,20 +13,12 @@ from astropy.nddata import Cutout2D, block_replicate
 from astropy.stats import sigma_clip
 from astropy.table import Table, vstack
 from astropy.utils.exceptions import AstropyUserWarning
-from astropy.utils.introspection import minversion
+
+from acstools._radon import radon
 
 # check for scikit-image
 try:
-    import skimage
-
-    SKIMAGE_LT_0_27 = not minversion(skimage, "0.26.1.dev")  # 0.27
-
     from skimage import transform
-    from skimage.transform._warps import warp
-    if SKIMAGE_LT_0_27:
-        from skimage._shared.utils import convert_to_float
-    else:
-        from _skimage2._shared.utils import convert_to_float
 except ImportError as e:
     warnings.warn(f'skimage not installed. MRT calculation will not work: {repr(e)}')  # noqa
 
@@ -50,8 +41,8 @@ __version__ = "1.0"
 __vdate__ = "10-Feb-2022"
 __all__ = ['merge_tables', 'good_indices', 'fit_streak_profile',
            'rotate_image_to_trail', 'filter_sources', 'create_mask', 'rotate',
-           'streak_endpoints', 'streak_persistence', 'add_streak', 'rot_sum',
-           'rot_med', 'radon', 'create_mrt_line_kernel', 'update_dq']
+           'streak_endpoints', 'streak_persistence', 'add_streak',
+           'create_mrt_line_kernel', 'update_dq']
 
 # Initialize the logger
 logging.basicConfig()
@@ -939,253 +930,6 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
     return image + trail_image
 
 
-def _rot(image, angle, return_length, func):
-    center = image.shape[0] // 2
-    cos_a, sin_a = np.cos(angle), np.sin(angle)
-    R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
-                  [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
-                  [0, 0, 1]])
-
-    # rotate image
-    rotated = warp(image, R, clip=False, cval=np.nan)
-
-    # take func along each column
-    with warnings.catch_warnings():
-        # suppressing this warning as it's inconsequential and expected
-        warnings.filterwarnings(action='ignore',
-                                message='All-NaN slice encountered')
-        medarr = func(rotated, axis=0)
-
-    # get length along each column
-    if return_length:
-        length = np.sum(np.isfinite(rotated), axis=0)
-        return [medarr, length]
-    return medarr
-
-
-def rot_sum(image, angle, return_length):
-    '''
-    Rotates and image by a designated angle and sums the values in each column.
-
-    Parameters
-    ----------
-    image : ndarray
-        Image to be rotated and summed.
-    angle : float
-        Angle by which to rotate the input image (radians).
-    return_length : bool
-        Set to the return the number of valid pixels in each column.
-
-    Returns
-    -------
-    medarr : ndarray
-        The resulting sum in each column.
-    length : ndarray, optional
-        The number of valid pixels in each column.
-        This is only returned if ``return_length`` is `True`.
-
-    '''
-    return _rot(image, angle, return_length, np.nansum)
-
-
-def rot_med(image, angle, return_length):
-    '''
-    Rotates and image by a designated angle and take a median in each column.
-
-    Parameters
-    ----------
-    image : ndarray
-        Image to be rotated and medianed.
-    angle : float
-        Angle by which to rotate the input image (radians).
-    return_length : bool
-        Set to the return the number of valid pixels in each column.
-
-    Returns
-    -------
-    medarr : ndarray
-        The resulting median in each column.
-    length : ndarray, optional
-        The number of valid pixels in each column.
-        This is only returned if ``return_length`` is `True`.
-
-    '''
-    return _rot(image, angle, return_length, np.nanmedian)
-
-
-# TODO: If radon performance is improved upstream, we should just use
-#       the version in scikit-image and remove this one. See
-#       https://github.com/scikit-image/scikit-image/issues/3118
-def radon(image, theta=None, circle=False, *, preserve_range=False,
-          fill_value=np.nan, median=True, processes=1, return_length=False,
-          print_calc_times=False):
-    """
-    Calculates the (median) radon transform of an image.
-
-    This routine basically :func:`skimage.transform.radon` but with
-    extra options and multiprocessing.
-    For further information see [1]_ and [2]_.
-
-    Parameters
-    ----------
-    image : array-like
-        Input image. The rotation axis will be located in the pixel with
-        indices ``(image.shape[0] // 2, image.shape[1] // 2)``.
-    theta : array-like, optional
-        Projection angles (in degrees). If `None`, the value is set to
-        ``np.arange(180)``.
-    circle : bool, optional
-        Assume image is zero outside the inscribed circle, making the
-        width of each projection (the first dimension of the sinogram)
-        equal to ``min(image.shape)``.
-    preserve_range : bool, optional
-        Whether to keep the original range of values. Otherwise, the input
-        image is converted according to the conventions of ``img_as_float``.
-        Also see https://scikit-image.org/docs/dev/user_guide/data_types.html
-    fill_value : float, optional
-        Value to use for regions where the transform could not be calculated.
-        Default is 0.
-    median: bool, optional
-        Flag to turn on Median Radon Transform instead of standard Radon
-        Transform. Default is `True`.
-    processes: int, optional
-        Number of processes to use when calculating the transform. Default is 1
-        (no multi-processing).
-    return_length : bool, optional
-        Option to return an array giving the length of the data array used to
-        calculate the transform at every location. Default is `False`.
-    print_calc_times : bool, optional
-        Log the run time.
-
-    Returns
-    -------
-    radon_image : ndarray
-        Radon transform (sinogram). The tomography rotation axis will lie
-        at the pixel index ``radon_image.shape[0] // 2`` along the 0th
-        dimension of ``radon_image``.
-    length: ndarray, optional
-        Length of data array. This is only returned if ``return_length`` is
-        `True`.
-
-    Raises
-    ------
-    ValueError
-        Input image is not 2-D or padded image is not square.
-
-    References
-    ----------
-    .. [1] AC Kak, M Slaney, "Principles of Computerized Tomographic
-           Imaging", IEEE Press 1988.
-    .. [2] B.R. Ramesh, N. Srinivasa, K. Rajgopal, "An Algorithm for Computing
-           the Discrete Radon Transform With Some Applications", Proceedings of
-           the Fourth IEEE Region 10 International Conference, TENCON '89, 1989
-
-    Notes
-    -----
-    Based on code of Justin K. Romberg
-
-    """
-    total_median_time = 0.
-    total_warp_time = 0.
-
-    if median is True:
-        LOG.info('Calculating median Radon Transform with {} processes'.format(processes))  # noqa
-    else:
-        LOG.info('Calculating standard Radon Transform with {} processes'.format(processes))  # noqa
-    if image.ndim != 2:
-        raise ValueError('The input image must be 2-D')
-    if theta is None:
-        theta = np.arange(180)
-
-    image = convert_to_float(image, preserve_range)
-
-    if circle:
-        shape_min = min(image.shape)
-        radius = shape_min // 2
-        img_shape = np.array(image.shape)
-        coords = np.array(np.ogrid[:image.shape[0], :image.shape[1]],
-                          dtype=object)
-        dist = ((coords - img_shape // 2) ** 2).sum(0)
-        outside_reconstruction_circle = dist > radius ** 2
-        if np.any(image[outside_reconstruction_circle]):
-            warnings.warn('Radon transform: image must be zero outside the '
-                          'reconstruction circle', AstropyUserWarning)
-        # Crop image to make it square
-        slices = tuple(slice(int(np.ceil(excess / 2)),
-                             int(np.ceil(excess / 2) + shape_min))
-                       if excess > 0 else slice(None)
-                       for excess in (img_shape - shape_min))
-        padded_image = image[slices]
-    else:
-        diagonal = np.sqrt(2) * max(image.shape)
-        pad = [int(np.ceil(diagonal - s)) for s in image.shape]
-        new_center = [(s + p) // 2 for s, p in zip(image.shape, pad)]
-        old_center = [s // 2 for s in image.shape]
-        pad_before = [nc - oc for oc, nc in zip(old_center, new_center)]
-        pad_width = [(pb, p - pb) for pb, p in zip(pad_before, pad)]
-        padded_image = np.pad(image, pad_width, mode='constant',
-                              constant_values=fill_value)
-
-    # padded_image is always square
-    if padded_image.shape[0] != padded_image.shape[1]:
-        raise ValueError('padded_image must be a square')
-    center = padded_image.shape[0] // 2
-    radon_image = np.zeros((padded_image.shape[0], len(theta)),
-                           dtype=image.dtype) + np.nan
-    lengths = np.copy(radon_image)
-
-    if processes <= 1:
-        for i, angle in enumerate(np.deg2rad(theta)):
-            cos_a, sin_a = np.cos(angle), np.sin(angle)
-            R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
-                          [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
-                          [0, 0, 1]])
-            warp_time_0 = time.time()
-            rotated = warp(padded_image, R, clip=False)
-            warp_time_1 = time.time()
-            total_warp_time += (warp_time_1 - warp_time_0)
-            if median is False:
-                radon_image[:, i] = np.nansum(rotated, axis=0)
-            else:
-                median_time_0 = time.time()
-                radon_image[:, i] = np.nanmedian(rotated, axis=0)
-                median_time_1 = time.time()
-                total_median_time += (median_time_1 - median_time_0)
-            lengths[:, i] = np.sum(np.isfinite(rotated), axis=0)
-
-    else:
-        # splitting calculation up among many processes to speed up. Each
-        # thread rotates and sums/medians at a specific angle
-        p = Pool(processes)
-        angles = np.deg2rad(theta)
-        images = [padded_image for i in range(len(angles))]
-        return_lengths = [True for i in range(len(angles))]
-        pairs = list(zip(images, angles, return_lengths))
-        if median is False:
-            result = p.starmap(rot_sum, pairs)
-            result = np.array(result)
-            radon_image = result[:, 0, :]
-            lengths = result[:, 1, :]
-        else:
-            result = p.starmap(rot_med, pairs)
-            result = np.array(result)
-            # print(np.shape(result))  # DEBUG
-            radon_image = result[:, 0, :]
-            lengths = result[:, 1, :]
-        radon_image = radon_image.T
-        lengths = lengths.T
-        p.close()
-
-    if print_calc_times:
-        LOG.info('Total time to warp images = {} seconds'.format(total_warp_time))  # noqa
-        LOG.info('Total time to calculate medians = {} seconds'.format(total_median_time))  # noqa
-
-    if return_length is True:
-        return radon_image, lengths
-    else:
-        return radon_image
-
-
 def update_dq(filename, ext, mask, dqval=16384, verbose=True,
               expand_mask=False):
     """Update the given image and DQ extension with the given
@@ -1313,7 +1057,7 @@ def update_dq(filename, ext, mask, dqval=16384, verbose=True,
 
 
 def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
-                           plot=False, theta=None, processes=1):
+                           plot=False, theta=None):
     '''
     Creates a model signal MRT signal of a line of specified width.
 
@@ -1339,9 +1083,6 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
     theta : array or `None`, optional
         Set of angles in degrees at which to calculate the MRT, default is
         `None`, which defaults to ``np.arange(0, 180, 0.5)``.
-    processes: int, optional
-        Number of processes to use when calculating MRT. Default is 1
-        (no multi-processing).
 
     Returns
     -------
@@ -1374,8 +1115,9 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         ax.set_title('model image')
 
     # calculate the RT for this model
-    rt = radon(image, theta=theta, circle=False, median=True, fill_value=np.nan,
-               processes=processes, return_length=False)
+    if image.ndim != 2:
+        raise ValueError('The input image must be 2-D')
+    rt = radon(image, theta)
 
     # plot the MRT
     if ax:

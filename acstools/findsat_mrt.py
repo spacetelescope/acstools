@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 This module identifies satellite trails in ACS/WFC imaging with the Median
@@ -50,7 +49,7 @@ MRT calculation:
 
 Initialize `~acstools.findsat_mrt.TrailFinder` and run these steps:
 
->>> s = TrailFinder(image, processes=8)  # initialization
+>>> s = TrailFinder(image)            # initialization
 >>> s.run_mrt()                       # calculates MRT
 >>> s.find_mrt_sources()              # finds point sources in MRT
 >>> s.filter_sources()                # filters sources from MRT
@@ -68,7 +67,7 @@ this process:
 After loading and preprocessing the image (see example above), run
 the following:
 
->>> s = TrailFinder(image, processes=8)  # initialization
+>>> s = TrailFinder(image)                   # initialization
 >>> s.run_all()                              # runs everything else
 
 **Example 3:** Run identification/masking using the WFC wrapper.
@@ -94,7 +93,6 @@ Or the entire process can be run in a single line with
 
 """  # noqa
 import logging
-import multiprocessing
 import os
 import warnings
 
@@ -104,8 +102,9 @@ from astropy.nddata import bitmask, block_reduce
 from astropy.table import Table
 from astropy.utils.data import get_pkg_data_filename
 
+from acstools._radon import radon
 from acstools.utils_findsat_mrt import (create_mask, filter_sources,
-                                        merge_tables, radon, streak_endpoints,
+                                        merge_tables, streak_endpoints,
                                         update_dq)
 
 # test for matplotlib, turn off plotting if it does not exist
@@ -134,7 +133,7 @@ class TrailFinder:
     Parameters
     ----------
     image : ndarray
-        Input image.
+        Input image. It will be converted to float for calculations.
     header : `astropy.io.fits.Header`, optional
         The primary header for the input data (usually the 0th extension). This
         is not used for anything during the analysis, but it is saved with the
@@ -146,9 +145,6 @@ class TrailFinder:
     save_image_header_keys : list, optional
         See :attr:`~acstools.findsat_mrt.TrailFinder.save_image_header_keys`.
         Default is an empty list (nothing saved from ``image_header``).
-    processes : int, optional
-        See :attr:`~acstools.findsat_mrt.TrailFinder.processes`.
-        The default is 2.
     min_length : int, optional
         See :attr:`~acstools.findsat_mrt.TrailFinder.min_length`.
         The default is 25 pixels.
@@ -220,7 +216,6 @@ class TrailFinder:
             header=None,
             image_header=None,
             save_image_header_keys=None,
-            processes=2,
             min_length=25,
             max_width=75,
             buffer=250,
@@ -240,7 +235,7 @@ class TrailFinder:
             save_mask=False):
 
         # inputs
-        self.image = image
+        self.image = image.astype(np.float64)
         self.header = header
         self.image_header = image_header
         self.save_image_header_keys = save_image_header_keys
@@ -248,7 +243,6 @@ class TrailFinder:
         self.min_length = min_length
         self.max_width = max_width
         self.kernels = kernels
-        self.processes = processes
         self.theta = theta
         self.plot = plot
         self.buffer = buffer
@@ -302,21 +296,6 @@ class TrailFinder:
         else:
             value = np.squeeze(value).tolist()
         self._save_image_header_keys = value
-
-    @property
-    def processes(self):
-        """Number of processes to use when calculating MRT."""
-        return self._processes
-
-    @processes.setter
-    def processes(self, value):
-        max_cpu = multiprocessing.cpu_count()
-        if value < 1:
-            self._processes = 1
-        elif value > max_cpu:
-            self._processes = max_cpu
-        else:
-            self._processes = value
 
     @property
     def min_length(self):
@@ -532,14 +511,14 @@ class TrailFinder:
     def run_mrt(self):
         '''
         Run the median radon transform on the input image.
-        This uses `theta` and `processes` for calculations, so update them
+        This uses `theta` for calculations, so update it
         first, if needed.
 
         '''
         # run MRT
-        rt, length = radon(self.image, circle=False, median=True,
-                           fill_value=np.nan, processes=self.processes,
-                           return_length=True, theta=self.theta)
+        if self.image.ndim != 2:
+            raise ValueError('The input image must be 2-D')
+        rt, length = radon(self.image, self.theta, return_length=True)
 
         # trim mrt where length too short
         rt[length < self.min_length] = np.nan

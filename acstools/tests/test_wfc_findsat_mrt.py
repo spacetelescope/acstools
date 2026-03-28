@@ -28,7 +28,7 @@ def test_WfcWrapper(tmp_path):
     WfcWrapper(inputfile, binsize=4, extension=4,
                output_root=f'{rootname}_flc',
                output_dir=tmp_path, max_width=37.5,
-               processes=8, execute=True, save_mask=True,
+               execute=True, save_mask=True,
                save_diagnostic=False, save_catalog=True)
 
     # Compare mask with truth
