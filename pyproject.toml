@@ -1,4 +1,117 @@
+[project]
+name = "acstools"
+description = "Python Tools for HST ACS"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.10"
+authors = [
+    { name = "Matt Davis" },
+    { name = "Warren Hack" },
+    { name = "Norman Grogin" },
+    { name = "Pey Lian Lim" },
+    { name = "Sara Ogaz" },
+    { name = "Leonardo Ubeda" },
+    { name = "Mihai Cara" },
+    { name = "David Borncamp" },
+    { name = "Nathan Miles" },
+    { name = "Tyler Desjardins" },
+    { name = "Jenna Ryon" },
+    { name = "David Stark" },
+    { name = "Gagandeep Anand" },
+    { name = "Yotam Cohen" },
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["astronomy", "astrophysics", "calibration"]
+dependencies = [
+    "numpy",
+    "astropy",
+    "requests",
+    "PyYAML",
+]
+license = "BSD-3-Clause"
+license-files = ["LICENSE.md"]
+dynamic = [
+    "version",
+]
+
+[project.urls]
+"Bug Reports" = "https://github.com/spacetelescope/acstools/issues"
+Source = "https://github.com/spacetelescope/acstools"
+Help = "https://hsthelp.stsci.edu"
+Documentation = "https://acstools.readthedocs.io"
+
+[project.optional-dependencies]
+all = [
+    "matplotlib",
+    "scipy",
+    "scikit-image",
+    "stsci.tools",
+    "stsci.imagestats",
+    "photutils",
+    "dask",
+]
+test = [
+    "pytest",
+    "pytest-astropy-header",
+    "pytest-remotedata",
+    "ci-watson",
+]
+docs = [
+    "sphinx",
+    "sphinx-automodapi",
+    "sphinx-rtd-theme",
+]
+
+[project.scripts]
+acs_destripe = "acstools.acs_destripe:main"
+acs_destripe_plus = "acstools.acs_destripe_plus:main"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["acstools*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"acstools" = [
+    "data/*"
+]
+"acstools.tests" = [
+    "data/input/*.fits",
+    "data/truth/*.fits",
+]
+
 [build-system]
 requires = ["setuptools>=30.3.0",
             "setuptools_scm"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_file = "acstools/version.py"
+
+[tool.pytest.ini_options]
+minversion = "5"
+norecursedirs = [
+    "build",
+    "doc/build",
+]
+testpaths = [
+    "acstools",
+    "doc",
+]
+astropy_header = true
+xfail_strict = true
+filterwarnings = [
+    "error",
+    "ignore:numpy\\.ndarray size changed:RuntimeWarning",
+    "ignore:unclosed file:ResourceWarning",
+]

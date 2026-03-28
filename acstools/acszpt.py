@@ -255,6 +255,8 @@ class Query:
             dt_obj = dt.datetime.strptime(self.date, fmt)
         except ValueError:
             result = f'{self.date} does not match YYYY-MM-DD format'
+        except Exception:  # nosec
+            pass
         else:
             if dt_obj < self._acs_installation_date:
                 result = ('The observation date cannot occur '
@@ -264,8 +266,8 @@ class Query:
                 result = ('The observation date cannot be '
                           'after 2029 '
                           f'({self._end_table_date.strftime(fmt)})')
-        finally:
-            return result
+
+        return result
 
     def fetch(self):
         """Function to query API on AWS APIGateway for zeropoints for single or all

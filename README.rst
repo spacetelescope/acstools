@@ -13,6 +13,8 @@ ACSTOOLS
     :target: https://github.com/spacetelescope/acstools/actions?query=workflow%3ACI
     :alt: Github Actions CI Status
 
+Python Tools for HST ACS (Advanced Camera for Surveys) Data.
+
 For v3.5 or later:
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7406933.svg
