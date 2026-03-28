@@ -20,6 +20,6 @@ jobs:
       coverage: ''
       # TODO: Enable more OSes when possible.
       envs: |
-        - name: Python 3.11 with pre-release
-          linux: py311-test-predeps
+        - name: Python 3.13 with pre-release
+          linux: py313-test-predeps
           posargs: --remote-data -v
