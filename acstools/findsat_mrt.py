@@ -764,6 +764,7 @@ class TrailFinder:
         from astropy.utils import minversion
 
         PHOTUTILS_LT_3 = not minversion(photutils, "2.3.1.dev")  # dev tag a little off
+        photutils.future_column_names = True
 
         LOG.info('Detection threshold: {}'.format(self.threshold))
 
@@ -787,7 +788,6 @@ class TrailFinder:
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
-
             tbl = s.find_stars(snrmap, mask=snrmap_mask)
             if tbl is None:
                 nsources = 0
@@ -797,6 +797,12 @@ class TrailFinder:
             LOG.info('{{no}} sources found using kernel: {}'.format(nsources))
 
             if nsources > 0:
+                if not PHOTUTILS_LT_3:
+                    col_map = {'x_centroid': 'xcentroid',
+                               'y_centroid': 'ycentroid'}
+                    for col in col_map:
+                        tbl.rename_column(col, col_map[col])
+
                 tbl = tbl[np.isfinite(tbl['xcentroid'])]
                 LOG.info('{} sources found using kernel'.format(len(tbl)))
                 if (len(tbls) > 0):
