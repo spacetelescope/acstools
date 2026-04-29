@@ -15,7 +15,6 @@ except ImportError:
 # from the list of packages for which version numbers are displayed
 # when running the tests.
 PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
-PYTEST_HEADER_MODULES['beautifulsoup4'] = 'bs4'
 PYTEST_HEADER_MODULES['requests'] = 'requests'
 PYTEST_HEADER_MODULES['stsci.tools'] = 'stsci.tools'
 PYTEST_HEADER_MODULES.pop('Pandas', None)
