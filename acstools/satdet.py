@@ -157,11 +157,10 @@ try:
     from skimage.feature import canny
 except ImportError:
     HAS_OPDEP = False
+    SKIMAGE_LT_0_26 = True
 else:
-    if minversion(skimage, '0.11'):
-        HAS_OPDEP = True
-    else:
-        HAS_OPDEP = False
+    HAS_OPDEP = True
+    SKIMAGE_LT_0_26 = not minversion(skimage, "0.26.0")
 
 try:
     import matplotlib.pyplot as plt
@@ -170,8 +169,8 @@ except ImportError:
     warnings.warn('matplotlib not found, plotting is disabled',
                   AstropyUserWarning)
 
-__version__ = '0.3.3'
-__vdate__ = '11-Jul-2017'
+__version__ = '0.3.4'
+__vdate__ = '12-May-2026'
 __author__ = 'David Borncamp, Pey Lian Lim'
 __all__ = ['detsat', 'make_mask']
 
@@ -214,8 +213,11 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
                  high_threshold=immax * h_thresh)
 
     # clean up the small objects, will make less noise
-    morph.remove_small_objects(edge, min_size=small_edge, connectivity=8,
-                               out=edge)
+    if SKIMAGE_LT_0_26:
+        rso_kwargs = {"min_size": small_edge}
+    else:
+        rso_kwargs = {"max_size": small_edge - 1}
+    morph.remove_small_objects(edge, connectivity=8, out=edge, **rso_kwargs)
 
     # create an array of angles from 0 to 180, exactly 0 will get bad columns
     # but it is unlikely that a satellite will be exactly at 0 degrees, so
