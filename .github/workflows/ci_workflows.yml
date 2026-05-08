@@ -56,8 +56,8 @@ jobs:
         - name: Check links
           linux: linkcheck
 
-        - name: Python 3.10 with remote data and all dependencies
-          linux: py310-test-alldeps
+        - name: Python 3.13 with remote data and all dependencies
+          linux: py313-test-alldeps
           posargs: --remote-data -v
 
         - name: Python 3.14 with remote data and dev dependencies
