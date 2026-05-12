@@ -51,7 +51,7 @@ Documentation = "https://acstools.readthedocs.io"
 all = [
     "matplotlib",
     "scipy",
-    "scikit-image",
+    "scikit-image>=0.11",
     "stsci.tools",
     "stsci.imagestats",
     "photutils",
