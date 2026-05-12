@@ -99,8 +99,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_file = "acstools/version.py"
 
-[tool.pytest.ini_options]
-minversion = "5"
+[tool.pytest]
+minversion = "9"
 norecursedirs = [
     "build",
     "doc/build",
