@@ -206,7 +206,7 @@ intersphinx_mapping = {
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
     'skimage': ('https://scikit-image.org/docs/stable/', None),
     'matplotlib': ('https://matplotlib.org/', None),
-    'astropy': ('https://docs.astropy.org/en/stable/', None)
+    'astropy': ('https://docs.astropy.org/en/v8.0.x/', None)
 }
 
 # -- Options for linkcheck output ---------------------------------------------
