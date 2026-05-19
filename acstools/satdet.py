@@ -208,7 +208,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     # get the edges
     immax = np.max(image)
-    edge = canny(image, sigma=sigma,
+    edge = canny(image, sigma=sigma, mode='constant',
                  low_threshold=immax * low_thresh,
                  high_threshold=immax * h_thresh)
 
