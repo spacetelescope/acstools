@@ -115,6 +115,4 @@ filterwarnings = [
     "error",
     "ignore:numpy\\.ndarray size changed:RuntimeWarning",
     "ignore:unclosed file:ResourceWarning",
-    # scikit-image>=0.27
-    "ignore:Importing from the .*skimage2.* namespace is experimental",
 ]
