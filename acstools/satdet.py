@@ -154,10 +154,7 @@ try:
     from skimage import transform
     from skimage import morphology as morph
     from skimage import exposure
-    with warnings.catch_warnings():
-        # skimage>=0.27 has some PendingSkimage2Change for canny
-        warnings.simplefilter("ignore")
-        from skimage.feature import canny
+    from skimage.feature import canny
 except ImportError:
     HAS_OPDEP = False
     SKIMAGE_LT_0_26 = True
