@@ -115,4 +115,5 @@ filterwarnings = [
     "error",
     "ignore:numpy\\.ndarray size changed:RuntimeWarning",
     "ignore:unclosed file:ResourceWarning",
+    "ignore:.*skimage\\.feature\\.canny.* is deprecated",
 ]

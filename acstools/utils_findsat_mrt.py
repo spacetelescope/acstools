@@ -14,12 +14,20 @@ from astropy.nddata import Cutout2D, block_replicate
 from astropy.stats import sigma_clip
 from astropy.table import Table, vstack
 from astropy.utils.exceptions import AstropyUserWarning
+from astropy.utils.introspection import minversion
 
 # check for scikit-image
 try:
+    import skimage
+
+    SKIMAGE_LT_0_27 = not minversion(skimage, "0.26.1.dev")  # 0.27
+
     from skimage import transform
     from skimage.transform._warps import warp
-    from skimage._shared.utils import convert_to_float
+    if SKIMAGE_LT_0_27:
+        from skimage._shared.utils import convert_to_float
+    else:
+        from _skimage2._shared.utils import convert_to_float
 except ImportError as e:
     warnings.warn(f'skimage not installed. MRT calculation will not work: {repr(e)}')  # noqa
 
