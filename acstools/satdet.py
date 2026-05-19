@@ -150,17 +150,23 @@ biweight_midvariance = partial(biweight_scale, modify_sample_size=False)
 # OPTIONAL
 try:
     import skimage
+
+    SKIMAGE_LT_0_26 = not minversion(skimage, "0.26.0")
+    SKIMAGE_LT_0_27 = not minversion(skimage, "0.26.1.dev")  # 0.27
+
     from scipy import stats
     from skimage import transform
     from skimage import morphology as morph
     from skimage import exposure
-    from skimage.feature import canny
+    if SKIMAGE_LT_0_27:
+        from skimage.feature import canny
+    else:
+        from skimage2.feature import canny
 except ImportError:
     HAS_OPDEP = False
     SKIMAGE_LT_0_26 = True
 else:
     HAS_OPDEP = True
-    SKIMAGE_LT_0_26 = not minversion(skimage, "0.26.0")
 
 try:
     import matplotlib.pyplot as plt
