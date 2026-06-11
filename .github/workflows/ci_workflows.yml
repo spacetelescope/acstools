@@ -62,4 +62,4 @@ jobs:
 
         - name: Python 3.14 with remote data and dev dependencies
           linux: py314-test-devdeps
-          posargs: --remote-data -v
+          posargs: --remote-data -v --durations=0
