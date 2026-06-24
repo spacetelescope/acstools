@@ -1,12 +1,16 @@
 name: Wheel building
 
 on:
-  pull_request:
-    # We also want this workflow triggered if the 'Build wheels'
-    # label is added or present when PR is updated
-    types:
-      - synchronize
-      - labeled
+  # Enable again in
+  # https://github.com/spacetelescope/acstools/pull/241
+  # when we can split the publish part away from pull_request
+  #pull_request:
+  #  # We also want this workflow triggered if the 'Build wheels'
+  #  # label is added or present when PR is updated
+  #  types:
+  #    - synchronize
+  #    - labeled
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -29,7 +33,14 @@ jobs:
       contents: none
 
     runs-on: ubuntu-latest
-    if: (github.repository == 'spacetelescope/acstools' && (github.event_name == 'push' ||  contains(github.event.pull_request.labels.*.name, 'Build wheels')))
+    if: (github.repository == 'spacetelescope/acstools' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'Build wheels')))
+
+    # This is for publish step only.
+    environment:
+      name: release
+      url: https://pypi.org/p/acstools
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -47,18 +58,11 @@ jobs:
       run: python -m build --sdist --wheel .
 
     - name: List result
-      run: ls -l dist
+      run: ls -lh dist
 
     - name: Check dist
       run: python -m twine check --strict dist/*
 
-    # FOR DEBUGGING ONLY: repository_url (TestPyPI) and verbose;
-    # Use appropriate token if debugging with TestPyPI
     - name: Publish distribution 📦 to PyPI
       if: (startsWith(github.ref, 'refs/tags/') && github.event_name == 'push')
       uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_TOKEN }}
-        #repository_url: https://test.pypi.org/legacy/
-        #verbose: true
