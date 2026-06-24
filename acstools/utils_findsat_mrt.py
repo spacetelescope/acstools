@@ -1374,7 +1374,7 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
         ax.set_title('model image')
 
     # calculate the RT for this model
-    rt = radon(image, circle=False, median=True, fill_value=np.nan,
+    rt = radon(image, theta=theta, circle=False, median=True, fill_value=np.nan,
                processes=processes, return_length=False)
 
     # plot the MRT
