@@ -18,8 +18,6 @@ concurrency:
 
 permissions: {}
 
-# NOTE: Cannot use OpenAstronomy workflow due to
-#       https://github.com/OpenAstronomy/github-actions-workflows/issues/168
 jobs:
   build:
     if: (github.repository == 'spacetelescope/acstools' && (github.event_name == 'release' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'Build wheels')))
@@ -29,7 +27,6 @@ jobs:
         with:
           fetch-tags: true
           fetch-depth: 0
-          lfs: false
           persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:

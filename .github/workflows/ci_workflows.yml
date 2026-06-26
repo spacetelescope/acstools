@@ -38,8 +38,6 @@ jobs:
     needs: initial_checks
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@2835f0cacddf3f8de198db9afdb5354a5cebe0ef  # v2.6.3
     with:
-      setenv: |
-        jref: "https://ssb.stsci.edu/trds_open/jref"
       submodules: false
       coverage: ''
       envs: |
@@ -56,10 +54,10 @@ jobs:
         - name: Check links
           linux: linkcheck
 
-        - name: Python 3.10 with remote data and all dependencies
+        - name: Python 3.10 with all dependencies
           linux: py310-test-alldeps
-          posargs: --remote-data -v --durations=0
+          posargs: -v --durations=0
 
-        - name: Python 3.14 with remote data and dev dependencies
+        - name: Python 3.14 with dev dependencies
           linux: py314-test-devdeps
-          posargs: --remote-data -v --durations=0
+          posargs: -v --durations=0

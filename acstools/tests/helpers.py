@@ -1,16 +1,23 @@
 """ACSTOOLS regression test helpers."""
 
 import os
-import shutil
+from functools import partial
 
 import pytest
+from ci_watson.artifactory_helpers import (
+    generate_upload_params, generate_upload_schema)
+from ci_watson.artifactory_helpers import get_bigdata as _get_bigdata
 from ci_watson.hst_helpers import ref_from_image, download_crds
 
 from astropy.io import fits
 from astropy.io.fits import FITSDiff
-from astropy.utils.data import get_pkg_data_filename
 
 __all__ = ['calref_from_image', 'BaseACSTOOLS']
+
+# Overload generic get_bigdata to include repo root dir.
+# This is to accomodate developers who have to run big data tests across
+# several repositories using the same TEST_BIGDATA env var.
+get_bigdata = partial(_get_bigdata, 'scsb-hstcal')
 
 
 def calref_from_image(input_image):
@@ -67,10 +74,12 @@ def calref_from_image(input_image):
 
 # Base class for actual tests.
 # NOTE: Named in a way so pytest will not pick them up here.
-# NOTE: remote_data because reference files need internet connection
+# NOTE: bigdata marker requires TEST_BIGDATA environment variable to
+#       point to a valid big data directory, whether locally or on Artifactory.
+# NOTE: envopt would point tests to "dev" or "stable".
 # NOTE: _jail fixture ensures each test runs in a clean tmpdir.
-@pytest.mark.remote_data
-@pytest.mark.usefixtures('_jail')
+@pytest.mark.bigdata
+@pytest.mark.usefixtures('_jail', 'envopt')
 class BaseACSTOOLS:
     # Timeout in seconds for file downloads.
     timeout = 30
@@ -82,12 +91,33 @@ class BaseACSTOOLS:
     # To be defined by test class in actual test modules.
     detector = ''
 
+    @pytest.fixture(autouse=True)
+    def setup_class(self, envopt):
+        """
+        Class-level setup that is done at the beginning of the test.
+
+        Parameters
+        ----------
+        envopt : {'dev', 'stable'}
+            This is a ``pytest`` fixture that defines the test
+            environment in which input and truth files reside.
+
+        """
+        self.env = envopt
+
     def get_input_file(self, filename, skip_ref=False):
         """Copy input file into the working directory.
         The associated CRDS reference files are also copied or
         downloaded, if desired.
 
-        Input file is from ``git lfs``, while the reference files from CDBS.
+        Input file is from Artifactory, while the reference files from CDBS.
+
+        Data directory layout same as HSTCAL::
+
+            instrument/
+                detector/
+                    input/
+                    truth/
 
         Parameters
         ----------
@@ -100,33 +130,26 @@ class BaseACSTOOLS:
         """
         # Copy over main input file: The way calibration code was written,
         # it usually assumes input is in the working directory.
-        src = get_pkg_data_filename(
-            os.path.join('data', 'input', filename), package='acstools.tests',
-            show_progress=False, remote_timeout=self.timeout)
-        dst = os.path.join(os.curdir, filename)
-        shutil.copyfile(src, dst)
+        get_bigdata(self.env, self.instrument, self.detector,
+                    'input', filename)
 
         if skip_ref:
             return
 
-        ref_files = calref_from_image(src)
+        ref_files = calref_from_image(filename)
         for ref_file in ref_files:
             # Special reference files that live with inputs.
             if ('$' not in ref_file and
                     os.path.basename(ref_file) == ref_file):
-                refsrc = get_pkg_data_filename(
-                    os.path.join('data', 'input', ref_file),
-                    package='acstools.tests',
-                    show_progress=False, remote_timeout=self.timeout)
-                refdst = os.path.join(os.curdir, ref_file)
-                shutil.copyfile(refsrc, refdst)
+                get_bigdata(self.env, self.instrument, self.detector,
+                            'input', ref_file)
                 continue
 
             # Download reference files, if needed only.
             download_crds(ref_file)
 
     def compare_outputs(self, outputs, atol=0, rtol=1e-7, raise_error=True,
-                        ignore_keywords_overwrite=None):
+                        ignore_keywords_overwrite=None, verbose=True):
         """Compare ACSTOOLS output with "truth" using ``fitsdiff``.
 
         Parameters
@@ -149,6 +172,9 @@ class BaseACSTOOLS:
             If not `None`, these will overwrite
             ``self.ignore_keywords`` for the calling test.
 
+        verbose : bool
+            Print extra info to screen.
+
         Returns
         -------
         report : str
@@ -158,6 +184,7 @@ class BaseACSTOOLS:
         """
         all_okay = True
         creature_report = ''
+        updated_outputs = []  # To track outputs for Artifactory JSON schema
 
         if ignore_keywords_overwrite is None:
             ignore_keywords = self.ignore_keywords
@@ -165,18 +192,25 @@ class BaseACSTOOLS:
             ignore_keywords = ignore_keywords_overwrite
 
         for actual, desired in outputs:
-            desiredpath = get_pkg_data_filename(
-                os.path.join('data', 'truth', desired),
-                package='acstools.tests',
-                show_progress=False, remote_timeout=self.timeout)
-            fdiff = FITSDiff(actual, desiredpath, rtol=rtol, atol=atol,
+            desired = get_bigdata(self.env, self.instrument, self.detector,
+                                  'truth', desired)
+            fdiff = FITSDiff(actual, desired, rtol=rtol, atol=atol,
                              ignore_keywords=ignore_keywords)
             creature_report += fdiff.report()
 
-            if not fdiff.identical and all_okay:
+            if not fdiff.identical:
                 all_okay = False
+                # Only keep track of failed results which need to
+                # be used to replace the truth files (if OK).
+                updated_outputs.append((actual, desired))
 
-        if not all_okay and raise_error:
-            raise AssertionError(os.linesep + creature_report)
+        if not all_okay:
+            if self.results_root is not None:  # pragma: no cover
+                schema_pattern, tree, testname = generate_upload_params(
+                    self.results_root, updated_outputs, verbose=verbose)
+                generate_upload_schema(schema_pattern, tree, testname)
+
+            if raise_error:
+                raise AssertionError(os.linesep + creature_report)
 
         return creature_report

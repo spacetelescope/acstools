@@ -60,7 +60,6 @@ all = [
 test = [
     "pytest",
     "pytest-astropy-header",
-    "pytest-remotedata",
     "ci-watson",
 ]
 docs = [
@@ -85,10 +84,6 @@ namespaces = false
 [tool.setuptools.package-data]
 "acstools" = [
     "data/*"
-]
-"acstools.tests" = [
-    "data/input/*.fits",
-    "data/truth/*.fits",
 ]
 
 [build-system]
