@@ -1,0 +1,15 @@
+# Use numpy/scipy dev builds
+--extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple
+numpy>=0.0.dev0
+scipy>=0.0.dev0
+matplotlib>=0.0.dev0
+scikit-image>=0.0.dev0
+
+# Use astropy dev builds
+--extra-index-url https://pypi.anaconda.org/astropy/simple
+astropy>=0.0.dev0
+photutils>=0.0.dev0
+
+# Others
+git+https://github.com/spacetelescope/ci_watson.git
+git+https://github.com/spacetelescope/stsci.tools.git
