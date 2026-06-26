@@ -27,3 +27,12 @@ If this pull request is unrelated to any issues, please remove
 the following line. -->
 
 Fixes #<Issue Number>
+
+### Regression tests
+<!-- Do not forget to run regression tests if needed. -->
+
+Wiki: https://github.com/spacetelescope/acstools/wiki#regression-tests
+
+If you are external contributor, please ask maintainer to assist with the following:
+
+- [ ] [start a regression test](https://github.com/spacetelescope/RegressionTests/actions/workflows/acstools.yml) and include a link to the running job ([click here for instructions](https://github.com/spacetelescope/RegressionTests/blob/main/docs/running_regression_tests.md))
