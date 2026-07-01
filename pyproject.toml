@@ -56,6 +56,7 @@ all = [
     "stsci.imagestats",
     "photutils",
     "dask",
+    "bottleneck",
 ]
 test = [
     "pytest",
