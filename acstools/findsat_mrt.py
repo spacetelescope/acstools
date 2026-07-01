@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This module identifies satellite trails in ACS/WFC imaging with the Median
 Radon Transform (MRT).
@@ -94,7 +92,6 @@ Or the entire process can be run in a single line with
 
 """  # noqa
 import logging
-import multiprocessing
 import os
 import warnings
 
@@ -310,7 +307,7 @@ class TrailFinder:
 
     @processes.setter
     def processes(self, value):
-        max_cpu = multiprocessing.cpu_count()
+        max_cpu = os.cpu_count()
         if value < 1:
             self._processes = 1
         elif value > max_cpu:
