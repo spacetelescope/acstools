@@ -1014,48 +1014,22 @@ def rot_med(image, angle, return_length):
     return _rot(image, angle, return_length, np.nanmedian)
 
 
-def _rot_sum_mp(shm_padded_name, shm_radon_name, shm_lengths_name,
-                image_shape, image_dtype, n_angles, i_angle, angle):
+def _rot_sum_mp(shm_padded_name, image_shape, image_dtype, angle):
     """rot_sum for multiprocessing"""
     # Grab input array from shared memory
-    shm_padded = shared_memory.SharedMemory(name=shm_padded_name)
+    shm_padded = shared_memory.SharedMemory(name=shm_padded_name, create=False)
     image = np.ndarray(
         image_shape, dtype=image_dtype, buffer=shm_padded.buf)
-
-    med_arr, length = _rot(image, angle, True, np.nansum)
-
-    # Put result in shared memory
-    result_shape = (image_shape[0], n_angles)
-    shm_radon = shared_memory.SharedMemory(name=shm_radon_name)
-    radon_image = np.ndarray(
-        result_shape, dtype=image_dtype, buffer=shm_radon.buf)
-    shm_lengths = shared_memory.SharedMemory(name=shm_lengths_name)
-    lengths = np.ndarray(
-        result_shape, dtype=image_dtype, buffer=shm_lengths.buf)
-    radon_image[:, i_angle] = med_arr
-    lengths[:, i_angle] = length
+    return _rot(image, angle, True, np.nansum)
 
 
-def _rot_med_mp(shm_padded_name, shm_radon_name, shm_lengths_name,
-                image_shape, image_dtype, n_angles, i_angle, angle):
+def _rot_med_mp(shm_padded_name, image_shape, image_dtype, angle):
     """rot_med for multiprocessing"""
     # Grab input array from shared memory
-    shm_padded = shared_memory.SharedMemory(name=shm_padded_name)
+    shm_padded = shared_memory.SharedMemory(name=shm_padded_name, create=False)
     image = np.ndarray(
         image_shape, dtype=image_dtype, buffer=shm_padded.buf)
-
-    med_arr, length = _rot(image, angle, True, np.nanmedian)
-
-    # Put result in shared memory
-    result_shape = (image_shape[0], n_angles)
-    shm_radon = shared_memory.SharedMemory(name=shm_radon_name)
-    radon_image = np.ndarray(
-        result_shape, dtype=image_dtype, buffer=shm_radon.buf)
-    shm_lengths = shared_memory.SharedMemory(name=shm_lengths_name)
-    lengths = np.ndarray(
-        result_shape, dtype=image_dtype, buffer=shm_lengths.buf)
-    radon_image[:, i_angle] = med_arr
-    lengths[:, i_angle] = length
+    return _rot(image, angle, True, np.nanmedian)
 
 
 # TODO: If radon performance is improved upstream, we should just use
@@ -1197,7 +1171,7 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
 
     else:
         # Splitting calculation up among many processes to speed up. Each
-        # thread rotates and sums/medians at a specific angle.
+        # process rotates and sums/medians at a specific angle.
         with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as p, \
                 SharedMemoryManager() as smm, \
                 warnings.catch_warnings():
@@ -1210,27 +1184,18 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
                 padded_image.shape, dtype=padded_image.dtype, buffer=shm_padded.buf)
             mparr_padded[:] = padded_image[:]
 
-            # Shared memory for radon_image
-            shm_radon = smm.SharedMemory(radon_image.nbytes)
-            mparr_radon = np.ndarray(
-                radon_image.shape, dtype=radon_image.dtype, buffer=shm_radon.buf)
-            mparr_radon[:] = radon_image[:]
-
-            # Shared memory for lengths
-            shm_lengths = smm.SharedMemory(lengths.nbytes)
-            mparr_lengths = np.ndarray(
-                lengths.shape, dtype=lengths.dtype, buffer=shm_lengths.buf)
-            mparr_lengths = lengths[:]
-
-            for i, angle in enumerate(angles):
-                future = p.submit(
-                    statfunc_mp, shm_padded.name, shm_radon.name, shm_lengths.name,
-                    padded_image.shape, padded_image.dtype, n_angles, i, angle)
-                _ = future.result()
-
-            # Copy from shared memory to outputs
-            radon_image[:] = mparr_radon[:]
-            lengths[:] = mparr_lengths[:]
+            for i, angle, result in zip(
+                range(n_angles),
+                angles, p.map(
+                    statfunc_mp,
+                    repeat(shm_padded.name),
+                    repeat(padded_image.shape),
+                    repeat(padded_image.dtype),
+                    angles,
+                )
+            ):
+                radon_image[:, i] = result[0]
+                lengths[:, i] = result[1]
 
     if return_length is True:
         return radon_image, lengths
