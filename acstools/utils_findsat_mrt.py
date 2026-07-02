@@ -1,10 +1,11 @@
 '''
 Various helper functions for :ref:`findsat_mrt`.
 '''
+import concurrent.futures
 import logging
 import time
 import warnings
-from multiprocessing import Pool
+from itertools import repeat
 
 import numpy as np
 from astropy.convolution import convolve, Gaussian2DKernel
@@ -940,6 +941,7 @@ def add_streak(image, width, value, rho=None, theta=None, endpoints=None,
 
 
 def _rot(image, angle, return_length, func):
+    """Worker function for radon multiprocessing."""
     center = image.shape[0] // 2
     cos_a, sin_a = np.cos(angle), np.sin(angle)
     R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
@@ -949,17 +951,14 @@ def _rot(image, angle, return_length, func):
     # rotate image
     rotated = warp(image, R, clip=False, cval=np.nan)
 
+    # Note: This call might produce warning, suppress it in calling code.
     # take func along each column
-    with warnings.catch_warnings():
-        # suppressing this warning as it's inconsequential and expected
-        warnings.filterwarnings(action='ignore',
-                                message='All-NaN slice encountered')
-        medarr = func(rotated, axis=0)
+    medarr = func(rotated, axis=0)
 
     # get length along each column
     if return_length:
         length = np.sum(np.isfinite(rotated), axis=0)
-        return [medarr, length]
+        return medarr, length
     return medarr
 
 
@@ -1085,17 +1084,16 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     Based on code of Justin K. Romberg
 
     """
-    total_median_time = 0.
-    total_warp_time = 0.
+    if image.ndim != 2:
+        raise ValueError(f'The input image must be 2-D but got {image.ndim}-D')
 
     if median is True:
-        LOG.info('Calculating median Radon Transform with {} processes'.format(processes))  # noqa
+        statname = "median"
+        statfunc = rot_med
     else:
-        LOG.info('Calculating standard Radon Transform with {} processes'.format(processes))  # noqa
-    if image.ndim != 2:
-        raise ValueError('The input image must be 2-D')
-    if theta is None:
-        theta = np.arange(180)
+        statname = "standard"
+        statfunc = rot_sum
+    LOG.info('Calculating %s Radon Transform with %d processes', statname, processes)
 
     image = convert_to_float(image, preserve_range)
 
@@ -1129,61 +1127,45 @@ def radon(image, theta=None, circle=False, *, preserve_range=False,
     # padded_image is always square
     if padded_image.shape[0] != padded_image.shape[1]:
         raise ValueError('padded_image must be a square')
-    center = padded_image.shape[0] // 2
-    radon_image = np.zeros((padded_image.shape[0], len(theta)),
-                           dtype=image.dtype) + np.nan
+
+    if theta is None:
+        theta = np.arange(180)
+
+    angles = np.deg2rad(theta)
+    radon_image = np.empty((padded_image.shape[0], len(theta)), dtype=image.dtype)
+    radon_image[:] = np.nan
     lengths = np.copy(radon_image)
 
     if processes <= 1:
-        for i, angle in enumerate(np.deg2rad(theta)):
-            cos_a, sin_a = np.cos(angle), np.sin(angle)
-            R = np.array([[cos_a, sin_a, -center * (cos_a + sin_a - 1)],
-                          [-sin_a, cos_a, -center * (cos_a - sin_a - 1)],
-                          [0, 0, 1]])
-            warp_time_0 = time.time()
-            rotated = warp(padded_image, R, clip=False)
-            warp_time_1 = time.time()
-            total_warp_time += (warp_time_1 - warp_time_0)
-            if median is False:
-                radon_image[:, i] = np.nansum(rotated, axis=0)
-            else:
-                median_time_0 = time.time()
-                radon_image[:, i] = np.nanmedian(rotated, axis=0)
-                median_time_1 = time.time()
-                total_median_time += (median_time_1 - median_time_0)
-            lengths[:, i] = np.sum(np.isfinite(rotated), axis=0)
+        with warnings.catch_warnings():
+            # suppressing this warning as it's inconsequential and expected
+            warnings.filterwarnings('ignore', message='All-NaN slice encountered')
+
+            for i, angle in enumerate(angles):
+                cur_arr, cur_length = statfunc(padded_image, angle, True)
+                radon_image[:, i] = cur_arr
+                lengths[:, i] = cur_length
 
     else:
-        # splitting calculation up among many processes to speed up. Each
-        # thread rotates and sums/medians at a specific angle
-        p = Pool(processes)
-        angles = np.deg2rad(theta)
-        images = [padded_image for i in range(len(angles))]
-        return_lengths = [True for i in range(len(angles))]
-        pairs = list(zip(images, angles, return_lengths))
-        if median is False:
-            result = p.starmap(rot_sum, pairs)
-            result = np.array(result)
-            radon_image = result[:, 0, :]
-            lengths = result[:, 1, :]
-        else:
-            result = p.starmap(rot_med, pairs)
-            result = np.array(result)
-            # print(np.shape(result))  # DEBUG
-            radon_image = result[:, 0, :]
-            lengths = result[:, 1, :]
-        radon_image = radon_image.T
-        lengths = lengths.T
-        p.close()
+        # Splitting calculation up among many processes to speed up. Each
+        # thread rotates and sums/medians at a specific angle.
+        collected_results = {}
 
-    if print_calc_times:
-        LOG.info('Total time to warp images = {} seconds'.format(total_warp_time))  # noqa
-        LOG.info('Total time to calculate medians = {} seconds'.format(total_median_time))  # noqa
+        with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as p, warnings.catch_warnings():
+            # suppressing this warning as it's inconsequential and expected
+            warnings.filterwarnings('ignore', message='All-NaN slice encountered')
+
+            for angle, result in zip(angles, p.map(statfunc, repeat(padded_image), angles, repeat(True))):
+                collected_results[angle] = result
+
+        for i, angle in enumerate(angles):
+            result = collected_results[angle]
+            radon_image[:, i] = result[0]
+            lengths[:, i] = result[1]
 
     if return_length is True:
         return radon_image, lengths
-    else:
-        return radon_image
+    return radon_image
 
 
 def update_dq(filename, ext, mask, dqval=16384, verbose=True,
