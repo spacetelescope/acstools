@@ -105,6 +105,11 @@ from acstools.utils_findsat_mrt import (create_mask, filter_sources,
                                         merge_tables, radon, streak_endpoints,
                                         update_dq)
 
+try:
+    from bottleneck import nanmedian
+except ImportError:
+    nanmedian = np.nanmedian
+
 # test for matplotlib, turn off plotting if it does not exist
 try:
     import matplotlib as mpl
@@ -552,13 +557,13 @@ class TrailFinder:
                                     message='All-NaN slice encountered')
             # calculate some useful properties
             # median
-            self._medrt = np.nanmedian(rt)
+            self._medrt = nanmedian(rt)
             # median abs deviation
-            self._madrt = np.nanmedian(np.abs(rt[np.abs(rt) > 0]) -
-                                       self._medrt)
+            abs_rt = np.abs(rt)
+            self._madrt = nanmedian(abs_rt[abs_rt > 0] - self._medrt)
 
             # calculate the approximate uncertainty of the MRT at each point
-            self._image_mad = np.nanmedian(np.abs(self.image))
+            self._image_mad = nanmedian(np.abs(self.image))
 
         # using MAD to avoid influence from outliers
         self._image_stddev = self._image_mad / 0.67449
@@ -605,7 +610,7 @@ class TrailFinder:
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore',
                                     message='All-NaN slice encountered')
-            self._image_mad = np.nanmedian(np.abs(self.image))
+            self._image_mad = nanmedian(np.abs(self.image))
 
         self._image_stddev = self._image_mad / 0.67449  # using MAD to avoid
         # influence from outliers
@@ -1360,7 +1365,7 @@ class WfcWrapper(TrailFinder):
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore',
                                     message='All-NaN slice encountered')
-            self.image = self.image - np.nanmedian(self.image)
+            self.image = self.image - nanmedian(self.image)
 
     def rebin(self):
         '''

@@ -38,6 +38,15 @@ try:
 except ImportError:
     warnings.warn('scipy not installed. Kernel generation will not work')
 
+try:
+    from bottleneck import nanargmax, nanmax, nanmean, nanmedian, nansum
+except ImportError:
+    nanargmax = np.nanargmax
+    nanmax = np.nanmax
+    nanmean = np.nanmean
+    nanmedian = np.nanmedian
+    nansum = np.nansum
+
 # turn plotting off if matplotlib is not available
 try:
     import matplotlib.pyplot as plt
@@ -244,7 +253,7 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
         # if not fitting, subtract median using outer 50% of data
         ind = int(len(yarr) / 4)  # use to select outer quarter of data
         # estimate baseline level using outer 50% of channels
-        yarr_bkg = np.nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])
+        yarr_bkg = nanmedian(list(yarr)[:ind] + list(yarr)[-ind:])
 
     yarr = yarr - yarr_bkg
 
@@ -252,7 +261,7 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
 
     # update initial guesses if necessary
     if amp0 is None:
-        amp0 = np.nanmax(yarr)
+        amp0 = nanmax(yarr)
     if stdev0 is None:
         stdev0 = 5.
 
@@ -285,22 +294,22 @@ def fit_streak_profile(yarr, p0, fit_background=True, plot_streak=False,
     if np.sum(sel) == 0:
         peak = 0
     else:
-        peak = np.nanmax(yarr[sel])
+        peak = nanmax(yarr[sel])
 
     # measure mean flux within the standard deviation
     sel = (xarr > (g.mean - g.stddev)) & (xarr < (g.mean + g.stddev))
     if np.sum(sel) == 0:
         mean_flux = 0
     else:
-        mean_flux = np.nanmean(yarr[sel])
+        mean_flux = nanmean(yarr[sel])
 
     # measure noise outside the profile. Using median abs dev to avoid outliers
     sel = (xarr < lower) | (xarr > upper)
     if np.sum(sel) == 0:
         noise = 0
     else:
-        noise = np.nanmedian(np.abs(yarr[sel] -
-                                    np.nanmedian(yarr[sel]))) / 0.67449
+        noise = nanmedian(np.abs(yarr[sel] -
+                                 nanmedian(yarr[sel]))) / 0.67449
 
     # use amplitude and noise to re-estimate snr
     snr = (peak - noise) / noise
@@ -471,7 +480,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore',
                                     message='All-NaN slice encountered')
-            medarr = np.nanmedian(subregion, axis=1)
+            medarr = nanmedian(subregion, axis=1)
 
         # get number of pixels being considered at each point; remove those
         # that are too small such that median unreliable
@@ -483,7 +492,7 @@ def filter_sources(image, streak_positions, plot_streak=False, buffer=100,
 
         if plot_streak and (plt is not None):
             fig, (ax1, ax2) = plt.subplots(1, 2)
-            mad = np.nanmedian(np.abs(subregion))
+            mad = nanmedian(np.abs(subregion))
             ax2.imshow(subregion, vmin=-mad, vmax=5*mad, origin='lower')
             ax2.plot([0, subregion.shape[1] - 1], [dy_streak, dy_streak], '--',
                      lw=2, color='magenta', alpha=0.4)
@@ -813,7 +822,7 @@ def streak_persistence(cutout, dx, streak_y0, streak_stdev, max_width=None,
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore',
                                     message='All-NaN slice encountered')
-            chunk = np.nanmedian(cutout[:, ind0:ind1], axis=1)
+            chunk = nanmedian(cutout[:, ind0:ind1], axis=1)
 
         if plot_streak and (plt is not None):
             fig, ax = plt.subplots()
@@ -984,7 +993,7 @@ def rot_sum(image, angle, return_length):
         This is only returned if ``return_length`` is `True`.
 
     '''
-    return _rot(image, angle, return_length, np.nansum)
+    return _rot(image, angle, return_length, nansum)
 
 
 def rot_med(image, angle, return_length):
@@ -1009,7 +1018,7 @@ def rot_med(image, angle, return_length):
         This is only returned if ``return_length`` is `True`.
 
     '''
-    return _rot(image, angle, return_length, np.nanmedian)
+    return _rot(image, angle, return_length, nanmedian)
 
 
 # TODO: If radon performance is improved upstream, we should just use
@@ -1369,10 +1378,10 @@ def create_mrt_line_kernel(width, sigma, outfile=None, shape=(1024, 2048),
 
     # find the center of the signal by summing along each direction and finding
     # the max.
-    rt_rho = np.nansum(rt, axis=1)
-    rt_theta = np.nansum(rt, axis=0)
-    rho0 = np.nanargmax(rt_rho)
-    theta0 = np.nanargmax(rt_theta)
+    rt_rho = nansum(rt, axis=1)
+    rt_theta = nansum(rt, axis=0)
+    rho0 = nanargmax(rt_rho)
+    theta0 = nanargmax(rt_theta)
 
     # plot the 1D slices
     if ax:
