@@ -138,22 +138,21 @@ from multiprocessing import Process, Queue
 # THIRD PARTY
 import numpy as np
 from astropy.io import fits
+
 # from astropy.stats import biweight_location
-from astropy.stats import sigma_clipped_stats
+# See https://github.com/astropy/astropy/issues/6364
+from astropy.stats import biweight_scale, sigma_clipped_stats
 from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils.introspection import minversion
 
-# See https://github.com/astropy/astropy/issues/6364
-from astropy.stats import biweight_scale
 biweight_midvariance = partial(biweight_scale, modify_sample_size=False)
 
 # OPTIONAL
 try:
     import skimage
     from scipy import stats
-    from skimage import transform
+    from skimage import exposure, transform
     from skimage import morphology as morph
-    from skimage import exposure
     from skimage.feature import canny
 except ImportError:
     HAS_OPDEP = False
@@ -166,28 +165,37 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
-    warnings.warn('matplotlib not found, plotting is disabled',
-                  AstropyUserWarning)
+    warnings.warn("matplotlib not found, plotting is disabled", AstropyUserWarning)
 
-__version__ = '0.3.4'
-__vdate__ = '12-May-2026'
-__author__ = 'David Borncamp, Pey Lian Lim'
-__all__ = ['detsat', 'make_mask']
+__version__ = "0.3.4"
+__vdate__ = "12-May-2026"
+__author__ = "David Borncamp, Pey Lian Lim"
+__all__ = ["detsat", "make_mask"]
 
 
-def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
-                small_edge=60, line_len=200, line_gap=75,
-                percentile=(4.5, 93.0), buf=200, plot=False, verbose=False):
+def _detsat_one(
+    filename,
+    ext,
+    sigma=2.0,
+    low_thresh=0.1,
+    h_thresh=0.5,
+    small_edge=60,
+    line_len=200,
+    line_gap=75,
+    percentile=(4.5, 93.0),
+    buf=200,
+    plot=False,
+    verbose=False,
+):
     """Called by :func:`detsat`."""
     if verbose:
         t_beg = time.time()
 
-    fname = f'{filename}[{ext}]'
+    fname = f"{filename}[{ext}]"
 
     # check extension
-    if ext not in (1, 4, 'SCI', ('SCI', 1), ('SCI', 2)):
-        warnings.warn(f'{ext} is not a valid science extension for ACS/WFC',
-                      AstropyUserWarning)
+    if ext not in (1, 4, "SCI", ("SCI", 1), ("SCI", 2)):
+        warnings.warn(f"{ext} is not a valid science extension for ACS/WFC", AstropyUserWarning)
 
     # get the data
     image = fits.getdata(filename, ext)
@@ -202,15 +210,13 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         p1 = 0.0
 
     if verbose:
-        print(f'Rescale intensity percentiles: {p1}, {p2}')
+        print(f"Rescale intensity percentiles: {p1}, {p2}")
 
     image = exposure.rescale_intensity(image, in_range=(p1, p2))
 
     # get the edges
     immax = np.max(image)
-    edge = canny(image, sigma=sigma, mode='constant',
-                 low_threshold=immax * low_thresh,
-                 high_threshold=immax * h_thresh)
+    edge = canny(image, sigma=sigma, mode="constant", low_threshold=immax * low_thresh, high_threshold=immax * h_thresh)
 
     # clean up the small objects, will make less noise
     if SKIMAGE_LT_0_26:
@@ -234,9 +240,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     # perform Probabilistic Hough Transformation to get line segments.
     # NOTE: Results are slightly different from run to run!
-    result = transform.probabilistic_hough_line(
-        edge, threshold=210, line_length=line_len,
-        line_gap=line_gap, theta=angle)
+    result = transform.probabilistic_hough_line(edge, threshold=210, line_length=line_len, line_gap=line_gap, theta=angle)
     result = np.asarray(result)
     n_result = len(result)
 
@@ -247,7 +251,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
     # returned from the PHT
     if n_result > 1:
         if verbose:
-            print(f'Length of PHT result: {n_result}')
+            print(f"Length of PHT result: {n_result}")
 
         # create lists for X and Y positions of lines and build points
         x0 = result[:, 0, 0]
@@ -261,12 +265,10 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         topy = ymax - buf
 
         if verbose:
-            print(f'min(x0)={min(x0):4d}, min(x1)={min(x1):4d}, '
-                  f'min(y0)={min(y0):4d}, min(y1)={min(y1):4d}')
-            print(f'max(x0)={max(x0):4d}, max(x1)={max(x1):4d}, '
-                  f'max(y0)={max(y0):4d}, max(y1)={max(y1):4d}')
-            print(f'buf={buf}')
-            print(f'topx={topx}, topy={topy}')
+            print(f"min(x0)={min(x0):4d}, min(x1)={min(x1):4d}, min(y0)={min(y0):4d}, min(y1)={min(y1):4d}")
+            print(f"max(x0)={max(x0):4d}, max(x1)={max(x1):4d}, max(y0)={max(y0):4d}, max(y1)={max(y1):4d}")
+            print(f"buf={buf}")
+            print(f"topx={topx}, topy={topy}")
 
         # set up trail angle "tracking" arrays.
         # find the angle of each segment and filter things out.
@@ -280,7 +282,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
         if not np.any(mask):
             if verbose:
-                print('No round_angle found')
+                print("No round_angle found")
             return np.empty(0)
 
         round_angle = round_angle[mask]
@@ -293,9 +295,9 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         truth = round_angle == ang[0]
 
         if verbose:
-            print(f'trail_angle: {trail_angle}')
-            print(f'round_angle: {round_angle}')
-            print(f'mode(round_angle): {ang[0]}')
+            print(f"trail_angle: {trail_angle}")
+            print(f"round_angle: {round_angle}")
+            print(f"mode(round_angle): {ang[0]}")
 
         # filter out the outliers
         trail_angle = trail_angle[truth]
@@ -303,7 +305,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         n_result = len(result)
 
         if verbose:
-            print(f'Filtered trail_angle: {trail_angle}')
+            print(f"Filtered trail_angle: {trail_angle}")
 
         if n_result < 1:
             return np.empty(0)
@@ -311,8 +313,9 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         # if there is an unreasonable amount of points, it picked up garbage
         elif n_result > 300:
             warnings.warn(
-                f'Way too many segments results to be correct ({n_result}). '
-                f'Rejecting detection on {fname}.', AstropyUserWarning)
+                f"Way too many segments results to be correct ({n_result}). Rejecting detection on {fname}.",
+                AstropyUserWarning,
+            )
             return np.empty(0)
 
         # remake the point lists with things taken out
@@ -336,58 +339,48 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         # make decisions on where the trail went and determine if a trail
         # traversed the image
         # top to bottom
-        if (((min_y0 < buf) or (min_y1 < buf)) and
-                ((max_y0 > topy) or (max_y1 > topy))):
+        if ((min_y0 < buf) or (min_y1 < buf)) and ((max_y0 > topy) or (max_y1 > topy)):
             satellite = True
             if verbose:
-                print('Trail Direction: Top to Bottom')
+                print("Trail Direction: Top to Bottom")
 
         # right to left
-        elif (((min_x0 < buf) or (min_x1 < buf)) and
-              ((max_x0 > topx) or (max_x1 > topx))):
+        elif ((min_x0 < buf) or (min_x1 < buf)) and ((max_x0 > topx) or (max_x1 > topx)):
             satellite = True
             if verbose:
-                print('Trail Direction: Right to Left')
+                print("Trail Direction: Right to Left")
 
         # bottom to left
-        elif (((min_x0 < buf) or (min_x1 < buf)) and
-              ((min_y0 < buf) or (min_y1 < buf)) and
-              (-1 > mean_angle > -89)):
+        elif ((min_x0 < buf) or (min_x1 < buf)) and ((min_y0 < buf) or (min_y1 < buf)) and (-1 > mean_angle > -89):
             satellite = True
             if verbose:
-                print('Trail Direction: Bottom to Left')
+                print("Trail Direction: Bottom to Left")
 
         # top to left
-        elif (((min_x0 < buf) or (min_x1 < buf)) and
-              ((max_y0 > topy) or (max_y1 > topy)) and
-              (89 > mean_angle > 1)):
+        elif ((min_x0 < buf) or (min_x1 < buf)) and ((max_y0 > topy) or (max_y1 > topy)) and (89 > mean_angle > 1):
             satellite = True
             if verbose:
-                print('Trail Direction: Top to Left')
+                print("Trail Direction: Top to Left")
 
         # top to right
-        elif (((max_x0 > topx) or (max_x1 > topx)) and
-              ((max_y0 > topy) or (max_y1 > topy)) and
-              (-1 > mean_angle > -89)):
+        elif ((max_x0 > topx) or (max_x1 > topx)) and ((max_y0 > topy) or (max_y1 > topy)) and (-1 > mean_angle > -89):
             satellite = True
             if verbose:
-                print('Trail Direction: Top to Right')
+                print("Trail Direction: Top to Right")
 
         # bottom to right
-        elif (((max_x0 > topx) or (max_x1 > topx)) and
-              ((min_y0 < buf) or (min_y1 < buf)) and
-              (89 > mean_angle > 1)):
+        elif ((max_x0 > topx) or (max_x1 > topx)) and ((min_y0 < buf) or (min_y1 < buf)) and (89 > mean_angle > 1):
             satellite = True
             if verbose:
-                print('Trail Direction: Bottom to Right')
+                print("Trail Direction: Bottom to Right")
 
     if satellite:
         if verbose:
-            print(f'{n_result} trail segment(s) detected')
-            print(f'Trail angle list (not returned):\n{trail_angle}')
-            print('End point list:')
+            print(f"{n_result} trail segment(s) detected")
+            print(f"Trail angle list (not returned):\n{trail_angle}")
+            print("End point list:")
             for i, ((px0, py0), (px1, py1)) in enumerate(result, 1):
-                print(f'{i:5d}. ({px0:4d}, {py0:4d}), ({px1:4d}, {py1:4d})')
+                print(f"{i:5d}. ({px0:4d}, {py0:4d}), ({px1:4d}, {py1:4d})")
 
         if plot and plt is not None:
             mean = np.median(image)
@@ -397,19 +390,16 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
             fig1, ax1 = plt.subplots()
             ax1.imshow(edge, cmap=plt.cm.gray)
-            ax1.set_title(f'Edge image for {fname}')
+            ax1.set_title(f"Edge image for {fname}")
 
             for (px0, py0), (px1, py1) in result:  # Draw trails
                 ax1.plot((px0, px1), (py0, py1), scalex=False, scaley=False)
 
             fig2, ax2 = plt.subplots()
-            ax2.imshow(
-                np.log(1 + h),
-                extent=(np.rad2deg(theta[-1]), np.rad2deg(theta[0]),
-                        d[-1], d[0]), aspect=0.02)
-            ax2.set_title('Hough Transform')
-            ax2.set_xlabel('Angles (degrees)')
-            ax2.set_ylabel('Distance from Origin (pixels)')
+            ax2.imshow(np.log(1 + h), extent=(np.rad2deg(theta[-1]), np.rad2deg(theta[0]), d[-1], d[0]), aspect=0.02)
+            ax2.set_title("Hough Transform")
+            ax2.set_xlabel("Angles (degrees)")
+            ax2.set_ylabel("Distance from Origin (pixels)")
 
             fig3, ax3 = plt.subplots()
             ax3.imshow(image, vmin=lower, vmax=upper, cmap=plt.cm.gray)
@@ -424,7 +414,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
         result = np.empty(0)
 
         if verbose:
-            print(f'No trail detected; found {n_result} segments')
+            print(f"No trail detected; found {n_result} segments")
 
         if plot and plt is not None:
             fig1, ax1 = plt.subplots()
@@ -437,7 +427,7 @@ def _detsat_one(filename, ext, sigma=2.0, low_thresh=0.1, h_thresh=0.5,
 
     if verbose:
         t_end = time.time()
-        print(f'Run time: {t_end - t_beg} s')
+        print(f"Run time: {t_end - t_beg} s")
 
     return result
 
@@ -457,7 +447,7 @@ def _get_valid_indices(shape, ix0, ix1, iy0, iy1):
         iy1 = ymax
 
     if iy1 <= iy0 or ix1 <= ix0:
-        raise IndexError(f'array[{iy0}:{iy1},{ix0}:{ix1}] is invalid')
+        raise IndexError(f"array[{iy0}:{iy1},{ix0}:{ix1}] is invalid")
 
     return list(map(int, [ix0, ix1, iy0, iy1]))
 
@@ -501,7 +491,7 @@ def _rotate_point(point, angle, ishape, rshape, reverse=False):
     """
     #  unpack the image and rotated images shapes
     if reverse:
-        angle = (angle * -1)
+        angle = angle * -1
         temp = ishape
         ishape = rshape
         rshape = temp
@@ -529,8 +519,7 @@ def _rotate_point(point, angle, ishape, rshape, reverse=False):
     return (newx, newy)
 
 
-def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
-              sigma=4, pad=10, plot=False, verbose=False):
+def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3, sigma=4, pad=10, plot=False, verbose=False):
     """Create DQ mask for an image for a given satellite trail.
     This mask can be added to existing DQ data using
     :func:`acstools.utils_findsat_mrt.update_dq`.
@@ -596,17 +585,17 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     """
     if not HAS_OPDEP:
-        raise ImportError('Missing scipy or skimage>=0.11 packages')
+        raise ImportError("Missing scipy or skimage>=0.11 packages")
 
     if verbose:
         t_beg = time.time()
 
-    fname = f'{filename}[{ext}]'
+    fname = f"{filename}[{ext}]"
     image = fits.getdata(filename, ext)
 
     dx = image.max()
     if dx <= 0:
-        raise ValueError('Image has no positive values')
+        raise ValueError("Image has no positive values")
 
     # rescale the image
     image = image / dx
@@ -621,7 +610,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     deg = np.degrees(rad)
 
     if verbose:
-        print(f'Rotation: {deg}')
+        print(f"Rotation: {deg}")
 
     rotate = transform.rotate(image, deg, resize=True, order=order)
 
@@ -638,7 +627,7 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
         fig2, ax2 = plt.subplots()
         ax2.imshow(rotate, vmin=lower, vmax=upper, cmap=plt.cm.gray)
-        ax2.set_title(f'{fname} rotated by {deg} deg')
+        ax2.set_title(f"{fname} rotated by {deg} deg")
 
         plt.draw()
 
@@ -649,12 +638,10 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     #  start with one subarray around p0
     dx = int(subwidth / 2)
-    ix0, ix1, iy0, iy1 = _get_valid_indices(
-        rotate.shape, sx - dx, sx + dx, sy - sublen, sy + sublen)
+    ix0, ix1, iy0, iy1 = _get_valid_indices(rotate.shape, sx - dx, sx + dx, sy - sublen, sy + sublen)
     subr = rotate[iy0:iy1, ix0:ix1]
     if len(subr) <= sublen:
-        raise ValueError(f'Trail subarray size is {len(subr)} but expected '
-                         f'{sublen} or larger')
+        raise ValueError(f"Trail subarray size is {len(subr)} but expected {sublen} or larger")
 
     # Flatten the array so we are looking along rows
     # Take median of each row, should filter out most outliers
@@ -672,19 +659,20 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
     if plot and plt is not None:
         fig1, ax1 = plt.subplots()
-        ax1.plot(medarr, 'b.')
-        ax1.plot(z, medarr[z], 'r.')
-        ax1.set_xlabel('Index')
-        ax1.set_ylabel('Value')
-        ax1.set_title('Median array in flat[0]')
+        ax1.plot(medarr, "b.")
+        ax1.plot(z, medarr[z], "r.")
+        ax1.set_xlabel("Index")
+        ax1.set_ylabel("Value")
+        ax1.set_title("Median array in flat[0]")
         plt.draw()
 
     # Make sure there is something in the first pass before trying to move on
     if len(z) < 1:
         raise ValueError(
-            'First look at finding a profile failed. '
-            f'Nothing found at {sigma} from background! '
-            'Adjust parameters and try again.')
+            "First look at finding a profile failed. "
+            f"Nothing found at {sigma} from background! "
+            "Adjust parameters and try again."
+        )
 
     # get the bounds of the flagged points
     lower = z.min()
@@ -698,14 +686,18 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     # for plotting see how the profile was made (append to plot above)
     if plot and plt is not None:
         padind = np.arange(lower, upper)
-        ax1.plot(padind, medarr[padind], 'yx')
+        ax1.plot(padind, medarr[padind], "yx")
         plt.draw()
 
     # start to create a mask
     mask = np.zeros(rotate.shape)
     lowerx, upperx, lowery, uppery = _get_valid_indices(
-        mask.shape, np.floor(sx - subwidth), np.ceil(sx + subwidth),
-        np.floor(sy - sublen + lower), np.ceil(sy - sublen + upper))
+        mask.shape,
+        np.floor(sx - subwidth),
+        np.ceil(sx + subwidth),
+        np.floor(sy - sublen + lower),
+        np.ceil(sy - sublen + upper),
+    )
     mask[lowery:uppery, lowerx:upperx] = 1
 
     done = False
@@ -717,16 +709,14 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
     while not done:
         # move to the right of the centerpoint first. do the same
         # as above but keep moving right until the edge is hit.
-        ix0, ix1, iy0, iy1 = _get_valid_indices(
-            rotate.shape, nextx - dx, nextx + dx,
-            centery - sublen, centery + sublen)
+        ix0, ix1, iy0, iy1 = _get_valid_indices(rotate.shape, nextx - dx, nextx + dx, centery - sublen, centery + sublen)
         subr = rotate[iy0:iy1, ix0:ix1]
 
         # determines the edge, if the subr is not good, then the edge was
         # hit.
         if 0 in subr.shape:
             if verbose:
-                print(f'Hit edge, subr shape={subr.shape}, first={first}')
+                print(f"Hit edge, subr shape={subr.shape}, first={first}")
             if first:
                 first = False
                 centery = sy
@@ -747,15 +737,13 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         if len(z) < 1:
             if first:
                 if verbose:
-                    print(f'No good profile found for counter={counter}. '
-                          'Start moving left from starting point.')
+                    print(f"No good profile found for counter={counter}. Start moving left from starting point.")
                 centery = sy
                 nextx = sx
                 first = False
             else:
                 if verbose:
-                    print(f'z={z} is less than 1, subr shape={subr.shape}, '
-                          'we are done')
+                    print(f"z={z} is less than 1, subr shape={subr.shape}, we are done")
                 done = True
             continue
 
@@ -773,15 +761,15 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
             np.floor(nextx - subwidth),
             np.ceil(nextx + subwidth),
             np.floor(centery - sublen + lower),
-            np.ceil(centery - sublen + upper))
+            np.ceil(centery - sublen + upper),
+        )
         mask[lowery:uppery, lowerx:upperx] = 1
 
         # lower_p = (lowerx, lowery)
         upper_p = (upperx, uppery)
         # lower_t = _rotate_point(
         #     lower_p, newrad, image.shape, rotate.shape, reverse=True)
-        upper_t = _rotate_point(
-            upper_p, newrad, image.shape, rotate.shape, reverse=True)
+        upper_t = _rotate_point(upper_p, newrad, image.shape, rotate.shape, reverse=True)
 
         # lowy = np.floor(lower_t[1])
         highy = np.ceil(upper_t[1])
@@ -795,11 +783,11 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
             if (nextx + subwidth) > rotate.shape[1]:
                 if verbose:
-                    print(f'Hit rotate edge at counter={counter}')
+                    print(f"Hit rotate edge at counter={counter}")
                 first = False
             elif (highy > image.shape[0]) or (highx > image.shape[1]):
                 if verbose:
-                    print(f'Hit image edge at counter={counter}')
+                    print(f"Hit image edge at counter={counter}")
                 first = False
 
             if not first:
@@ -813,11 +801,11 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
             if (nextx - subwidth) < 0:
                 if verbose:
-                    print(f'Hit rotate edge at counter={counter}')
+                    print(f"Hit rotate edge at counter={counter}")
                 done = True
             elif (highy > image.shape[0]) or (highx > image.shape[1]):
                 if verbose:
-                    print(f'Hit image edge at counter={counter}')
+                    print(f"Hit image edge at counter={counter}")
                 done = True
 
         counter += 1
@@ -825,21 +813,18 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
         # make sure it does not try to go infinetly
         if counter > 500:
             if verbose:
-                print('Too many loops, exiting')
+                print("Too many loops, exiting")
             done = True
     # End while
 
     rot = transform.rotate(mask, -deg, resize=True, order=1)
     ix0 = (rot.shape[1] - image.shape[1]) / 2
     iy0 = (rot.shape[0] - image.shape[0]) / 2
-    lowerx, upperx, lowery, uppery = _get_valid_indices(
-        rot.shape, ix0, image.shape[1] + ix0, iy0, image.shape[0] + iy0)
+    lowerx, upperx, lowery, uppery = _get_valid_indices(rot.shape, ix0, image.shape[1] + ix0, iy0, image.shape[0] + iy0)
     mask = rot[lowery:uppery, lowerx:upperx]
 
     if mask.shape != image.shape:
-        warnings.warn(
-            f'Output mask shape is {mask.shape} but input image shape is '
-            f'{image.shape}', AstropyUserWarning)
+        warnings.warn(f"Output mask shape is {mask.shape} but input image shape is {image.shape}", AstropyUserWarning)
 
     # Change to boolean mask
     mask = mask.astype(bool)
@@ -856,17 +841,17 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 
         fig1, ax1 = plt.subplots()
         ax1.imshow(test, vmin=lower, vmax=upper, cmap=plt.cm.gray)
-        ax1.set_title('Masked image')
+        ax1.set_title("Masked image")
 
         fig2, ax2 = plt.subplots()
         ax2.imshow(mask, cmap=plt.cm.gray)
-        ax2.set_title('DQ mask')
+        ax2.set_title("DQ mask")
 
         plt.draw()
 
     if verbose:
         t_end = time.time()
-        print(f'Run time: {t_end - t_beg} s')
+        print(f"Run time: {t_end - t_beg} s")
 
     return mask
 
@@ -875,20 +860,39 @@ def make_mask(filename, ext, trail_coords, sublen=75, subwidth=200, order=3,
 # Multiprocessing for multiple input files.
 # This is for detection only, not for mask.
 
-def _satdet_worker(work_queue, done_queue, sigma=2.0, low_thresh=0.1,
-                   h_thresh=0.5, small_edge=60, line_len=200, line_gap=75,
-                   percentile=(4.5, 93.0), buf=200):
+
+def _satdet_worker(
+    work_queue,
+    done_queue,
+    sigma=2.0,
+    low_thresh=0.1,
+    h_thresh=0.5,
+    small_edge=60,
+    line_len=200,
+    line_gap=75,
+    percentile=(4.5, 93.0),
+    buf=200,
+):
     """Multiprocessing worker."""
-    for fil, chip in iter(work_queue.get, 'STOP'):
+    for fil, chip in iter(work_queue.get, "STOP"):
         try:
             result = _detsat_one(
-                fil, chip, sigma=sigma,
-                low_thresh=low_thresh, h_thresh=h_thresh,
-                small_edge=small_edge, line_len=line_len, line_gap=line_gap,
-                percentile=percentile, buf=buf, plot=False, verbose=False)
+                fil,
+                chip,
+                sigma=sigma,
+                low_thresh=low_thresh,
+                h_thresh=h_thresh,
+                small_edge=small_edge,
+                line_len=line_len,
+                line_gap=line_gap,
+                percentile=percentile,
+                buf=buf,
+                plot=False,
+                verbose=False,
+            )
         except Exception as e:
             retcode = False
-            result = f'{type(e)}: {repr(e)}'
+            result = f"{type(e)}: {repr(e)}"
         else:
             retcode = True
         done_queue.put((retcode, fil, chip, result))
@@ -896,10 +900,21 @@ def _satdet_worker(work_queue, done_queue, sigma=2.0, low_thresh=0.1,
     return True
 
 
-def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
-           low_thresh=0.1, h_thresh=0.5, small_edge=60, line_len=200,
-           line_gap=75, percentile=(4.5, 93.0), buf=200, plot=False,
-           verbose=True):
+def detsat(
+    searchpattern,
+    chips=[1, 4],
+    n_processes=4,
+    sigma=2.0,
+    low_thresh=0.1,
+    h_thresh=0.5,
+    small_edge=60,
+    line_len=200,
+    line_gap=75,
+    percentile=(4.5, 93.0),
+    buf=200,
+    plot=False,
+    verbose=True,
+):
     """Find satellite trails in the given images and extensions.
     The trails are calculated using Probabilistic Hough Transform.
 
@@ -985,7 +1000,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
 
     """
     if not HAS_OPDEP:
-        raise ImportError('Missing scipy or skimage>=0.11 packages')
+        raise ImportError("Missing scipy or skimage>=0.11 packages")
 
     if verbose:
         t_beg = time.time()
@@ -999,7 +1014,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
     errors = {}
 
     if verbose:
-        print(f'{n_files} file(s) found...')
+        print(f"{n_files} file(s) found...")
 
     # Nothing to do
     if n_files < 1 or n_chips < 1:
@@ -1016,18 +1031,26 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
         for fil in files:
             for chip in chips:
                 if verbose:
-                    print(f'\nProcessing {fil}[{chip}]...')
+                    print(f"\nProcessing {fil}[{chip}]...")
 
                 key = (fil, chip)
                 try:
                     result = _detsat_one(
-                        fil, chip, sigma=sigma,
-                        low_thresh=low_thresh, h_thresh=h_thresh,
-                        small_edge=small_edge, line_len=line_len,
-                        line_gap=line_gap, percentile=percentile, buf=buf,
-                        plot=plot, verbose=verbose)
+                        fil,
+                        chip,
+                        sigma=sigma,
+                        low_thresh=low_thresh,
+                        h_thresh=h_thresh,
+                        small_edge=small_edge,
+                        line_len=line_len,
+                        line_gap=line_gap,
+                        percentile=percentile,
+                        buf=buf,
+                        plot=plot,
+                        verbose=verbose,
+                    )
                 except Exception as e:
-                    errmsg = f'{type(e)}: {repr(e)}'
+                    errmsg = f"{type(e)}: {repr(e)}"
                     errors[key] = errmsg
                     if verbose:
                         print(errmsg)
@@ -1041,7 +1064,7 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
     # processes. When a worker finishes, its output is put into done queue.
     else:
         if verbose:
-            print(f'Using {n_processes} processes')
+            print(f"Using {n_processes} processes")
 
         work_queue = Queue()
         done_queue = Queue()
@@ -1053,22 +1076,30 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
 
         for w in range(n_processes):
             p = Process(
-                target=_satdet_worker, args=(work_queue, done_queue), kwargs={
-                    'sigma': sigma, 'low_thresh': low_thresh,
-                    'h_thresh': h_thresh, 'small_edge': small_edge,
-                    'line_len': line_len, 'line_gap': line_gap,
-                    'percentile': percentile, 'buf': buf})
+                target=_satdet_worker,
+                args=(work_queue, done_queue),
+                kwargs={
+                    "sigma": sigma,
+                    "low_thresh": low_thresh,
+                    "h_thresh": h_thresh,
+                    "small_edge": small_edge,
+                    "line_len": line_len,
+                    "line_gap": line_gap,
+                    "percentile": percentile,
+                    "buf": buf,
+                },
+            )
             p.start()
             processes.append(p)
-            work_queue.put('STOP')
+            work_queue.put("STOP")
 
         for p in processes:
             p.join()
 
-        done_queue.put('STOP')
+        done_queue.put("STOP")
 
         # return a dictionary of lists
-        for status in iter(done_queue.get, 'STOP'):
+        for status in iter(done_queue.get, "STOP"):
             key = (status[1], status[2])
             if status[0]:  # Success
                 results[key] = status[3]
@@ -1077,16 +1108,16 @@ def detsat(searchpattern, chips=[1, 4], n_processes=4, sigma=2.0,
 
         if verbose:
             if len(results) > 0:
-                print('Number of trail segment(s) found:')
+                print("Number of trail segment(s) found:")
             for key in sorted(results):
-                print(f'  {key[0]}[{key[1]}]: {len(results[key])}')
+                print(f"  {key[0]}[{key[1]}]: {len(results[key])}")
             if len(errors) > 0:
-                print('These have errors:')
+                print("These have errors:")
             for key in sorted(errors):
-                print(f'  {key[0]}[{key[1]}]')
+                print(f"  {key[0]}[{key[1]}]")
 
     if verbose:
         t_end = time.time()
-        print(f'Total run time: {t_end - t_beg} s')
+        print(f"Total run time: {t_end - t_beg} s")
 
     return results, errors

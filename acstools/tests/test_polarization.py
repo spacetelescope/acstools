@@ -10,21 +10,21 @@ def test_tables():
     """Test that the tables are loaded correctly and are all present."""
     # Check if we can load the tables from the package data.
     tables = polarization_tools.PolarizerTables.from_package_data()
-    assert hasattr(tables, 'wfc_transmission')
-    assert hasattr(tables, 'hrc_transmission')
-    assert hasattr(tables, 'wfc_efficiency')
-    assert hasattr(tables, 'hrc_efficiency')
+    assert hasattr(tables, "wfc_transmission")
+    assert hasattr(tables, "hrc_transmission")
+    assert hasattr(tables, "wfc_efficiency")
+    assert hasattr(tables, "hrc_efficiency")
 
 
 def test_theta():
     """Test that the calc_theta function returns a quantity object
     in degrees and that the value is as expected."""
     # Check the angle for when we have all U polarization.
-    all_u = polarization_tools.calc_theta(0, 1, 'wfc', 38.2)
+    all_u = polarization_tools.calc_theta(0, 1, "wfc", 38.2)
     assert_quantity_allclose(all_u, 45 * units.degree)
 
     # Also check the value for the all Q case.
-    all_q = polarization_tools.calc_theta(1, 0, 'wfc', 38.2)
+    all_q = polarization_tools.calc_theta(1, 0, "wfc", 38.2)
     assert_quantity_allclose(all_q, 0 * units.degree)
 
 
@@ -49,7 +49,7 @@ def test_pol_class():
     but let's test that we get expected exceptions."""
 
     with pytest.raises(IndexError):
-        polarization_tools.Polarization(1, 1, 1, 'F607W', 'WFC', 1)
+        polarization_tools.Polarization(1, 1, 1, "F607W", "WFC", 1)
 
     with pytest.raises(ValueError):
-        polarization_tools.Polarization(1, 1, 1, 'F606W', 'WFB', 1)
+        polarization_tools.Polarization(1, 1, 1, "F606W", "WFB", 1)

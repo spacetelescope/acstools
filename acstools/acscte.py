@@ -17,6 +17,7 @@ Examples
 For help usage use ``exe_args=['--help']``
 
 """
+
 # STDLIB
 import os
 import subprocess  # nosec
@@ -24,11 +25,10 @@ import subprocess  # nosec
 __taskname__ = "acscte"
 __version__ = "1.0"
 __vdate__ = "13-Aug-2013"
-__all__ = ['acscte']
+__all__ = ["acscte"]
 
 
-def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
-           single_core=False, exe_args=None):
+def acscte(input, exec_path="", time_stamps=False, verbose=False, quiet=False, single_core=False, exe_args=None):
     r"""
     Run the acscte.e executable as from the shell.
 
@@ -74,27 +74,27 @@ def acscte(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acscte.e']
+        call_list = ["acscte.e"]
 
     # Parse input to get list of filenames to process.
     # acscte.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-    call_list.append(','.join(infiles))
+    call_list.append(",".join(infiles))
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if quiet:
-        call_list.append('-q')
+        call_list.append("-q")
 
     if single_core:
-        call_list.append('-1')
+        call_list.append("-1")
 
     if exe_args:
         call_list.extend(exe_args)

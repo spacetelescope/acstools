@@ -64,11 +64,11 @@ import logging
 import os
 import subprocess  # nosec
 
-# ASTROPY
-from astropy.time import Time
-
 # THIRD-PARTY
 import numpy as np
+
+# ASTROPY
+from astropy.time import Time
 
 try:
     # This supports PIXVALUE
@@ -78,38 +78,70 @@ except ImportError:
     from astropy.io import fits
 
 # LOCAL
-from . import acs_destripe
-from . import acs2d
-from . import acsccd
-from . import acscte
-from . import acsrej
+from . import acs2d, acs_destripe, acsccd, acscte, acsrej
 from .utils_calib import SM4_MJD
 
-__taskname__ = 'acs_destripe_plus'
-__version__ = '0.4.3'
-__vdate__ = '01-Apr-2020'
-__author__ = 'Leonardo Ubeda, Sara Ogaz (ACS Team), STScI'
-__all__ = ['destripe_plus', 'crrej_plus']
+__taskname__ = "acs_destripe_plus"
+__version__ = "0.4.3"
+__vdate__ = "01-Apr-2020"
+__author__ = "Leonardo Ubeda, Sara Ogaz (ACS Team), STScI"
+__all__ = ["destripe_plus", "crrej_plus"]
 
 SUBARRAY_LIST = [
-    'WFC1-2K', 'WFC1-POL0UV', 'WFC1-POL0V', 'WFC1-POL60V',
-    'WFC1-POL60UV', 'WFC1-POL120V', 'WFC1-POL120UV', 'WFC1-SMFL',
-    'WFC1-IRAMPQ', 'WFC1-MRAMPQ', 'WFC2-2K', 'WFC2-ORAMPQ',
-    'WFC2-SMFL', 'WFC2-POL0UV', 'WFC2-POL0V', 'WFC2-MRAMPQ',
-    'WFC1A-512', 'WFC1A-1K', 'WFC1A-2K', 'WFC1B-512', 'WFC1B-1K', 'WFC1B-2K',
-    'WFC2C-512', 'WFC2C-1K', 'WFC2C-2K', 'WFC2D-512', 'WFC2D-1K', 'WFC2D-2K']
+    "WFC1-2K",
+    "WFC1-POL0UV",
+    "WFC1-POL0V",
+    "WFC1-POL60V",
+    "WFC1-POL60UV",
+    "WFC1-POL120V",
+    "WFC1-POL120UV",
+    "WFC1-SMFL",
+    "WFC1-IRAMPQ",
+    "WFC1-MRAMPQ",
+    "WFC2-2K",
+    "WFC2-ORAMPQ",
+    "WFC2-SMFL",
+    "WFC2-POL0UV",
+    "WFC2-POL0V",
+    "WFC2-MRAMPQ",
+    "WFC1A-512",
+    "WFC1A-1K",
+    "WFC1A-2K",
+    "WFC1B-512",
+    "WFC1B-1K",
+    "WFC1B-2K",
+    "WFC2C-512",
+    "WFC2C-1K",
+    "WFC2C-2K",
+    "WFC2D-512",
+    "WFC2D-1K",
+    "WFC2D-2K",
+]
 
 logging.basicConfig()
 LOG = logging.getLogger(__taskname__)
 LOG.setLevel(logging.INFO)
 
 
-def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
-                  sigrej=2.0, lower=None, upper=None, binwidth=0.3,
-                  scimask1=None, scimask2=None,
-                  dqbits=None, rpt_clean=0, atol=0.01,
-                  cte_correct=True, keep_intermediate_files=False,
-                  clobber=False, verbose=True):
+def destripe_plus(
+    inputfile,
+    suffix="strp",
+    stat="pmode1",
+    maxiter=15,
+    sigrej=2.0,
+    lower=None,
+    upper=None,
+    binwidth=0.3,
+    scimask1=None,
+    scimask2=None,
+    dqbits=None,
+    rpt_clean=0,
+    atol=0.01,
+    cte_correct=True,
+    keep_intermediate_files=False,
+    clobber=False,
+    verbose=True,
+):
     r"""Calibrate post-SM4 ACS/WFC exposure(s) and use
     standalone :ref:`acsdestripe`.
 
@@ -293,12 +325,9 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
             elif isinstance(m, str):
                 mlist1 += parseinput.parseinput(m)[0]
             else:
-                raise TypeError("'scimask1' must be a list of str or "
-                                "numpy.ndarray values.")
+                raise TypeError("'scimask1' must be a list of str or numpy.ndarray values.")
     else:
-        raise TypeError("'scimask1' must be either a str, or a "
-                        "numpy.ndarray, or a list of the two type of "
-                        "values.")
+        raise TypeError("'scimask1' must be either a str, or a numpy.ndarray, or a list of the two type of values.")
 
     if isinstance(scimask2, str):
         mlist2 = parseinput.parseinput(scimask2)[0]
@@ -314,41 +343,46 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
             elif isinstance(m, str):
                 mlist2 += parseinput.parseinput(m)[0]
             else:
-                raise TypeError("'scimask2' must be a list of str or "
-                                "numpy.ndarray values.")
+                raise TypeError("'scimask2' must be a list of str or numpy.ndarray values.")
     else:
-        raise TypeError("'scimask2' must be either a str, or a "
-                        "numpy.ndarray, or a list of the two type of "
-                        "values.")
+        raise TypeError("'scimask2' must be either a str, or a numpy.ndarray, or a list of the two type of values.")
 
     n_input = len(flist)
     n_mask1 = len(mlist1)
     n_mask2 = len(mlist2)
 
     if n_input == 0:
-        raise ValueError(
-            'No input file(s) provided or the file(s) do not exist')
+        raise ValueError("No input file(s) provided or the file(s) do not exist")
 
     if n_mask1 == 0:
         mlist1 = [None] * n_input
     elif n_mask1 != n_input:
-        raise ValueError('Insufficient masks for [SCI,1]')
+        raise ValueError("Insufficient masks for [SCI,1]")
 
     if n_mask2 == 0:
         mlist2 = [None] * n_input
     elif n_mask2 != n_input:
-        raise ValueError('Insufficient masks for [SCI,2]')
+        raise ValueError("Insufficient masks for [SCI,2]")
 
     if n_input > 1:
         for img, mf1, mf2 in zip(flist, mlist1, mlist2):
             destripe_plus(
-                inputfile=img, suffix=suffix, stat=stat,
-                lower=lower, upper=upper, binwidth=binwidth,
-                maxiter=maxiter, sigrej=sigrej,
-                scimask1=scimask1, scimask2=scimask2, dqbits=dqbits,
+                inputfile=img,
+                suffix=suffix,
+                stat=stat,
+                lower=lower,
+                upper=upper,
+                binwidth=binwidth,
+                maxiter=maxiter,
+                sigrej=sigrej,
+                scimask1=scimask1,
+                scimask2=scimask2,
+                dqbits=dqbits,
                 cte_correct=cte_correct,
                 keep_intermediate_files=keep_intermediate_files,
-                clobber=clobber, verbose=verbose)
+                clobber=clobber,
+                verbose=verbose,
+            )
         return
 
     inputfile = flist[0]
@@ -364,53 +398,48 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
     header = fits.getheader(inputfile)
 
     # verify masks defined (or not) simultaneously:
-    if (header['CCDAMP'] == 'ABCD' and
-            ((scimask1 is not None and scimask2 is None) or
-             (scimask1 is None and scimask2 is not None))):
-        raise ValueError("Both 'scimask1' and 'scimask2' must be specified "
-                         "or not specified together.")
+    if header["CCDAMP"] == "ABCD" and (
+        (scimask1 is not None and scimask2 is None) or (scimask1 is None and scimask2 is not None)
+    ):
+        raise ValueError("Both 'scimask1' and 'scimask2' must be specified or not specified together.")
 
-    calacs_str = subprocess.check_output(['calacs.e', '--version']).split()[0]  # nosec # noqa
-    calacs_ver = [int(x) for x in calacs_str.decode().split('.')]
+    calacs_str = subprocess.check_output(["calacs.e", "--version"]).split()[0]  # nosec # noqa
+    calacs_ver = [int(x) for x in calacs_str.decode().split(".")]
     if calacs_ver < [8, 3, 1]:
-        raise ValueError(f'CALACS {calacs_str} is incomptible. '
-                         'Must be 8.3.1 or later.')
+        raise ValueError(f"CALACS {calacs_str} is incomptible. Must be 8.3.1 or later.")
 
     # check date for post-SM4 and if supported subarray or full frame
     is_subarray = False
-    ctecorr = header['PCTECORR']
-    aperture = header['APERTURE']
-    detector = header['DETECTOR']
-    date_obs = Time(header['DATE-OBS']).mjd  # Convert to MJD for comparison
+    ctecorr = header["PCTECORR"]
+    aperture = header["APERTURE"]
+    detector = header["DETECTOR"]
+    date_obs = Time(header["DATE-OBS"]).mjd  # Convert to MJD for comparison
 
     # intermediate filenames
-    blvtmp_name = inputfile.replace('raw', 'blv_tmp')
-    blctmp_name = inputfile.replace('raw', 'blc_tmp')
+    blvtmp_name = inputfile.replace("raw", "blv_tmp")
+    blctmp_name = inputfile.replace("raw", "blc_tmp")
 
     # output filenames
-    tra_name = inputfile.replace('_raw.fits', '.tra')
-    flt_name = inputfile.replace('raw', 'flt')
-    flc_name = inputfile.replace('raw', 'flc')
+    tra_name = inputfile.replace("_raw.fits", ".tra")
+    flt_name = inputfile.replace("raw", "flt")
+    flc_name = inputfile.replace("raw", "flc")
 
-    if detector != 'WFC':
-        raise ValueError(f"{inputfile} is not a WFC image, please check the "
-                         "'DETECTOR' keyword.")
+    if detector != "WFC":
+        raise ValueError(f"{inputfile} is not a WFC image, please check the 'DETECTOR' keyword.")
 
     if date_obs < SM4_MJD:
         raise ValueError(f"{inputfile} is a pre-SM4 image.")
 
-    if header['SUBARRAY'] and cte_correct:
+    if header["SUBARRAY"] and cte_correct:
         if aperture in SUBARRAY_LIST:
             is_subarray = True
         else:
-            LOG.warning(f'Using non-supported subarray ({aperture}), '
-                        'turning CTE correction off')
+            LOG.warning(f"Using non-supported subarray ({aperture}), turning CTE correction off")
             cte_correct = False
 
     # delete files from previous CALACS runs
     if clobber:
-        for tmpfilename in [blvtmp_name, blctmp_name, flt_name, flc_name,
-                            tra_name]:
+        for tmpfilename in [blvtmp_name, blctmp_name, flt_name, flc_name, tra_name]:
             if os.path.exists(tmpfilename):
                 os.remove(tmpfilename)
 
@@ -449,7 +478,7 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
         # reconstruct trailer file:
         if tra_lines is not None:
-            with open(tra_name, mode='w') as fh:
+            with open(tra_name, mode="w") as fh:
                 fh.writelines(tra_lines)
 
         # delete temporary FLT image:
@@ -458,21 +487,33 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
 
     # execute destriping (post-SM4 data only)
     acs_destripe.clean(
-        blvtmp_name, suffix, stat=stat, maxiter=maxiter, sigrej=sigrej,
-        lower=lower, upper=upper, binwidth=binwidth,
-        mask1=scimask1, mask2=scimask2, dqbits=dqbits,
-        rpt_clean=rpt_clean, atol=atol, clobber=clobber, verbose=verbose)
-    blvtmpsfx = f'blv_tmp_{suffix}'
-    os.rename(inputfile.replace('raw', blvtmpsfx), blvtmp_name)
+        blvtmp_name,
+        suffix,
+        stat=stat,
+        maxiter=maxiter,
+        sigrej=sigrej,
+        lower=lower,
+        upper=upper,
+        binwidth=binwidth,
+        mask1=scimask1,
+        mask2=scimask2,
+        dqbits=dqbits,
+        rpt_clean=rpt_clean,
+        atol=atol,
+        clobber=clobber,
+        verbose=verbose,
+    )
+    blvtmpsfx = f"blv_tmp_{suffix}"
+    os.rename(inputfile.replace("raw", blvtmpsfx), blvtmp_name)
 
     # update subarray header
     if is_subarray and cte_correct:
-        fits.setval(blvtmp_name, 'PCTECORR', value='PERFORM')
-        ctecorr = 'PERFORM'
+        fits.setval(blvtmp_name, "PCTECORR", value="PERFORM")
+        ctecorr = "PERFORM"
 
     # perform CTE correction on destriped image
     if cte_correct:
-        if ctecorr == 'PERFORM':
+        if ctecorr == "PERFORM":
             acscte.acscte(blvtmp_name)
         else:
             LOG.warning(f"PCTECORR={ctecorr}, cannot run CTE correction")
@@ -489,18 +530,18 @@ def destripe_plus(inputfile, suffix='strp', stat='pmode1', maxiter=15,
         if cte_correct and os.path.isfile(blctmp_name):
             os.remove(blctmp_name)
 
-    info_str = f'Done.\nFLT: {flt_name}\n'
+    info_str = f"Done.\nFLT: {flt_name}\n"
     if cte_correct:
-        info_str += f'FLC: {flc_name}\n'
+        info_str += f"FLC: {flc_name}\n"
     LOG.info(info_str)
 
 
 def _read_DQ_arrays(flt_name):
     with fits.open(flt_name) as h:
-        ampstring = h[0].header['CCDAMP']
-        dq1 = h['dq', 1].data
-        if (ampstring == 'ABCD'):
-            dq2 = h['dq', 2].data
+        ampstring = h[0].header["CCDAMP"]
+        dq1 = h["dq", 1].data
+        if ampstring == "ABCD":
+            dq2 = h["dq", 2].data
         else:
             dq2 = None
     return dq1, dq2
@@ -508,7 +549,7 @@ def _read_DQ_arrays(flt_name):
 
 def _get_mask(scimask, n):
     if isinstance(scimask, str):
-        if scimask.strip() == '':
+        if scimask.strip() == "":
             mask = None
         else:
             mask = fits.getdata(scimask)
@@ -517,8 +558,7 @@ def _get_mask(scimask, n):
     elif scimask is None:
         mask = None
     else:
-        raise TypeError(f"'scimask{n}' must be either a str file name, "
-                        "a numpy.ndarray, or None.")
+        raise TypeError(f"'scimask{n}' must be either a str file name, a numpy.ndarray, or None.")
     return mask
 
 
@@ -581,36 +621,36 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     filelist = parseinput.parseinput(filelist)[0]
 
-    is_blv = np.all(['blv_tmp.fits' in f for f in filelist])
-    is_blc = np.all(['blc_tmp.fits' in f for f in filelist])
+    is_blv = np.all(["blv_tmp.fits" in f for f in filelist])
+    is_blc = np.all(["blc_tmp.fits" in f for f in filelist])
 
     if is_blv is is_blc:
-        raise ValueError('Inputs must be all BLV_TMP or all BLC_TMP files')
+        raise ValueError("Inputs must be all BLV_TMP or all BLC_TMP files")
 
     if is_blv:
-        sfx = 'crj'
+        sfx = "crj"
     else:  # is_blc
-        sfx = 'crc'
+        sfx = "crc"
 
-    tmpname = f'{outroot}_{sfx}_tmp.fits'
+    tmpname = f"{outroot}_{sfx}_tmp.fits"
     acsrej.acsrej(filelist, tmpname, verbose=verbose)
     acs2d.acs2d(tmpname, verbose=verbose)  # crx_tmp -> crx
 
     # Work around a bug in ACS2D that names crx_tmp -> crx_tmp_flt, see
     # https://github.com/spacetelescope/hstcal/pull/470
-    wrongname = f'{outroot}_{sfx}_tmp_flt.fits'
-    rightname = f'{outroot}_{sfx}.fits'
+    wrongname = f"{outroot}_{sfx}_tmp_flt.fits"
+    rightname = f"{outroot}_{sfx}.fits"
     if os.path.isfile(wrongname) and not os.path.exists(rightname):
         os.rename(wrongname, rightname)
 
         # Brute-force fixing of final output header.
-        with fits.open(rightname, 'update') as pf:
-            pf[0].header['FILENAME'] = rightname
-            pf[0].header['ROOTNAME'] = outroot
+        with fits.open(rightname, "update") as pf:
+            pf[0].header["FILENAME"] = rightname
+            pf[0].header["ROOTNAME"] = outroot
 
             for hdu in pf[1:]:
-                hdu.header['EXPNAME'] = outroot
-                hdu.header['ROOTNAME'] = outroot
+                hdu.header["EXPNAME"] = outroot
+                hdu.header["ROOTNAME"] = outroot
 
     # Delete intermediate file
     if not keep_intermediate_files and os.path.isfile(tmpname):
@@ -618,19 +658,20 @@ def crrej_plus(filelist, outroot, keep_intermediate_files=False, verbose=True):
 
     # Delete extraneous trailer file generated by ACSREJ. Its contents are
     # copied to the trailer file generated by ACS2D after anyway.
-    final_tra = f'{outroot}_{sfx}_tmp.tra'
-    extra_tra = f'{outroot}.tra'
+    final_tra = f"{outroot}_{sfx}_tmp.tra"
+    extra_tra = f"{outroot}.tra"
     if os.path.isfile(extra_tra) and os.path.isfile(final_tra):
         os.remove(extra_tra)
 
         # If fixing the HSTCAL bug changes TRA naming too, this needs to be
         # adjusted accordingly.
-        os.rename(final_tra, f'{outroot}_{sfx}.tra')
+        os.rename(final_tra, f"{outroot}_{sfx}.tra")
 
 
-#-----------------------------#
+# -----------------------------#
 # Interfaces for command line #
-#-----------------------------#
+# -----------------------------#
+
 
 def main():
     """Command line driver."""
@@ -640,56 +681,30 @@ def main():
     parser = argparse.ArgumentParser(
         prog=__taskname__,
         description=(
-            'Run CALACS and standalone acs_destripe script on given post-SM4 '
-            'ACS/WFC RAW full-frame or supported subarray image.'))
+            "Run CALACS and standalone acs_destripe script on given post-SM4 "
+            "ACS/WFC RAW full-frame or supported subarray image."
+        ),
+    )
+    parser.add_argument("arg0", metavar="input", type=str, help="Input file")
+    parser.add_argument("--suffix", type=str, default="strp", help="Output suffix for acs_destripe")
+    parser.add_argument("--stat", type=str, default="pmode1", help="Background statistics")
+    parser.add_argument("--maxiter", type=int, default=15, help="Max #iterations")
+    parser.add_argument("--sigrej", type=float, default=2.0, help="Rejection sigma")
+    parser.add_argument("--lower", nargs="?", type=float, default=None, help='Lower limit for "good" pixels.')
+    parser.add_argument("--upper", nargs="?", type=float, default=None, help='Upper limit for "good" pixels.')
+    parser.add_argument("--binwidth", type=float, default=0.1, help="Bin width for distribution sampling.")
+    parser.add_argument("--sci1_mask", nargs=1, type=str, default=None, help="Mask image for calibrated [SCI,1]")
+    parser.add_argument("--sci2_mask", nargs=1, type=str, default=None, help="Mask image for calibrated [SCI,2]")
+    parser.add_argument("--dqbits", nargs="?", type=str, default=None, help='DQ bits to be considered "good".')
+    parser.add_argument("--rpt_clean", type=int, default=0, help="Number of *repeated* bias de-stripes to perform.")
     parser.add_argument(
-        'arg0', metavar='input', type=str, help='Input file')
-    parser.add_argument(
-        '--suffix', type=str, default='strp',
-        help='Output suffix for acs_destripe')
-    parser.add_argument(
-        '--stat', type=str, default='pmode1', help='Background statistics')
-    parser.add_argument(
-        '--maxiter', type=int, default=15, help='Max #iterations')
-    parser.add_argument(
-        '--sigrej', type=float, default=2.0, help='Rejection sigma')
-    parser.add_argument(
-        '--lower', nargs='?', type=float, default=None,
-        help='Lower limit for "good" pixels.')
-    parser.add_argument(
-        '--upper', nargs='?', type=float, default=None,
-        help='Upper limit for "good" pixels.')
-    parser.add_argument(
-        '--binwidth', type=float, default=0.1,
-        help='Bin width for distribution sampling.')
-    parser.add_argument(
-        '--sci1_mask', nargs=1, type=str, default=None,
-        help='Mask image for calibrated [SCI,1]')
-    parser.add_argument(
-        '--sci2_mask', nargs=1, type=str, default=None,
-        help='Mask image for calibrated [SCI,2]')
-    parser.add_argument(
-        '--dqbits', nargs='?', type=str, default=None,
-        help='DQ bits to be considered "good".')
-    parser.add_argument(
-        '--rpt_clean', type=int, default=0,
-        help='Number of *repeated* bias de-stripes to perform.')
-    parser.add_argument(
-        '--atol', nargs='?', type=float, default=0.01,
-        help='Absolute tolerance to stop *repeated* bias de-stripes.')
-    parser.add_argument(
-        '--nocte', action='store_true', help='Turn off CTE correction.')
-    parser.add_argument(
-        '--keep_intermediate_files', action='store_true',
-        help='Keep intermediate BLV_TMP and BLC_TMP files')
-    parser.add_argument(
-        '--clobber', action='store_true', help='Clobber output')
-    parser.add_argument(
-        '-q', '--quiet', action="store_true",
-        help='Do not print informational messages')
-    parser.add_argument(
-        '--version', action='version',
-        version=f'{__taskname__} v{__version__} ({__vdate__})')
+        "--atol", nargs="?", type=float, default=0.01, help="Absolute tolerance to stop *repeated* bias de-stripes."
+    )
+    parser.add_argument("--nocte", action="store_true", help="Turn off CTE correction.")
+    parser.add_argument("--keep_intermediate_files", action="store_true", help="Keep intermediate BLV_TMP and BLC_TMP files")
+    parser.add_argument("--clobber", action="store_true", help="Clobber output")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Do not print informational messages")
+    parser.add_argument("--version", action="version", version=f"{__taskname__} v{__version__} ({__vdate__})")
     options = parser.parse_args()
 
     if options.sci1_mask:
@@ -702,16 +717,25 @@ def main():
     else:
         mask2 = options.sci2_mask
 
-    destripe_plus(options.arg0, suffix=options.suffix,
-                  maxiter=options.maxiter, sigrej=options.sigrej,
-                  lower=options.lower, upper=options.upper,
-                  binwidth=options.binwidth,
-                  scimask1=mask1, scimask2=mask2, dqbits=options.dqbits,
-                  rpt_clean=options.rpt_clean, atol=options.atol,
-                  cte_correct=not options.nocte,
-                  keep_intermediate_files=options.keep_intermediate_files,
-                  clobber=options.clobber, verbose=not options.quiet)
+    destripe_plus(
+        options.arg0,
+        suffix=options.suffix,
+        maxiter=options.maxiter,
+        sigrej=options.sigrej,
+        lower=options.lower,
+        upper=options.upper,
+        binwidth=options.binwidth,
+        scimask1=mask1,
+        scimask2=mask2,
+        dqbits=options.dqbits,
+        rpt_clean=options.rpt_clean,
+        atol=options.atol,
+        cte_correct=not options.nocte,
+        keep_intermediate_files=options.keep_intermediate_files,
+        clobber=options.clobber,
+        verbose=not options.quiet,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

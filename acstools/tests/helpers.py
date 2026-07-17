@@ -4,20 +4,18 @@ import os
 from functools import partial
 
 import pytest
-from ci_watson.artifactory_helpers import (
-    generate_upload_params, generate_upload_schema)
-from ci_watson.artifactory_helpers import get_bigdata as _get_bigdata
-from ci_watson.hst_helpers import ref_from_image, download_crds
-
 from astropy.io import fits
 from astropy.io.fits import FITSDiff
+from ci_watson.artifactory_helpers import generate_upload_params, generate_upload_schema
+from ci_watson.artifactory_helpers import get_bigdata as _get_bigdata
+from ci_watson.hst_helpers import download_crds, ref_from_image
 
-__all__ = ['calref_from_image', 'BaseACSTOOLS']
+__all__ = ["calref_from_image", "BaseACSTOOLS"]
 
 # Overload generic get_bigdata to include repo root dir.
 # This is to accomodate developers who have to run big data tests across
 # several repositories using the same TEST_BIGDATA env var.
-get_bigdata = partial(_get_bigdata, 'scsb-hstcal')
+get_bigdata = partial(_get_bigdata, "scsb-hstcal")
 
 
 def calref_from_image(input_image):
@@ -30,41 +28,40 @@ def calref_from_image(input_image):
     # NOTE: Add additional mapping as needed.
     # Map *CORR to associated CRDS reference file.
     corr_lookup = {
-        'DQICORR': ['BPIXTAB', 'SNKCFILE'],
-        'ATODCORR': ['ATODTAB'],
-        'BLEVCORR': ['OSCNTAB'],
-        'SINKCORR': ['SNKCFILE'],
-        'BIASCORR': ['BIASFILE'],
-        'PCTECORR': ['PCTETAB', 'DRKCFILE', 'BIACFILE'],
-        'FLSHCORR': ['FLSHFILE'],
-        'CRCORR': ['CRREJTAB'],
-        'SHADCORR': ['SHADFILE'],
-        'DARKCORR': ['DARKFILE', 'TDCTAB'],
-        'FLATCORR': ['PFLTFILE', 'DFLTFILE', 'LFLTFILE'],
-        'PHOTCORR': ['IMPHTTAB'],
-        'LFLGCORR': ['MLINTAB'],
-        'GLINCORR': ['MLINTAB'],
-        'NLINCORR': ['NLINFILE'],
-        'ZSIGCORR': ['DARKFILE', 'NLINFILE'],
-        'WAVECORR': ['LAMPTAB', 'WCPTAB', 'SDCTAB'],
-        'SGEOCORR': ['SDSTFILE'],
-        'X1DCORR': ['XTRACTAB', 'SDCTAB'],
-        'SC2DCORR': ['CDSTAB', 'ECHSCTAB', 'EXSTAB', 'RIPTAB', 'HALOTAB',
-                     'TELTAB', 'SRWTAB'],
-        'BACKCORR': ['XTRACTAB'],
-        'FLUXCORR': ['APERTAB', 'PHOTTAB', 'PCTAB', 'TDSTAB']}
+        "DQICORR": ["BPIXTAB", "SNKCFILE"],
+        "ATODCORR": ["ATODTAB"],
+        "BLEVCORR": ["OSCNTAB"],
+        "SINKCORR": ["SNKCFILE"],
+        "BIASCORR": ["BIASFILE"],
+        "PCTECORR": ["PCTETAB", "DRKCFILE", "BIACFILE"],
+        "FLSHCORR": ["FLSHFILE"],
+        "CRCORR": ["CRREJTAB"],
+        "SHADCORR": ["SHADFILE"],
+        "DARKCORR": ["DARKFILE", "TDCTAB"],
+        "FLATCORR": ["PFLTFILE", "DFLTFILE", "LFLTFILE"],
+        "PHOTCORR": ["IMPHTTAB"],
+        "LFLGCORR": ["MLINTAB"],
+        "GLINCORR": ["MLINTAB"],
+        "NLINCORR": ["NLINFILE"],
+        "ZSIGCORR": ["DARKFILE", "NLINFILE"],
+        "WAVECORR": ["LAMPTAB", "WCPTAB", "SDCTAB"],
+        "SGEOCORR": ["SDSTFILE"],
+        "X1DCORR": ["XTRACTAB", "SDCTAB"],
+        "SC2DCORR": ["CDSTAB", "ECHSCTAB", "EXSTAB", "RIPTAB", "HALOTAB", "TELTAB", "SRWTAB"],
+        "BACKCORR": ["XTRACTAB"],
+        "FLUXCORR": ["APERTAB", "PHOTTAB", "PCTAB", "TDSTAB"],
+    }
 
     hdr = fits.getheader(input_image, ext=0)
 
     # Mandatory CRDS reference file.
     # Destriping tries to ingest some *FILE regardless of *CORR.
-    ref_files = ref_from_image(input_image, ['CCDTAB', 'DARKFILE', 'PFLTFILE'])
+    ref_files = ref_from_image(input_image, ["CCDTAB", "DARKFILE", "PFLTFILE"])
 
     for step in corr_lookup:
         # Not all images have the CORR step and it is not always on.
         # Destriping also does reverse-calib.
-        if ((step not in hdr) or
-                (hdr[step].strip().upper() not in ('PERFORM', 'COMPLETE'))):
+        if (step not in hdr) or (hdr[step].strip().upper() not in ("PERFORM", "COMPLETE")):
             continue
 
         ref_files += ref_from_image(input_image, corr_lookup[step])
@@ -79,17 +76,16 @@ def calref_from_image(input_image):
 # NOTE: envopt would point tests to "dev" or "stable".
 # NOTE: _jail fixture ensures each test runs in a clean tmpdir.
 @pytest.mark.bigdata
-@pytest.mark.usefixtures('_jail', 'envopt')
+@pytest.mark.usefixtures("_jail", "envopt")
 class BaseACSTOOLS:
     # Timeout in seconds for file downloads.
     timeout = 30
 
-    instrument = 'acs'
-    ignore_keywords = ['filename', 'date', 'iraf-tlm', 'fitsdate',
-                       'opus_ver', 'cal_ver', 'proctime', 'history']
+    instrument = "acs"
+    ignore_keywords = ["filename", "date", "iraf-tlm", "fitsdate", "opus_ver", "cal_ver", "proctime", "history"]
 
     # To be defined by test class in actual test modules.
-    detector = ''
+    detector = ""
 
     @pytest.fixture(autouse=True)
     def setup_class(self, envopt):
@@ -130,8 +126,7 @@ class BaseACSTOOLS:
         """
         # Copy over main input file: The way calibration code was written,
         # it usually assumes input is in the working directory.
-        get_bigdata(self.env, self.instrument, self.detector,
-                    'input', filename)
+        get_bigdata(self.env, self.instrument, self.detector, "input", filename)
 
         if skip_ref:
             return
@@ -139,17 +134,14 @@ class BaseACSTOOLS:
         ref_files = calref_from_image(filename)
         for ref_file in ref_files:
             # Special reference files that live with inputs.
-            if ('$' not in ref_file and
-                    os.path.basename(ref_file) == ref_file):
-                get_bigdata(self.env, self.instrument, self.detector,
-                            'input', ref_file)
+            if "$" not in ref_file and os.path.basename(ref_file) == ref_file:
+                get_bigdata(self.env, self.instrument, self.detector, "input", ref_file)
                 continue
 
             # Download reference files, if needed only.
             download_crds(ref_file)
 
-    def compare_outputs(self, outputs, atol=0, rtol=1e-7, raise_error=True,
-                        ignore_keywords_overwrite=None, verbose=True):
+    def compare_outputs(self, outputs, atol=0, rtol=1e-7, raise_error=True, ignore_keywords_overwrite=None, verbose=True):
         """Compare ACSTOOLS output with "truth" using ``fitsdiff``.
 
         Parameters
@@ -183,7 +175,7 @@ class BaseACSTOOLS:
 
         """
         all_okay = True
-        creature_report = ''
+        creature_report = ""
         updated_outputs = []  # To track outputs for Artifactory JSON schema
 
         if ignore_keywords_overwrite is None:
@@ -192,10 +184,8 @@ class BaseACSTOOLS:
             ignore_keywords = ignore_keywords_overwrite
 
         for actual, desired in outputs:
-            desired = get_bigdata(self.env, self.instrument, self.detector,
-                                  'truth', desired)
-            fdiff = FITSDiff(actual, desired, rtol=rtol, atol=atol,
-                             ignore_keywords=ignore_keywords)
+            desired = get_bigdata(self.env, self.instrument, self.detector, "truth", desired)
+            fdiff = FITSDiff(actual, desired, rtol=rtol, atol=atol, ignore_keywords=ignore_keywords)
             creature_report += fdiff.report()
 
             if not fdiff.identical:
@@ -206,8 +196,7 @@ class BaseACSTOOLS:
 
         if not all_okay:
             if self.results_root is not None:  # pragma: no cover
-                schema_pattern, tree, testname = generate_upload_params(
-                    self.results_root, updated_outputs, verbose=verbose)
+                schema_pattern, tree, testname = generate_upload_params(self.results_root, updated_outputs, verbose=verbose)
                 generate_upload_schema(schema_pattern, tree, testname)
 
             if raise_error:

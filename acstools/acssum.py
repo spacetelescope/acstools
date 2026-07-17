@@ -11,6 +11,7 @@ Examples
 For help usage use ``exe_args=['--help']``
 
 """
+
 # STDLIB
 import os
 import subprocess  # nosec
@@ -18,11 +19,10 @@ import subprocess  # nosec
 __taskname__ = "acssum"
 __version__ = "1.0"
 __vdate__ = "18-Dec-2012"
-__all__ = ['acssum']
+__all__ = ["acssum"]
 
 
-def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
-           quiet=False, exe_args=None):
+def acssum(input, output, exec_path="", time_stamps=False, verbose=False, quiet=False, exe_args=None):
     r"""
     Run the acssum.e executable as from the shell.
 
@@ -65,26 +65,26 @@ def acssum(input, output, exec_path='', time_stamps=False, verbose=False,
 
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acssum.e']
+        call_list = ["acssum.e"]
 
     # Parse input to get list of filenames to process.
     # acssum.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-    call_list.append(','.join(infiles))
+    call_list.append(",".join(infiles))
 
     call_list.append(output)
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if quiet:
-        call_list.append('-q')
+        call_list.append("-q")
 
     if exe_args:
         call_list.extend(exe_args)

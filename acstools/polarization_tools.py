@@ -5,14 +5,14 @@ about ACS polarization data analysis, see `Section 5.3 of the ACS Data Handbook 
 """
 
 import os
+
 import numpy as np
 import yaml
-
 from astropy import units
 from astropy.table import Table
 from astropy.utils.data import get_pkg_data_filename
 
-__all__ = ['calc_theta', 'calc_fraction', 'calc_stokes', 'PolarizerTables', 'Polarization']
+__all__ = ["calc_theta", "calc_fraction", "calc_stokes", "PolarizerTables", "Polarization"]
 
 
 def calc_stokes(pol0, pol60, pol120, c0=1, c60=1, c120=1):
@@ -113,12 +113,12 @@ def calc_theta(q, u, detector, pav3):
     if isinstance(pav3, units.quantity.Quantity):
         pav3 = pav3.to_value(units.degree)
 
-    if detector.lower() not in ['wfc', 'hrc']:
-        raise ValueError('Detector must be either WFC or HRC.')
+    if detector.lower() not in ["wfc", "hrc"]:
+        raise ValueError("Detector must be either WFC or HRC.")
 
     # Add detector-dependent geometry correction from the ACS Data Handbook.
     # This is -38.2 degrees for WFC and -69.4 degrees for HRC.
-    chi = -38.2 if detector.lower() == 'wfc' else -69.4
+    chi = -38.2 if detector.lower() == "wfc" else -69.4
     theta = 0.5 * np.degrees(np.arctan2(u, q)) + pav3 + chi
 
     # Force the angle to be between 0 and 360 degrees. This result of
@@ -229,23 +229,30 @@ class PolarizerTables:
     >>> print(tables.wfc_transmission.meta['description'])
     WFC filters use MJD corresponding to 2020-01-01. HRC filters use MJD corresponding to 2007-01-01.
     """
+
     def __init__(self, input_dict):
 
         self.data = input_dict
 
-        self.wfc_transmission = Table(self.data['transmission']['wfc'],
-                                      names=('filter', 't_para', 't_perp', 'correction'),
-                                      meta=self.data['transmission']['meta'])
+        self.wfc_transmission = Table(
+            self.data["transmission"]["wfc"],
+            names=("filter", "t_para", "t_perp", "correction"),
+            meta=self.data["transmission"]["meta"],
+        )
 
-        self.hrc_transmission = Table(self.data['transmission']['hrc'],
-                                      names=('filter', 't_para', 't_perp', 'correction'),
-                                      meta=self.data['transmission']['meta'])
+        self.hrc_transmission = Table(
+            self.data["transmission"]["hrc"],
+            names=("filter", "t_para", "t_perp", "correction"),
+            meta=self.data["transmission"]["meta"],
+        )
 
-        self.wfc_efficiency = Table(self.data['efficiency']['wfc'], names=('filter', 'pol0', 'pol60', 'pol120'),
-                                    meta=self.data['efficiency']['meta'])
+        self.wfc_efficiency = Table(
+            self.data["efficiency"]["wfc"], names=("filter", "pol0", "pol60", "pol120"), meta=self.data["efficiency"]["meta"]
+        )
 
-        self.hrc_efficiency = Table(self.data['efficiency']['hrc'], names=('filter', 'pol0', 'pol60', 'pol120'),
-                                    meta=self.data['efficiency']['meta'])
+        self.hrc_efficiency = Table(
+            self.data["efficiency"]["hrc"], names=("filter", "pol0", "pol60", "pol120"), meta=self.data["efficiency"]["meta"]
+        )
 
     @classmethod
     def from_yaml(cls, yaml_file):
@@ -261,7 +268,7 @@ class PolarizerTables:
         -------
         pol_tables : `~acstools.polarization_tools.PolarizerTables`
         """
-        with open(yaml_file, 'r') as yf:
+        with open(yaml_file, "r") as yf:
             input_dict = yaml.safe_load(yf)
         return cls(input_dict)
 
@@ -275,7 +282,7 @@ class PolarizerTables:
         -------
         pol_tables : `~acstools.polarization_tools.PolarizerTables`
         """
-        filename = get_pkg_data_filename(os.path.join('data', 'polarizer_tables.yaml'))
+        filename = get_pkg_data_filename(os.path.join("data", "polarizer_tables.yaml"))
         return cls.from_yaml(filename)
 
 
@@ -355,8 +362,8 @@ class Polarization:
         self.pav3 = pav3
 
         # Check if detector is a valid value.
-        if self.detector not in ['wfc', 'hrc']:
-            raise ValueError('Detector must be either WFC or HRC')
+        if self.detector not in ["wfc", "hrc"]:
+            raise ValueError("Detector must be either WFC or HRC")
 
         self.stokes_i = None
         self.stokes_q = None
@@ -368,39 +375,43 @@ class Polarization:
         # Get correction terms that we need from the polarization tables.
         tables = tables.data if tables else PolarizerTables.from_package_data().data
 
-        if 'transmission' not in tables:
-            raise KeyError('Missing polarization reference transmission table.')
-        if 'efficiency' not in tables:
-            raise KeyError('Missing polarization reference efficiency table.')
+        if "transmission" not in tables:
+            raise KeyError("Missing polarization reference transmission table.")
+        if "efficiency" not in tables:
+            raise KeyError("Missing polarization reference efficiency table.")
 
         try:
-            leak_tab = Table(tables['transmission'][self.detector])
-            eff_tab = Table(tables['efficiency'][self.detector])
+            leak_tab = Table(tables["transmission"][self.detector])
+            eff_tab = Table(tables["efficiency"][self.detector])
         except KeyError:
-            raise KeyError(f'Polarization reference tables may be missing information for detector '
-                           f'{self.detector.upper()}.')
+            raise KeyError(f"Polarization reference tables may be missing information for detector {self.detector.upper()}.")
 
         try:
-            self.transmission_correction = leak_tab[np.where(leak_tab['filter'] == self.filter_name)]['correction'][0]
+            self.transmission_correction = leak_tab[np.where(leak_tab["filter"] == self.filter_name)]["correction"][0]
         except IndexError:
-            raise IndexError(f'No match found in input transmission leak correction table for detector '
-                             f'{self.detector.upper()} and filter {self.filter_name}.')
+            raise IndexError(
+                f"No match found in input transmission leak correction table for detector "
+                f"{self.detector.upper()} and filter {self.filter_name}."
+            )
 
         try:
-            self.c0 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol0'][0]
-            self.c60 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol60'][0]
-            self.c120 = eff_tab[np.where(eff_tab['filter'] == filter_name.upper())]['pol120'][0]
+            self.c0 = eff_tab[np.where(eff_tab["filter"] == filter_name.upper())]["pol0"][0]
+            self.c60 = eff_tab[np.where(eff_tab["filter"] == filter_name.upper())]["pol60"][0]
+            self.c120 = eff_tab[np.where(eff_tab["filter"] == filter_name.upper())]["pol120"][0]
         except IndexError:
-            raise IndexError(f'No match found in input efficiency correction table for detector '
-                             f'{self.detector.upper()} and filter {self.filter_name}.')
+            raise IndexError(
+                f"No match found in input efficiency correction table for detector "
+                f"{self.detector.upper()} and filter {self.filter_name}."
+            )
 
     def calc_stokes(self):
         """
         Calculate Stokes parameters using attributes set at initialization.
         """
 
-        self.stokes_i, self.stokes_q, self.stokes_u = calc_stokes(self.pol0, self.pol60, self.pol120,
-                                                                  c0=self.c0, c60=self.c60, c120=self.c120)
+        self.stokes_i, self.stokes_q, self.stokes_u = calc_stokes(
+            self.pol0, self.pol60, self.pol120, c0=self.c0, c60=self.c60, c120=self.c120
+        )
 
     def calc_polarization(self):
         """
@@ -408,7 +419,8 @@ class Polarization:
         using attributes set at initialization.
         """
 
-        self.polarization = calc_fraction(self.stokes_i, self.stokes_q, self.stokes_u,
-                                          transmission_correction=self.transmission_correction)
+        self.polarization = calc_fraction(
+            self.stokes_i, self.stokes_q, self.stokes_u, transmission_correction=self.transmission_correction
+        )
 
         self.angle = calc_theta(self.stokes_q, self.stokes_u, self.detector, self.pav3)

@@ -76,6 +76,7 @@ Similar to above but obtain the ePSF in detector space and with subpixel offsets
 ...     ePSFs, x, y, chip, pixel_space=True, subpixel_x=0.77, subpixel_y=0.33)
 
 """  # noqa: E501
+
 import logging
 import os
 import re
@@ -97,7 +98,7 @@ _re_patt = re.compile(r"attachment; filename=(\w{9})-\w*\/\w*\/(.*)")
 
 # Initialize the logger
 logging.basicConfig()
-LOG = logging.getLogger(f'{__taskname__}.Query')
+LOG = logging.getLogger(f"{__taskname__}.Query")
 LOG.setLevel(logging.INFO)
 
 
@@ -142,16 +143,15 @@ def psf_retriever(ipsoot, download_location, timeout=60):
         return
 
     # provide api URL and public key and ID
-    api_url = (
-        'https://8cclxcxse4.execute-api.us-east-1.amazonaws.com/main/psf-server-ops/')
-    api_id = 'iwx1prnqog'
-    api_key = 'T1fU5vycfM9KDlSLJoGBU6t0pzS0vjHKaSqmT6gU'
+    api_url = "https://8cclxcxse4.execute-api.us-east-1.amazonaws.com/main/psf-server-ops/"
+    api_id = "iwx1prnqog"
+    api_key = "T1fU5vycfM9KDlSLJoGBU6t0pzS0vjHKaSqmT6gU"
 
     # stitch together credentials
     auth = HTTPBasicAuth(api_id, api_key)
 
     # send up post request with ipsoot event
-    myobj = {'ipsoot': ipsoot}
+    myobj = {"ipsoot": ipsoot}
     result = requests.post(api_url, json=myobj, auth=auth, timeout=timeout)
 
     if not result.ok:
@@ -165,7 +165,7 @@ def psf_retriever(ipsoot, download_location, timeout=60):
         return
     with urlopen(url) as remotefile:  # nosec (already checked above)
         # determine readable name for file
-        content_disposition = remotefile.info()['Content-Disposition']
+        content_disposition = remotefile.info()["Content-Disposition"]
 
     m = _re_patt.match(content_disposition)
     if not m:
@@ -244,8 +244,7 @@ def multi_psf_retriever(input_list, download_location, num_workers=8):
 
     # run with progress bar
     with ProgressBar():
-        results = dask.compute(
-            *dask_results, num_workers=num_workers, scheduler='processes')
+        results = dask.compute(*dask_results, num_workers=num_workers, scheduler="processes")
 
     return results
 
@@ -383,8 +382,7 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
     # using notation from https://www.omnicalculator.com/math/bilinear-interpolation
 
     # case 1, where user coordinate is equivalent to a known ePSF
-    if (bot_left_single_index == bot_right_single_index ==
-            top_left_single_index == top_right_single_index):
+    if bot_left_single_index == bot_right_single_index == top_left_single_index == top_right_single_index:
         c_Q11 = 0.25
         c_Q12 = 0.25
         c_Q21 = 0.25
@@ -392,25 +390,25 @@ def interp_epsf(ePSFs, x, y, chip, pixel_space=False, subpixel_x=0, subpixel_y=0
 
     # case 2, where point falls on a y-grid line, so interpolate along x-axis only
     elif bot_left_single_index == top_left_single_index:
-        c_Q11 = ((xHigh - x) / (xHigh - xLow))
+        c_Q11 = (xHigh - x) / (xHigh - xLow)
         c_Q12 = 0
-        c_Q21 = (1 - c_Q11)
+        c_Q21 = 1 - c_Q11
         c_Q22 = 0
 
     # case 3, where point falls on an x-grid line, so interpolate along y-axis only
     elif bot_left_single_index == bot_right_single_index:
-        c_Q11 = ((yHigh - y) / (yHigh - yLow))
-        c_Q12 = (1 - c_Q11)
+        c_Q11 = (yHigh - y) / (yHigh - yLow)
+        c_Q12 = 1 - c_Q11
         c_Q21 = 0
         c_Q22 = 0
 
     # else do regular bilinear interpolation
     else:
-        dxh = (xHigh - x)
-        dyh = (yHigh - y)
-        dxl = (x - xLow)
-        dyl = (y - yLow)
-        denom = ((xHigh - xLow) * (yHigh - yLow))
+        dxh = xHigh - x
+        dyh = yHigh - y
+        dxl = x - xLow
+        dyl = y - yLow
+        denom = (xHigh - xLow) * (yHigh - yLow)
         c_Q11 = (dxh * dyh) / denom
         c_Q21 = (dxl * dyh) / denom
         c_Q12 = (dxh * dyl) / denom

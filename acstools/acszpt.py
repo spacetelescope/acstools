@@ -75,30 +75,31 @@ Retrieve the zeropoint information for the WFC/F435W filter on multiple dates:
 astropy.units.quantity.Quantity
 
 """
+
 import datetime as dt
 import json
 import logging
 import os
-import requests
 
 import astropy.units as u
+import requests
 from astropy.table import QTable
 
 __taskname__ = "acszpt"
-__author__   = "Gagandeep Anand, Jenna Ryon, Nathan Miles"
-__version__  = "2.0"
-__vdate__    = "10-Aug-2022"
-__all__      = ['ACSZeropointQueryError', 'Query']
+__author__ = "Gagandeep Anand, Jenna Ryon, Nathan Miles"
+__version__ = "2.0"
+__vdate__ = "10-Aug-2022"
+__all__ = ["ACSZeropointQueryError", "Query"]
 
 # Initialize the logger
 logging.basicConfig()
-LOG = logging.getLogger(f'{__taskname__}.Query')
+LOG = logging.getLogger(f"{__taskname__}.Query")
 LOG.setLevel(logging.INFO)
 
 
 class ACSZeropointQueryError(Exception):
-    """Class used for raising exceptions with API Gateway post requests.
-    """
+    """Class used for raising exceptions with API Gateway post requests."""
+
     pass
 
 
@@ -145,19 +146,43 @@ class Query:
             self._filt = filt.upper()
 
         # define valid detectors and filter combinations
-        self._valid_detectors = ('HRC', 'SBC', 'WFC')
+        self._valid_detectors = ("HRC", "SBC", "WFC")
         self.valid_filters = {
-            'WFC': ['F435W', 'F475W', 'F502N', 'F550M',
-                    'F555W', 'F606W', 'F625W', 'F658N',
-                    'F660N', 'F775W', 'F814W', 'F850LP', 'F892N'],
-
-            'HRC': ['F220W', 'F250W', 'F330W', 'F344N',
-                    'F435W', 'F475W', 'F502N', 'F550M',
-                    'F555W', 'F606W', 'F625W', 'F658N',
-                    'F660N', 'F775W', 'F814W', 'F850LP', 'F892N'],
-
-            'SBC': ['F115LP', 'F122M', 'F125LP',
-                    'F140LP', 'F150LP', 'F165LP']
+            "WFC": [
+                "F435W",
+                "F475W",
+                "F502N",
+                "F550M",
+                "F555W",
+                "F606W",
+                "F625W",
+                "F658N",
+                "F660N",
+                "F775W",
+                "F814W",
+                "F850LP",
+                "F892N",
+            ],
+            "HRC": [
+                "F220W",
+                "F250W",
+                "F330W",
+                "F344N",
+                "F435W",
+                "F475W",
+                "F502N",
+                "F550M",
+                "F555W",
+                "F606W",
+                "F625W",
+                "F658N",
+                "F660N",
+                "F775W",
+                "F814W",
+                "F850LP",
+                "F892N",
+            ],
+            "SBC": ["F115LP", "F122M", "F125LP", "F140LP", "F150LP", "F165LP"],
         }
 
         self._zpt_table = None
@@ -167,7 +192,7 @@ class Query:
         self._acs_installation_date = dt.datetime(2002, 3, 7)
         # end of data table in AWS S3 bucket
         self._end_table_date = dt.datetime(2029, 12, 31)
-        self._msg_div = '-' * 79
+        self._msg_div = "-" * 79
         self._response = None
         self._failed = False
 
@@ -206,27 +231,30 @@ class Query:
 
         # Determine the submitted detector is valid
         if self.detector not in self._valid_detectors:
-            msg = (f'{self.detector} is not a valid detector option.\n'
-                   'Please choose one of the following:\n'
-                   f'{os.linesep.join(self._valid_detectors)}\n'
-                   f'{self._msg_div}')
+            msg = (
+                f"{self.detector} is not a valid detector option.\n"
+                "Please choose one of the following:\n"
+                f"{os.linesep.join(self._valid_detectors)}\n"
+                f"{self._msg_div}"
+            )
             LOG.error(msg)
             valid_detector = False
 
         # Determine if the submitted filter is valid
-        if (self.filt is not None and valid_detector and
-                self.filt not in self.valid_filters[self.detector]):
-            msg = (f'{self.filt} is not a valid filter for {self.detector}\n'
-                   'Please choose one of the following:\n'
-                   f'{os.linesep.join(self.valid_filters[self.detector])}\n'
-                   f'{self._msg_div}')
+        if self.filt is not None and valid_detector and self.filt not in self.valid_filters[self.detector]:
+            msg = (
+                f"{self.filt} is not a valid filter for {self.detector}\n"
+                "Please choose one of the following:\n"
+                f"{os.linesep.join(self.valid_filters[self.detector])}\n"
+                f"{self._msg_div}"
+            )
             LOG.error(msg)
             valid_filter = False
 
         # Determine if the submitted date is valid
         date_check = self._check_date()
         if date_check is not None:
-            LOG.error(f'{date_check}\n{self._msg_div}')
+            LOG.error(f"{date_check}\n{self._msg_div}")
             valid_date = False
 
         if not valid_detector or not valid_filter or not valid_date:
@@ -234,7 +262,7 @@ class Query:
 
         return True
 
-    def _check_date(self, fmt='%Y-%m-%d'):
+    def _check_date(self, fmt="%Y-%m-%d"):
         """For determining if the input date is valid.
 
         Parameters
@@ -254,18 +282,16 @@ class Query:
         try:
             dt_obj = dt.datetime.strptime(self.date, fmt)
         except ValueError:
-            result = f'{self.date} does not match YYYY-MM-DD format'
+            result = f"{self.date} does not match YYYY-MM-DD format"
         except Exception:  # nosec
             pass
         else:
             if dt_obj < self._acs_installation_date:
-                result = ('The observation date cannot occur '
-                          'before ACS was installed '
-                          f'({self._acs_installation_date.strftime(fmt)})')
+                result = (
+                    f"The observation date cannot occur before ACS was installed ({self._acs_installation_date.strftime(fmt)})"
+                )
             if dt_obj > self._end_table_date:
-                result = ('The observation date cannot be '
-                          'after 2029 '
-                          f'({self._end_table_date.strftime(fmt)})')
+                result = f"The observation date cannot be after 2029 ({self._end_table_date.strftime(fmt)})"
 
         return result
 
@@ -283,7 +309,6 @@ class Query:
         bool_inputs = self._check_inputs()
 
         if bool_inputs:
-
             # select between all filters or a single filter depending on if user has
             # specified a filter, and then generate a request body to send the API
             if self.filt is None:
@@ -298,8 +323,9 @@ class Query:
                 body = '{"date": "%s", "detector": "%s", "filter": "%s"}' % (self.date, self.detector, self.filt)
 
             # send request to APIGateway with try/except clauses
-            help_desk_string = ("\nIf this error persists, please contact the HST Help Desk at \n"
-                                "https://stsci.service-now.com/hst")
+            help_desk_string = (
+                "\nIf this error persists, please contact the HST Help Desk at \nhttps://stsci.service-now.com/hst"
+            )
 
             try:
                 response = requests.post(invokeURL, data=body, timeout=100)
@@ -320,25 +346,24 @@ class Query:
             APIoutput = json.loads(response.text)
 
             # define appropriate headers for the table
-            headers = ['Detector', 'Filter', 'PHOTLAM', 'PHOTFLAM', 'STmag', 'VEGAmag', 'ABmag']
+            headers = ["Detector", "Filter", "PHOTLAM", "PHOTFLAM", "STmag", "VEGAmag", "ABmag"]
 
             # store each row of the results
             rows = APIoutput["rows"]
 
             # generate an astropy QTable from the results
-            table = QTable(rows=rows, names=headers,
-                           dtype=('S', 'S', 'float64', 'float64', 'float64', 'float64', 'float64'))
+            table = QTable(rows=rows, names=headers, dtype=("S", "S", "float64", "float64", "float64", "float64", "float64"))
 
             # remove detector column (to match output of previous API version)
-            table.remove_column('Detector')
+            table.remove_column("Detector")
 
             # set the appropriate units for each column
-            table['Filter'].unit = u.dimensionless_unscaled
-            table['PHOTLAM'].unit = u.angstrom
-            table['PHOTFLAM'].unit = u.erg / (u.cm * u.cm * u.angstrom * u.electron)
-            table['STmag'].unit = u.STmag
-            table['VEGAmag'].unit = u.mag
-            table['ABmag'].unit = u.ABmag
+            table["Filter"].unit = u.dimensionless_unscaled
+            table["PHOTLAM"].unit = u.angstrom
+            table["PHOTFLAM"].unit = u.erg / (u.cm * u.cm * u.angstrom * u.electron)
+            table["STmag"].unit = u.STmag
+            table["VEGAmag"].unit = u.mag
+            table["ABmag"].unit = u.ABmag
 
             self._zpt_table = table
 

@@ -11,15 +11,24 @@ Examples
 For help usage use ``exe_args=['--help']``
 
 """
+
 import os
 import subprocess  # nosec
 
-__all__ = ['calacs']
+__all__ = ["calacs"]
 
 
-def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
-           verbose=False, debug=False, quiet=False, single_core=False,
-           exe_args=None):
+def calacs(
+    input_file,
+    exec_path=None,
+    time_stamps=False,
+    temp_files=False,
+    verbose=False,
+    debug=False,
+    quiet=False,
+    single_core=False,
+    exe_args=None,
+):
     """
     Run the calacs.e executable as from the shell.
 
@@ -61,32 +70,32 @@ def calacs(input_file, exec_path=None, time_stamps=False, temp_files=False,
     """
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
 
         call_list = [exec_path]
     else:
-        call_list = ['calacs.e']
+        call_list = ["calacs.e"]
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if temp_files:
-        call_list.append('-s')
+        call_list.append("-s")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if debug:
-        call_list.append('-d')
+        call_list.append("-d")
 
     if quiet:
-        call_list.append('-q')
+        call_list.append("-q")
 
     if single_core:
-        call_list.append('-1')
+        call_list.append("-1")
 
     if not os.path.exists(input_file):
-        raise IOError('Input file not found: ' + input_file)
+        raise IOError("Input file not found: " + input_file)
 
     call_list.append(input_file)
 
