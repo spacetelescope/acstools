@@ -91,6 +91,7 @@ Or the entire process can be run in a single line with
 ...                execute=True)
 
 """  # noqa
+
 import logging
 import os
 import warnings
@@ -101,9 +102,7 @@ from astropy.nddata import bitmask, block_reduce
 from astropy.table import Table
 from astropy.utils.data import get_pkg_data_filename
 
-from acstools.utils_findsat_mrt import (create_mask, filter_sources,
-                                        merge_tables, radon, streak_endpoints,
-                                        update_dq)
+from acstools.utils_findsat_mrt import create_mask, filter_sources, merge_tables, radon, streak_endpoints, update_dq
 
 try:
     from bottleneck import nanmedian
@@ -116,22 +115,22 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
-    warnings.warn('matplotlib not found, plotting is disabled')
+    warnings.warn("matplotlib not found, plotting is disabled")
 
 __taskname__ = "findsat_mrt"
 __author__ = "David V. Stark"
 __version__ = "1.0"
 __vdate__ = "10-Feb-2023"
-__all__ = ['TrailFinder', 'WfcWrapper']
+__all__ = ["TrailFinder", "WfcWrapper"]
 
 # Initialize the logger
 logging.basicConfig()
-LOG = logging.getLogger(f'{__taskname__}')
+LOG = logging.getLogger(f"{__taskname__}")
 LOG.setLevel(logging.INFO)
 
 
 class TrailFinder:
-    '''Top-level class to handle trail identification and masking.
+    """Top-level class to handle trail identification and masking.
 
     Parameters
     ----------
@@ -215,31 +214,33 @@ class TrailFinder:
         See :attr:`~acstools.findsat_mrt.TrailFinder.save_mask`.
         Default is `False`.
 
-    '''  # noqa
+    """  # noqa
+
     def __init__(
-            self,
-            image,
-            header=None,
-            image_header=None,
-            save_image_header_keys=None,
-            processes=2,
-            min_length=25,
-            max_width=75,
-            buffer=250,
-            threshold=5,
-            theta=None,
-            kernels=None,
-            mask_include_status=[2],
-            plot=False,
-            output_dir='.',
-            output_root='',
-            check_persistence=True,
-            min_persistence=0.5,
-            ignore_theta_range=None,
-            save_catalog=True,
-            save_diagnostic=True,
-            save_mrt=False,
-            save_mask=False):
+        self,
+        image,
+        header=None,
+        image_header=None,
+        save_image_header_keys=None,
+        processes=2,
+        min_length=25,
+        max_width=75,
+        buffer=250,
+        threshold=5,
+        theta=None,
+        kernels=None,
+        mask_include_status=[2],
+        plot=False,
+        output_dir=".",
+        output_root="",
+        check_persistence=True,
+        min_persistence=0.5,
+        ignore_theta_range=None,
+        save_catalog=True,
+        save_diagnostic=True,
+        save_mrt=False,
+        save_mask=False,
+    ):
 
         # inputs
         self.image = image
@@ -395,8 +396,9 @@ class TrailFinder:
     def kernels(self, value):
         if value is None:
             self._kernels = [
-                get_pkg_data_filename(os.path.join('data', f'rt_line_kernel_width{k}.fits'))  # noqa
-                for k in (15, 7, 3)]
+                get_pkg_data_filename(os.path.join("data", f"rt_line_kernel_width{k}.fits"))  # noqa
+                for k in (15, 7, 3)
+            ]
         else:
             user_files = [v for v in value if os.path.isfile(v)]
             if len(user_files) < 1:
@@ -480,8 +482,7 @@ class TrailFinder:
 
     @ignore_theta_range.setter
     def ignore_theta_range(self, value):
-        if ((value is None) or
-                (isinstance(value, list) and all(len(x) == 2 for x in value))):
+        if (value is None) or (isinstance(value, list) and all(len(x) == 2 for x in value)):
             self._ignore_theta_range = value
         else:
             raise ValueError(f"Invalid ignore_theta_range: {value}")
@@ -532,16 +533,22 @@ class TrailFinder:
         self._save_mask = value
 
     def run_mrt(self):
-        '''
+        """
         Run the median radon transform on the input image.
         This uses `theta` and `processes` for calculations, so update them
         first, if needed.
 
-        '''
+        """
         # run MRT
-        rt, length = radon(self.image, circle=False, median=True,
-                           fill_value=np.nan, processes=self.processes,
-                           return_length=True, theta=self.theta)
+        rt, length = radon(
+            self.image,
+            circle=False,
+            median=True,
+            fill_value=np.nan,
+            processes=self.processes,
+            return_length=True,
+            theta=self.theta,
+        )
 
         # trim mrt where length too short
         rt[length < self.min_length] = np.nan
@@ -553,8 +560,7 @@ class TrailFinder:
         # setting a warning filter for the nanmedian calculations. These
         # warnings are inconsequential and already accounted for in the code
         with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore',
-                                    message='All-NaN slice encountered')
+            warnings.filterwarnings(action="ignore", message="All-NaN slice encountered")
             # calculate some useful properties
             # median
             self._medrt = nanmedian(rt)
@@ -570,7 +576,7 @@ class TrailFinder:
         # error on median ~ 1.25x error on mean. There are regions with length
         # equals zero which keeps raising warnings. Suppressing that warning
         # here
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             self.mrt_err = 1.25 * self._image_stddev / np.sqrt(self.length)
 
         # create the rho array
@@ -582,7 +588,7 @@ class TrailFinder:
             self.plot_mrt()
 
     def plot_image(self, ax=None, scale=(-1, 5), overlay_mask=False):
-        '''
+        """
         Plot the input image.
 
         Parameters
@@ -597,7 +603,7 @@ class TrailFinder:
         overlay_mask : bool, optional
             Overlay the trail mask, if already calculated. Default is `False`.
 
-        '''
+        """
         if plt is None:
             return
 
@@ -608,36 +614,39 @@ class TrailFinder:
         # setting a warning filter for the nanmedian calculations. These
         # warnings are inconsequential and already accounted for in the code
         with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore',
-                                    message='All-NaN slice encountered')
+            warnings.filterwarnings(action="ignore", message="All-NaN slice encountered")
             self._image_mad = nanmedian(np.abs(self.image))
 
         self._image_stddev = self._image_mad / 0.67449  # using MAD to avoid
         # influence from outliers
 
-        ax.imshow(self.image, cmap='viridis', origin='lower', aspect='auto',
-                  vmin=scale[0]*self._image_stddev,
-                  vmax=scale[1]*self._image_stddev)
-        ax.set_xlabel('X [pix]')
-        ax.set_ylabel('Y [pix]')
-        ax.set_title('Input Image')
+        ax.imshow(
+            self.image,
+            cmap="viridis",
+            origin="lower",
+            aspect="auto",
+            vmin=scale[0] * self._image_stddev,
+            vmax=scale[1] * self._image_stddev,
+        )
+        ax.set_xlabel("X [pix]")
+        ax.set_ylabel("Y [pix]")
+        ax.set_title("Input Image")
 
         if overlay_mask is True:
             if self.mask is None:
-                LOG.error('No mask to overlay')
+                LOG.error("No mask to overlay")
             else:
-                ax.imshow(self.mask, alpha=0.5, cmap='Reds', origin='lower',
-                          aspect='auto')
+                ax.imshow(self.mask, alpha=0.5, cmap="Reds", origin="lower", aspect="auto")
 
         # write to file if interactive is off and plottin is on
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root + '_image')
+            file_name = os.path.join(self.output_dir, self.root + "_image")
             if overlay_mask:
-                file_name = file_name + '_mask'
-            plt.savefig(file_name + '.png')
+                file_name = file_name + "_mask"
+            plt.savefig(file_name + ".png")
 
     def plot_mrt(self, ax=None, scale=(0, 10), show_sources=False):
-        '''
+        """
         Plot the MRT.
 
         Parameters
@@ -657,53 +666,50 @@ class TrailFinder:
         ax : `matplotlib.axes.Axes`
             Matplotlib subplot where the MRT is plotted.
 
-        '''
+        """
         # exit if no MRT
         if self.mrt is None:
-            LOG.error('No MRT to plot')
+            LOG.error("No MRT to plot")
             return
 
         # Letting user know if there are no sources to overplot
         if show_sources and (self.source_list is None):
             show_sources = False
-            LOG.info('No sources to show')
+            LOG.info("No sources to show")
 
         if ax is None:
             fig, ax = plt.subplots()
 
-        ax.imshow(self.mrt, aspect='auto', origin='lower',
-                  vmin=scale[0]*self._madrt, vmax=scale[1]*self._madrt)
-        ax.set_title('MRT')
-        ax.set_xlabel('angle(theta) pixel')
-        ax.set_ylabel('offset(rho) pixel')
+        ax.imshow(self.mrt, aspect="auto", origin="lower", vmin=scale[0] * self._madrt, vmax=scale[1] * self._madrt)
+        ax.set_title("MRT")
+        ax.set_xlabel("angle(theta) pixel")
+        ax.set_ylabel("offset(rho) pixel")
 
         # overplot sources if applicable
         if show_sources is True:
-            x = self.source_list['xcentroid']
-            y = self.source_list['ycentroid']
-            status = self.source_list['status']
+            x = self.source_list["xcentroid"]
+            y = self.source_list["ycentroid"]
+            status = self.source_list["status"]
 
-            for s, color in zip([0, 1, 2], ['red', 'orange', 'cyan']):
-                sel = (status == s)
+            for s, color in zip([0, 1, 2], ["red", "orange", "cyan"]):
+                sel = status == s
                 if np.sum(sel) > 0:
-                    ax.scatter(x[sel], y[sel], edgecolor=color,
-                               facecolor='none', s=100, lw=2,
-                               label=f'status={s}')
-            ax.legend(loc='upper center')
+                    ax.scatter(x[sel], y[sel], edgecolor=color, facecolor="none", s=100, lw=2, label=f"status={s}")
+            ax.legend(loc="upper center")
 
         # send plot to file if interactive is off
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root + '_mrt')
+            file_name = os.path.join(self.output_dir, self.root + "_mrt")
             if show_sources:
-                file_name = file_name + '_sources'
-            file_name = file_name + '.png'
+                file_name = file_name + "_sources"
+            file_name = file_name + ".png"
             plt.savefig(file_name)
-            LOG.info('Saving MRT to '+file_name)
+            LOG.info("Saving MRT to " + file_name)
 
         return ax
 
     def plot_mrt_snr(self, ax=None, scale=(1, 25)):
-        '''
+        """
         Plots a map of the MRT signal-to-noise ratio (SNR).
 
         Parameters
@@ -720,30 +726,28 @@ class TrailFinder:
         snr_map : array-like
             A map of the SNR.
 
-        '''
+        """
         if self.mrt is None:
-            LOG.error('No MRT to plot')
+            LOG.error("No MRT to plot")
             return
 
         if ax is None:
             fig, ax = plt.subplots()
 
         snr = self.mrt / self.mrt_err
-        ax.imshow(snr, aspect='auto', origin='lower',
-                  vmin=scale[0], vmax=scale[1])
-        ax.set_title('MRT SNR')
-        ax.set_xlabel('angle(theta) pixel')
-        ax.set_ylabel('offset(rho) pixel')
+        ax.imshow(snr, aspect="auto", origin="lower", vmin=scale[0], vmax=scale[1])
+        ax.set_title("MRT SNR")
+        ax.set_xlabel("angle(theta) pixel")
+        ax.set_ylabel("offset(rho) pixel")
 
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root +
-                                     '_mrt_snr.png')
+            file_name = os.path.join(self.output_dir, self.root + "_mrt_snr.png")
             plt.savefig(file_name)
 
         return snr
 
     def find_mrt_sources(self):
-        '''
+        """
         Finds sources in the MRT consistent with satellite trails/streaks.
         This uses `kernels` and `threshold` for calculations, so update them
         first, if needed.
@@ -754,13 +758,13 @@ class TrailFinder:
             Catalog containing information about detected trails, if
             applicable. This is the same info as ``self.source_list``.
 
-        '''
+        """
         # test for photutils
         try:
             import photutils
             from photutils.detection import StarFinder
         except ImportError:
-            LOG.error('photutils not installed. Source detection will not work.')  # noqa
+            LOG.error("photutils not installed. Source detection will not work.")  # noqa
             return
 
         from astropy.utils import minversion
@@ -768,25 +772,24 @@ class TrailFinder:
         PHOTUTILS_LT_3 = not minversion(photutils, "2.3.1.dev")  # dev tag a little off
         photutils.future_column_names = True
 
-        LOG.info('Detection threshold: {}'.format(self.threshold))
+        LOG.info("Detection threshold: {}".format(self.threshold))
 
         snrmap = self.mrt / self.mrt_err
         snrmap_mask = ~np.isfinite(snrmap)
 
         # cycle through kernels
-        tbls = []   # we'll store detected sources here
+        tbls = []  # we'll store detected sources here
         for k in self.kernels:
             with fits.open(k) as h:
                 kernel = h[0].data
-                LOG.info('Using kernel {}'.format(k))
+                LOG.info("Using kernel {}".format(k))
 
                 # detect sources
                 if PHOTUTILS_LT_3:
                     kwargs = {"brightest": None, "peakmax": None}
                 else:
                     kwargs = {"n_brightest": None, "peak_max": None}
-                s = StarFinder(self.threshold, kernel, min_separation=20,
-                               exclude_border=False, **kwargs)
+                s = StarFinder(self.threshold, kernel, min_separation=20, exclude_border=False, **kwargs)
 
             # can fail for cases where nothing found. Allow code to return
             # nothing and move on
@@ -796,27 +799,26 @@ class TrailFinder:
             else:
                 nsources = len(tbl)
 
-            LOG.info('{{no}} sources found using kernel: {}'.format(nsources))
+            LOG.info("{{no}} sources found using kernel: {}".format(nsources))
 
             if nsources > 0:
                 if not PHOTUTILS_LT_3:
-                    col_map = {'x_centroid': 'xcentroid',
-                               'y_centroid': 'ycentroid'}
+                    col_map = {"x_centroid": "xcentroid", "y_centroid": "ycentroid"}
                     for col in col_map:
                         tbl.rename_column(col, col_map[col])
 
-                tbl = tbl[np.isfinite(tbl['xcentroid'])]
-                LOG.info('{} sources found using kernel'.format(len(tbl)))
-                if (len(tbls) > 0):
-                    if len(tbls[-1]['id']) > 0:
-                        tbl['id'] += np.max(tbls[-1]['id'])
+                tbl = tbl[np.isfinite(tbl["xcentroid"])]
+                LOG.info("{} sources found using kernel".format(len(tbl)))
+                if len(tbls) > 0:
+                    if len(tbls[-1]["id"]) > 0:
+                        tbl["id"] += np.max(tbls[-1]["id"])
                         # adding max ID number from last iteration to avoid
                         # duplicate ids
                 tbls.append(tbl)
 
         # combine tables from each kernel and remove any duplicates
         if len(tbls) > 0:
-            LOG.info('Removing duplicate sources')
+            LOG.info("Removing duplicate sources")
             sources = merge_tables(tbls)
             self.source_list = sources
         else:
@@ -825,39 +827,32 @@ class TrailFinder:
         # add the theta and rho values to the table
         if self.source_list is not None:
             dtheta = self.theta[1] - self.theta[0]
-            self.source_list['theta'] = (
-                self.theta[0] +
-                dtheta * self.source_list['xcentroid']
-            )
-            self.source_list['rho'] = (
-                self.rho[0] +
-                self.source_list['ycentroid']
-            )
+            self.source_list["theta"] = self.theta[0] + dtheta * self.source_list["xcentroid"]
+            self.source_list["rho"] = self.rho[0] + self.source_list["ycentroid"]
 
             # Add the status array and endpoints array. Status will be zero
             # because no additional checks have been done yet.
-            self.source_list['endpoints'] = [
-                streak_endpoints(t['rho'], -t['theta'], self.image.shape)
-                for t in self.source_list]
-            self.source_list['status'] = np.zeros(len(self.source_list),
-                                                  dtype=int)
+            self.source_list["endpoints"] = [
+                streak_endpoints(t["rho"], -t["theta"], self.image.shape) for t in self.source_list
+            ]
+            self.source_list["status"] = np.zeros(len(self.source_list), dtype=int)
 
             # run the routine to remove angles if any bad ranges are specified
             if self.ignore_theta_range is not None:
                 self._remove_angles()
 
             # print the total number of sources found
-            LOG.info('{} final sources found'.format(len(self.source_list)))
+            LOG.info("{} final sources found".format(len(self.source_list)))
             # plot sources if set
             if self.plot and (plt is not None):
                 self.plot_mrt(show_sources=True)
         else:
-            LOG.warning('No sources found')
+            LOG.warning("No sources found")
 
         return self.source_list
 
     def filter_sources(self, trim_catalog=False, plot_streak=False):
-        '''
+        """
         Filters catalog of trails based on SNR, width, and persistence.
         This uses `threshold`, `max_width`, `min_length`, `buffer`,
         `check_persistence`, and `min_persistence` for calculations,
@@ -879,7 +874,7 @@ class TrailFinder:
             Catalog of identified satellite trails with additional measured
             parameters appended. This is the same info as ``self.source_list``.
 
-        '''
+        """
         if self.source_list is None:  # Nothing to do.
             return
 
@@ -887,35 +882,34 @@ class TrailFinder:
         if self.plot and ~self._interactive:
             plot_streak = False
 
-        LOG.info('Filtering sources...\n'
-                 'Min SNR : {}\n'
-                 'Max Width: {}\n'
-                 'Min Length: {}\n'
-                 'Check persistence: {}'.format(
-                     self.threshold, self.max_width, self.min_length,
-                     self.check_persistence))
+        LOG.info(
+            "Filtering sources...\nMin SNR : {}\nMax Width: {}\nMin Length: {}\nCheck persistence: {}".format(
+                self.threshold, self.max_width, self.min_length, self.check_persistence
+            )
+        )
 
         if self.check_persistence is True:
-            LOG.info('Min persistence: {}'.format(self.min_persistence))
+            LOG.info("Min persistence: {}".format(self.min_persistence))
 
         # run filtering routine
-        properties = filter_sources(self.image,
-                                    self.source_list['endpoints'],
-                                    max_width=self.max_width,
-                                    buffer=self.buffer,
-                                    plot_streak=plot_streak,
-                                    min_length=self.min_length,
-                                    minsnr=self.threshold,
-                                    check_persistence=self.check_persistence,
-                                    min_persistence=self.min_persistence)
+        properties = filter_sources(
+            self.image,
+            self.source_list["endpoints"],
+            max_width=self.max_width,
+            buffer=self.buffer,
+            plot_streak=plot_streak,
+            min_length=self.min_length,
+            minsnr=self.threshold,
+            check_persistence=self.check_persistence,
+            min_persistence=self.min_persistence,
+        )
 
         # update the status
         self.source_list.update(properties)
 
         # optionally trim the catalog of all rejected sources
         if trim_catalog:
-            sel = ((self.source_list['width'] < self.max_width) &
-                   (self.source_list['snr'] > self.threshold))
+            sel = (self.source_list["width"] < self.max_width) & (self.source_list["snr"] > self.threshold)
             self.source_list = self.source_list[sel]
 
         # plot if triggered
@@ -925,7 +919,7 @@ class TrailFinder:
         return self.source_list
 
     def make_mask(self):
-        '''
+        """
         Makes a satellite trail mask (bool) and a segmentation map.
         This uses `mask_include_status`, so update it first, if needed.
 
@@ -934,16 +928,14 @@ class TrailFinder:
 
         This updates ``self.segment`` and ``self.mask``.
 
-        '''
+        """
         # crate the mask/segmentation
         if self.source_list is not None:
-            include = [s['status'] in self.mask_include_status for s in
-                       self.source_list]
-            trail_id = self.source_list['id'][include]
-            endpoints = self.source_list['endpoints'][include]
-            widths = self.source_list['width'][include]
-            segment, mask = create_mask(self.image, trail_id, endpoints,
-                                        widths)
+            include = [s["status"] in self.mask_include_status for s in self.source_list]
+            trail_id = self.source_list["id"][include]
+            endpoints = self.source_list["endpoints"][include]
+            widths = self.source_list["width"][include]
+            segment, mask = create_mask(self.image, trail_id, endpoints, widths)
         else:
             mask = np.zeros(self.image.shape, dtype=bool)
             segment = np.zeros(self.image.shape, dtype=int)
@@ -957,7 +949,7 @@ class TrailFinder:
             self.plot_segment()
 
     def plot_mask(self):
-        '''
+        """
         Generates a plot of the trail mask (``self.mask``).
 
         Returns
@@ -965,26 +957,26 @@ class TrailFinder:
         ax : `matplotlib.axes.Axes`
             The matplotlib subplot containing the mask image.
 
-        '''
+        """
         # exit if there's not mask
         if self.mask is None:
-            LOG.error('No mask to show')
+            LOG.error("No mask to show")
             return
 
         fig, ax = plt.subplots()
-        ax.imshow(self.mask, origin='lower', aspect='auto')
-        ax.set_title('Mask')
+        ax.imshow(self.mask, origin="lower", aspect="auto")
+        ax.set_title("Mask")
 
         # send mask to file if interactive off and plotting enabled
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root + '_mask.png')
+            file_name = os.path.join(self.output_dir, self.root + "_mask.png")
             plt.savefig(file_name)
-            LOG.info('Saving mask to '+file_name)
+            LOG.info("Saving mask to " + file_name)
 
         return ax
 
     def plot_segment(self):
-        '''
+        """
         Generates a segmentation image of the identified trails
         (``self.segment``).
 
@@ -993,10 +985,10 @@ class TrailFinder:
         ax : `matplotlib.axes.Axes`
             A matplotlib subplot containing the segmentation map.
 
-        '''
+        """
         # exit if no segmentation image
         if self.segment is None:
-            LOG.error('No segment map to show')
+            LOG.error("No segment map to show")
             return
 
         # get unique values in segment
@@ -1012,29 +1004,26 @@ class TrailFinder:
         fig, ax = plt.subplots()
 
         # update the colormap to match the segmentation IDs
-        cmap = plt.get_cmap('tab20', data_max - data_min + 1)
-        mat = ax.imshow(data, cmap=cmap, vmin=data_min - 0.5,
-                        vmax=data_max + 0.5, origin='lower', aspect='auto')
+        cmap = plt.get_cmap("tab20", data_max - data_min + 1)
+        mat = ax.imshow(data, cmap=cmap, vmin=data_min - 0.5, vmax=data_max + 0.5, origin="lower", aspect="auto")
 
         # tell the colorbar to tick at integers
         ticks = np.arange(len(unique_vals) + 1)
         cax = plt.colorbar(mat, ticks=ticks)
-        cax.ax.set_yticklabels(np.concatenate([unique_vals,
-                                               [unique_vals[-1] + 1]]))
-        cax.ax.set_ylabel('trail ID')
-        ax.set_title('Segmentation Mask')
+        cax.ax.set_yticklabels(np.concatenate([unique_vals, [unique_vals[-1] + 1]]))
+        cax.ax.set_ylabel("trail ID")
+        ax.set_title("Segmentation Mask")
 
         # send to file if not interactive
         if self.plot and ~self._interactive:
-            file_name = os.path.join(self.output_dir, self.root +
-                                     '_segment.png')
+            file_name = os.path.join(self.output_dir, self.root + "_segment.png")
             plt.savefig(file_name)
-            LOG.info('Saving segmentation map to '+file_name)
+            LOG.info("Saving segmentation map to " + file_name)
 
         return ax
 
     def save_output(self, close_plot=True):
-        '''
+        """
         Save output. Any existing file will be overwritten.
         This uses `root`, `output_dir`, `save_mrt`, `save_catalog`, and
         `save_diagnostic`, so update them first, if needed. Output includes
@@ -1050,16 +1039,15 @@ class TrailFinder:
         close_plot : bool
             Close the plot instance after `save_diagnostic` is done.
 
-        '''
+        """
         # save the MRT image
         if self.save_mrt:
             if self.mrt is not None:
-                mrt_filename = os.path.join(self.output_dir,
-                                            f'{self.root}_mrt.fits')
+                mrt_filename = os.path.join(self.output_dir, f"{self.root}_mrt.fits")
                 fits.writeto(mrt_filename, self.mrt, overwrite=True)
-                LOG.info('Wrote MRT to {}'.format(mrt_filename))
+                LOG.info("Wrote MRT to {}".format(mrt_filename))
             else:
-                LOG.error('No MRT to save')
+                LOG.error("No MRT to save")
 
         # save the bool mask image
         if self.save_mask:
@@ -1070,86 +1058,103 @@ class TrailFinder:
                 hdu1 = fits.ImageHDU(self.mask.astype(int))
                 hdu2 = fits.ImageHDU(self.segment.astype(int))
                 hdul = fits.HDUList([hdu0, hdu1, hdu2])
-                mask_filename = os.path.join(self.output_dir,
-                                             f'{self.root}_mask.fits')
+                mask_filename = os.path.join(self.output_dir, f"{self.root}_mask.fits")
                 hdul.writeto(mask_filename, overwrite=True)
-                LOG.info('Wrote mask to {}'.format(mask_filename))
+                LOG.info("Wrote mask to {}".format(mask_filename))
             else:
-                LOG.error('No mask to save')
+                LOG.error("No mask to save")
 
         # save the diagnostic plot
         if self.save_diagnostic and (plt is not None):
-
-            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2,
-                                                         figsize=(20, 10))
+            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(20, 10))
             self.plot_image(ax=ax1)
             self.plot_mrt(ax=ax2)
             self.plot_image(ax=ax3)
-            ax3.imshow(self.mask, alpha=0.5, origin='lower', aspect='auto',
-                       cmap='Reds')
+            ax3.imshow(self.mask, alpha=0.5, origin="lower", aspect="auto", cmap="Reds")
             ax3_xlim = ax3.get_xlim()
             ax3_ylim = ax3.get_ylim()
 
             self.plot_mrt(ax=ax4)
             if self.source_list is not None:
                 for s in self.source_list:
-                    color = 'red'
-                    x1, y1 = s['endpoints'][0]
-                    x2, y2 = s['endpoints'][1]
-                    if (s['status'] == 2):
-                        color = 'turquoise'
-                    elif (s['status'] == 1):
-                        color = 'orange'
+                    color = "red"
+                    x1, y1 = s["endpoints"][0]
+                    x2, y2 = s["endpoints"][1]
+                    if s["status"] == 2:
+                        color = "turquoise"
+                    elif s["status"] == 1:
+                        color = "orange"
                     ax3.plot([x1, x2], [y1, y2], color=color, lw=5, alpha=0.5)
-                    ax4.scatter(s['xcentroid'], s['ycentroid'],
-                                edgecolor=color, facecolor='none', s=100, lw=2)
+                    ax4.scatter(s["xcentroid"], s["ycentroid"], edgecolor=color, facecolor="none", s=100, lw=2)
             # sometimes overplotting the "good" trails can cause axes to change
             ax3.set_xlim(ax3_xlim)
             ax3.set_ylim(ax3_ylim)
             plt.tight_layout()
-            diagnostic_filename = os.path.join(self.output_dir,
-                                               f'{self.root}_diagnostic.png')
+            diagnostic_filename = os.path.join(self.output_dir, f"{self.root}_diagnostic.png")
             plt.savefig(diagnostic_filename)
-            LOG.info('Wrote diagnostic plot to {}'.format(diagnostic_filename))
+            LOG.info("Wrote diagnostic plot to {}".format(diagnostic_filename))
             if close_plot:
                 plt.close()
 
         # save the catalog of trails
         if self.save_catalog:
-            cat_filename = os.path.join(self.output_dir,
-                                        f'{self.root}_catalog.fits')
+            cat_filename = os.path.join(self.output_dir, f"{self.root}_catalog.fits")
             if self.source_list is not None:
                 # there's some meta data called "version" that cannot be added
                 # to the fits header (and it is not useful). It always throws
                 # an inconsequential warning so we suppress it here.
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore',
-                                            message='Attribute `version` of.*')
+                    warnings.filterwarnings("ignore", message="Attribute `version` of.*")
                     self.source_list.write(cat_filename, overwrite=True)
             else:
                 # create an empty catalog and write that. It helps to have this
                 # for future analysis purposes even if it's empty
-                dummy_table = Table(names=('id', 'xcentroid', 'ycentroid',
-                                           'fwhm', 'roundness', 'pa',
-                                           'max_value', 'flux', 'mag',
-                                           'theta', 'rho', 'endpoints',
-                                           'width', 'snr', 'status',
-                                           'persistence'),
-                                    dtype=('int64', 'float64', 'float64',
-                                           'float64', 'float64', 'float64',
-                                           'float64', 'float64', 'float64',
-                                           'float64', 'float64', 'float64',
-                                           'float64', 'float64', 'float64',
-                                           'float64'))
+                dummy_table = Table(
+                    names=(
+                        "id",
+                        "xcentroid",
+                        "ycentroid",
+                        "fwhm",
+                        "roundness",
+                        "pa",
+                        "max_value",
+                        "flux",
+                        "mag",
+                        "theta",
+                        "rho",
+                        "endpoints",
+                        "width",
+                        "snr",
+                        "status",
+                        "persistence",
+                    ),
+                    dtype=(
+                        "int64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                        "float64",
+                    ),
+                )
                 dummy_table.write(cat_filename, overwrite=True)
-            LOG.info(f'wrote catalog {cat_filename}')
+            LOG.info(f"wrote catalog {cat_filename}")
 
             # Append the original data header to this catalog too.
             has_pri_hdr = isinstance(self.header, fits.Header)
-            has_dat_hdr = (isinstance(self.image_header, fits.Header) and
-                           (len(self.save_image_header_keys) > 0))
+            has_dat_hdr = isinstance(self.image_header, fits.Header) and (len(self.save_image_header_keys) > 0)
             if has_pri_hdr or has_dat_hdr:
-                with fits.open(cat_filename, mode='update') as h:
+                with fits.open(cat_filename, mode="update") as h:
                     if has_pri_hdr:
                         h[0].header.update(self.header)
 
@@ -1160,7 +1165,7 @@ class TrailFinder:
                                 h[1].header[k] = self.image_header[k]
 
     def _remove_angles(self):
-        '''
+        """
         Remove a range (or set of ranges) of angles from the trail catalog
         by updating ``self.source_list`` in-place.
         This uses `ignore_theta_range`, so update it first, if needed.
@@ -1169,26 +1174,25 @@ class TrailFinder:
         be overwhelmingly dominated by features that are not of interest, e.g.,
         for removing diffraction spikes.
 
-        '''
+        """
         if self.source_list is None:  # Nothing to do
             return
 
         if self.ignore_theta_range is None:
-            LOG.error('No angles set to ignore')
+            LOG.error("No angles set to ignore")
             return
 
         # add some checks to be sure ignore_ranges is the right type
         remove = np.zeros(len(self.source_list), dtype=bool)
         for r in self.ignore_theta_range:
             r = np.sort(r)
-            LOG.info('ignoring angles between {} and {}'.format(r[0], r[1]))
-            remove[(self.source_list['theta'] >= r[0]) &
-                   (self.source_list['theta'] <= r[1])] = True
+            LOG.info("ignoring angles between {} and {}".format(r[0], r[1]))
+            remove[(self.source_list["theta"] >= r[0]) & (self.source_list["theta"] <= r[1])] = True
 
         self.source_list = self.source_list[~remove]
 
     def run_all(self, trim_catalog=False, plot_streak=False, close_plot=True):
-        '''
+        """
         Run the entire pipeline to identify, filter, and mask trails.
         This calls the following methods in the given order:
 
@@ -1201,7 +1205,7 @@ class TrailFinder:
         See the documentation for methods above on how to use the
         keyword options.
 
-        '''
+        """
         self.run_mrt()
         self.find_mrt_sources()
         self.filter_sources(trim_catalog=trim_catalog, plot_streak=plot_streak)
@@ -1210,7 +1214,7 @@ class TrailFinder:
 
 
 class WfcWrapper(TrailFinder):
-    '''
+    """
     Wrapper for `TrailFinder` designed specifically for ACS/WFC data.
 
     This class enables quick reading and preprocessing of standard
@@ -1246,15 +1250,18 @@ class WfcWrapper(TrailFinder):
     ValueError
         Image is subarray, or unrecognized image extension or type.
 
-    '''
-    def __init__(self,
-                 image_file,
-                 extension=None,
-                 binsize=None,
-                 ignore_flags=[4096, 8192, 16384],
-                 preprocess=True,
-                 execute=False,
-                 **kwargs):
+    """
+
+    def __init__(
+        self,
+        image_file,
+        extension=None,
+        binsize=None,
+        ignore_flags=[4096, 8192, 16384],
+        preprocess=True,
+        execute=False,
+        **kwargs,
+    ):
         self.image_file = image_file
         self.extension = extension
         self.binsize = binsize
@@ -1264,33 +1271,31 @@ class WfcWrapper(TrailFinder):
 
         # open image
         with fits.open(self.image_file) as h:
-
             # check that image ID not subarray
-            if h[0].header['SUBARRAY'] is True:
-                raise ValueError('This program does not yet work on subarrays')
+            if h[0].header["SUBARRAY"] is True:
+                raise ValueError("This program does not yet work on subarrays")
 
             # get suffix to determine how to process image
-            suffix = (self.image_file.split('.')[-2]).split('_')[-1].lower()
+            suffix = (self.image_file.split(".")[-2]).split("_")[-1].lower()
             self.image_type = suffix
-            LOG.info('image type is {}'.format(self.image_type))
+            LOG.info("image type is {}".format(self.image_type))
 
-            if suffix in ('flc', 'flt'):
+            if suffix in ("flc", "flt"):
                 if extension is None:
-                    raise ValueError('FLC/FLT files must have extension specified')  # noqa
+                    raise ValueError("FLC/FLT files must have extension specified")  # noqa
                 elif extension not in (1, 4):
-                    raise ValueError('Valid extensions are 1 or 4 for FLC/FLT'
-                                     f'images but got: {extension}')
+                    raise ValueError(f"Valid extensions are 1 or 4 for FLC/FLTimages but got: {extension}")
 
                 image = h[extension].data  # main image
                 self.image_mask = h[extension + 2].data  # DQ array
 
-            elif suffix in ('drc', 'drz'):
+            elif suffix in ("drc", "drz"):
                 extension = 1
                 image = h[extension].data  # main image
                 self.image_mask = h[extension + 1].data  # weight array
 
             else:
-                raise ValueError(f'Image type not recognized: {suffix}')
+                raise ValueError(f"Image type not recognized: {suffix}")
 
         super().__init__(image, **kwargs)
 
@@ -1300,7 +1305,7 @@ class WfcWrapper(TrailFinder):
 
         # run the whole pipeline if set to True
         if execute:
-            LOG.info('Running the trailfinding pipeline')
+            LOG.info("Running the trailfinding pipeline")
             self.run_all()
 
     @property
@@ -1323,14 +1328,12 @@ class WfcWrapper(TrailFinder):
 
     @ignore_flags.setter
     def ignore_flags(self, value):
-        if not isinstance(value, list) or not all(isinstance(v, int) for v in
-                                                  value):
-            raise ValueError(f"ignore_flags must be list of int but got:"
-                             f"{value}")
+        if not isinstance(value, list) or not all(isinstance(v, int) for v in value):
+            raise ValueError(f"ignore_flags must be list of int but got:{value}")
         self._ignore_flags = value
 
     def mask_bad_pixels(self):
-        '''
+        """
         Mask bad pixels.
         This uses `ignore_flags` (for FLC/FLT), so update it first, if needed.
 
@@ -1338,63 +1341,58 @@ class WfcWrapper(TrailFinder):
         This uses the bitmask arrays for FLC/FLT images,
         and weight arrays for DRC/DRZ images.
 
-        '''
-        LOG.info('masking bad pixels')
+        """
+        LOG.info("masking bad pixels")
 
-        if self.image_type in ('flc', 'flt'):
+        if self.image_type in ("flc", "flt"):
             # for FLC/FLT, use DQ array
-            mask = bitmask.bitfield_to_boolean_mask(self.image_mask,
-                                                    ignore_flags=self.ignore_flags)  # noqa
+            mask = bitmask.bitfield_to_boolean_mask(self.image_mask, ignore_flags=self.ignore_flags)  # noqa
             self.image[mask] = np.nan
 
-        elif self.image_type in ('drz', 'drc'):
+        elif self.image_type in ("drz", "drc"):
             # for DRZ/DRC, mask everything with weight=0
             self.image[self.image_mask == 0] = np.nan
 
     def subtract_background(self):
-        '''
+        """
         Subtract a median background from the image, ignoring NaNs,
         where ``self.image`` is modified in-place.
         Bad pixels should first be handled via :meth:`mask_bad_pixels`
         before running this.
-        '''
-        LOG.info('Subtracting median background')
+        """
+        LOG.info("Subtracting median background")
 
         # setting a warning filter for the nanmedian calculations. These
         # warnings are inconsequential and already accounted for in the code
         with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore',
-                                    message='All-NaN slice encountered')
+            warnings.filterwarnings(action="ignore", message="All-NaN slice encountered")
             self.image = self.image - nanmedian(self.image)
 
     def rebin(self):
-        '''
+        """
         Rebin the image array by modifying ``self.image`` in-place.
         The binning in the x and y direction are identical.
         This uses `binsize`, so update it first, if needed.
 
-        '''
+        """
         if self.binsize is None:
-            LOG.warn('No bin size defined. Will not perform binning')
+            LOG.warn("No bin size defined. Will not perform binning")
             return
 
-        LOG.info('Rebinning the data by {}'.format(self.binsize))
+        LOG.info("Rebinning the data by {}".format(self.binsize))
 
         # trigger a warning if the image dimensions are not even
-        if (((self.image.shape[0] % self.binsize != 0)) |
-           ((self.image.shape[1] % self.binsize != 0))):
-            LOG.warning('Image dimensions do not evenly divide by bin size.'
-                        '\nExtra rows/columns will be trimmed first.')
+        if (self.image.shape[0] % self.binsize != 0) | (self.image.shape[1] % self.binsize != 0):
+            LOG.warning("Image dimensions do not evenly divide by bin size.\nExtra rows/columns will be trimmed first.")
 
         # setting a warning filter for the nansum calculations. These
         # warnings are inconsequential and already accounted for in the code
         with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore',
-                                    message='All-NaN slice encountered')
+            warnings.filterwarnings(action="ignore", message="All-NaN slice encountered")
             self.image = block_reduce(self.image, self.binsize, func=np.nansum)
 
     def run_preprocess(self):
-        '''
+        """
         Runs all the image preprocessing steps in the following order:
 
         1. :meth:`mask_bad_pixels`
@@ -1403,13 +1401,13 @@ class WfcWrapper(TrailFinder):
 
         See the documentation for methods above for more details.
 
-        '''
+        """
         self.mask_bad_pixels()
         self.subtract_background()
         self.rebin()
 
     def update_dq(self, dqval=16384, verbose=True):
-        '''
+        """
         Update DQ array with the satellite trail mask (``self.mask``) using
         :func:`acstools.utils_findsat_mrt.update_dq`.
         The file in ``self.image_file`` is updated for this operation,
@@ -1427,9 +1425,8 @@ class WfcWrapper(TrailFinder):
         verbose : bool, optional
             Print extra information to the terminal.
 
-        '''
-        if self.image_type not in ('flc', 'flt'):
-            raise ValueError(f'DQ array can only be updated for FLC/FLT images, not {self.image_type}')  # noqa
+        """
+        if self.image_type not in ("flc", "flt"):
+            raise ValueError(f"DQ array can only be updated for FLC/FLT images, not {self.image_type}")  # noqa
 
-        update_dq(self.image_file, self.extension + 2, self.mask, dqval=dqval,
-                  verbose=verbose, expand_mask=True)
+        update_dq(self.image_file, self.extension + 2, self.mask, dqval=dqval, verbose=verbose, expand_mask=True)

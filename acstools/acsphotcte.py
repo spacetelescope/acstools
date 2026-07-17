@@ -54,20 +54,19 @@ we assume an aperture radius of 3 pixels.
 >>> print(cte_corrected_magnitudes[:5])
 [-10.85516545  -9.68284332 -10.11060704  -9.11828746 -10.4918177 ]
 """
-from collections.abc import Iterable
+
 import json
 import logging
-
-# LOCAL
-from .utils_calib import SM4_MJD
+from collections.abc import Iterable
 
 import numpy as np
 import requests
 
-logging.basicConfig(format='%(levelname)-4s '
-                           '[%(module)s.%(funcName)s:%(lineno)d]'
-                           ' %(message)s')
-LOG = logging.getLogger('PhotCTEAPI')
+# LOCAL
+from .utils_calib import SM4_MJD
+
+logging.basicConfig(format="%(levelname)-4s [%(module)s.%(funcName)s:%(lineno)d] %(message)s")
+LOG = logging.getLogger("PhotCTEAPI")
 LOG.setLevel(logging.INFO)
 
 __taskname__ = "acsphotcte"
@@ -75,30 +74,25 @@ __author__ = "Nathan Miles"
 __version__ = "1.0"
 __vdate__ = "26-Mar-2020"
 
-__all__ = ['PhotCTEAPI']
+__all__ = ["PhotCTEAPI"]
 
 
 class PhotCTEAPI:
-    """Convenience class for handling queries to ACS Photometric CTE API.
-    """
+    """Convenience class for handling queries to ACS Photometric CTE API."""
 
     def __init__(self):
 
         # API Endpoint for the ACS Photometric CTE API
-        self._api_url = ('https://acsphotometriccteapi.stsci.edu/'
-                         'run-photcte-correction')
+        self._api_url = "https://acsphotometriccteapi.stsci.edu/run-photcte-correction"
 
         # Public API ID for the ACS Photometric CTE API
-        self._api_id = 'hdtenv1tu1'
+        self._api_id = "hdtenv1tu1"
 
         # Public API key for the ACS Photometric CTE API
-        self._api_key = 'rwPplgrNMMa9duXXhL1tA39sOPviMiTd4vsKXXQh'
+        self._api_key = "rwPplgrNMMa9duXXhL1tA39sOPviMiTd4vsKXXQh"
 
         # API credentials to pass in header of POST request
-        self._api_credentials = {
-            'x-api-id': self._api_id,
-            'x-api-key': self._api_key
-        }
+        self._api_credentials = {"x-api-id": self._api_id, "x-api-key": self._api_key}
         self._cte_corrections = None
         self._corrected_magnitudes = None
 
@@ -121,7 +115,7 @@ class PhotCTEAPI:
         self._cte_corrections = value
 
     def _query(self, data):
-        """ Submit a post request to the API
+        """Submit a post request to the API
 
         Parameters
         ----------
@@ -134,18 +128,12 @@ class PhotCTEAPI:
             Body of the response object
         """
 
-        response = requests.post(
-            self._api_url,
-            data=json.dumps(data),
-            headers=self._api_credentials,
-            timeout=100
-        )
+        response = requests.post(self._api_url, data=json.dumps(data), headers=self._api_credentials, timeout=100)
 
         status_code = response.status_code
         content = json.loads(response.content)
         if status_code > 400:
-            content = (f"Status Code: {status_code}\n"
-                       f"Message: {content['message']}")
+            content = f"Status Code: {status_code}\nMessage: {content['message']}"
         return content
 
     def _check_inputs(self, **inputs):
@@ -175,14 +163,13 @@ class PhotCTEAPI:
             # Check if the input is Iterable and not a list  (e.g. np.array)
             # We also need to make sure the input is not a str, since str are
             # Iterable in Python.
-            if isinstance(inputs[key], Iterable) and \
-                    not isinstance(inputs[key], (str, list)):
+            if isinstance(inputs[key], Iterable) and not isinstance(inputs[key], (str, list)):
                 # Convert the array to a python list
                 inputs[key] = list(inputs[key])
 
                 # Check if the first element of the input array is a float
                 if not isinstance(inputs[key][0], float):
-                    LOG.info('Converting elements..')
+                    LOG.info("Converting elements..")
                     # Convert the array of elements to floats
                     inputs[key] = list(map(float, inputs[key]))
                 # Save the length for comparision later
@@ -198,8 +185,8 @@ class PhotCTEAPI:
                     LOG.error(e)
                     return key
                 else:
-                    if key == 'radius' and inputs[key] not in [3., 5.]:
-                        LOG.error('Submitted radii not supported...')
+                    if key == "radius" and inputs[key] not in [3.0, 5.0]:
+                        LOG.error("Submitted radii not supported...")
                         return key
         # the last step is to ensure all the iterable inputs are the same length
         nl = "\n"
@@ -207,27 +194,17 @@ class PhotCTEAPI:
         # If there are, we make sure theyre all the same size.
         if iterable_lengths and len(set(iterable_lengths)) != 1:
             iterable_lengths = list(map(str, iterable_lengths))
-            msg = (
-                "Iterable inputs are not the same length.\n"
-                f"Computed lengths:\n{nl.join(iterable_lengths)}"
-            )
+            msg = f"Iterable inputs are not the same length.\nComputed lengths:\n{nl.join(iterable_lengths)}"
             LOG.error(msg)
             return
         # Check to see if the date occurs before SM4
-        if inputs['mjd'] < SM4_MJD:
+        if inputs["mjd"] < SM4_MJD:
             LOG.error(f"Observation MJD must occur after SM4, {SM4_MJD}")
-            return 'mjd'
+            return "mjd"
 
         return inputs
 
-    def correct_photometry(
-            self,
-            radius=None,
-            ytransfers=None,
-            mjd=None,
-            local_skys=None,
-            fluxes=None
-    ):
+    def correct_photometry(self, radius=None, ytransfers=None, mjd=None, local_skys=None, fluxes=None):
         """Get the CTE corrected FLT photometry.
 
         Parameters
@@ -255,20 +232,14 @@ class PhotCTEAPI:
             for the sources. Otherwise, it returns `None`.
         """
 
-        inputs = {
-            'radius': radius,
-            'ytransfers': ytransfers,
-            'mjd': mjd,
-            'local_skys': local_skys,
-            'fluxes': fluxes
-        }
+        inputs = {"radius": radius, "ytransfers": ytransfers, "mjd": mjd, "local_skys": local_skys, "fluxes": fluxes}
         inputs = self._check_inputs(**inputs)
 
         if not isinstance(inputs, dict) and isinstance(inputs, str):
-            LOG.error(f'Please check the following input: {inputs}')
+            LOG.error(f"Please check the following input: {inputs}")
             return
         elif inputs is None:
-            LOG.error('Please check the iterable inputs')
+            LOG.error("Please check the iterable inputs")
             return
 
         # Submit the request and check the result
@@ -279,10 +250,9 @@ class PhotCTEAPI:
             return
 
         # If successful, update the attribute with the computed corrections
-        self.cte_corrections = np.array(content['deltamag'])
+        self.cte_corrections = np.array(content["deltamag"])
 
         # Use the corrections to compute the corrected fluxes
-        self.corrected_magnitudes = \
-            -2.5 * np.log10(np.array(fluxes)) - self.cte_corrections
+        self.corrected_magnitudes = -2.5 * np.log10(np.array(fluxes)) - self.cte_corrections
 
         return self.corrected_magnitudes

@@ -11,6 +11,7 @@ Examples
 For help usage use ``exe_args=['--help']``.
 
 """
+
 # STDLIB
 import os
 import subprocess  # nosec
@@ -18,11 +19,10 @@ import subprocess  # nosec
 __taskname__ = "acs2d"
 __version__ = "2.0"
 __vdate__ = "10-Oct-2014"
-__all__ = ['acs2d']
+__all__ = ["acs2d"]
 
 
-def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
-          exe_args=None):
+def acs2d(input, exec_path="", time_stamps=False, verbose=False, quiet=False, exe_args=None):
     r"""
     Run the acs2d.e executable as from the shell.
 
@@ -76,24 +76,24 @@ def acs2d(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acs2d.e']
+        call_list = ["acs2d.e"]
 
     # Parse input to get list of filenames to process.
     # acs2d.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-    call_list.append(','.join(infiles))
+    call_list.append(",".join(infiles))
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if quiet:
-        call_list.append('-q')
+        call_list.append("-q")
 
     if exe_args:
         call_list.extend(exe_args)

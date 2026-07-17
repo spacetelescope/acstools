@@ -15,6 +15,7 @@ Examples
 For help usage use ``exe_args=['--help']``
 
 """
+
 # STDLIB
 import os
 import subprocess  # nosec
@@ -22,7 +23,7 @@ import subprocess  # nosec
 __taskname__ = "acsccd"
 __version__ = "2.0"
 __vdate__ = "13-Aug-2013"
-__all__ = ['acsccd']
+__all__ = ["acsccd"]
 
 
 #
@@ -36,8 +37,7 @@ __all__ = ['acsccd']
 #     If all False, will set all but ATODCORR to PERFORM.
 #     If any is True, will set that to PERFORM and the rest to OMIT.
 #
-def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
-           exe_args=None):
+def acsccd(input, exec_path="", time_stamps=False, verbose=False, quiet=False, exe_args=None):
     r"""
     Run the acsccd.e executable as from the shell.
 
@@ -78,38 +78,38 @@ def acsccd(input, exec_path='', time_stamps=False, verbose=False, quiet=False,
 
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acsccd.e']
+        call_list = ["acsccd.e"]
 
     # Parse input to get list of filenames to process.
     # acsccd.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-    call_list.append(','.join(infiles))
+    call_list.append(",".join(infiles))
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if quiet:
-        call_list.append('-q')
+        call_list.append("-q")
 
     if exe_args:
         call_list.extend(exe_args)
 
-    #if dqicorr:
+    # if dqicorr:
     #    call_list.append('-dqi')
 
-    #if atodcor:
+    # if atodcor:
     #    call_list.append('-atod')
 
-    #if blevcorr:
+    # if blevcorr:
     #    call_list.append('-blev')
 
-    #if biascorr:
+    # if biascorr:
     #    call_list.append('-bias')
 
     subprocess.check_call(call_list)  # nosec

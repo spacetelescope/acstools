@@ -11,6 +11,7 @@ Examples
 For help usage use ``exe_args=['--help']``
 
 """
+
 # STDLIB
 import os
 import subprocess  # nosec
@@ -19,17 +20,33 @@ import warnings
 __taskname__ = "acsrej"
 __version__ = "2.0"
 __vdate__ = "11-Jan-2018"
-__all__ = ['acsrej']
+__all__ = ["acsrej"]
 
 
 class ACSREJDeprecationWarning(Warning):
     pass
 
 
-def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
-           shadcorr=False, crrejtab='', crmask=False, scalense=None,
-           initgues='', skysub='', crsigmas='', crradius=None, crthresh=None,
-           badinpdq=None, newbias=False, readnoise_only=False, exe_args=None):
+def acsrej(
+    input,
+    output,
+    exec_path="",
+    time_stamps=False,
+    verbose=False,
+    shadcorr=False,
+    crrejtab="",
+    crmask=False,
+    scalense=None,
+    initgues="",
+    skysub="",
+    crsigmas="",
+    crradius=None,
+    crthresh=None,
+    badinpdq=None,
+    newbias=False,
+    readnoise_only=False,
+    exe_args=None,
+):
     r"""
     Run the acsrej.e executable as from the shell.
 
@@ -119,69 +136,68 @@ def acsrej(input, output, exec_path='', time_stamps=False, verbose=False,
 
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acsrej.e']
+        call_list = ["acsrej.e"]
 
     # Parse input to get list of filenames to process.
     # acsrej.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-    call_list.append(','.join(infiles))
+    call_list.append(",".join(infiles))
 
     call_list.append(output)
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if shadcorr:
-        call_list.append('-shadcorr')
+        call_list.append("-shadcorr")
 
     if crrejtab:
-        call_list += ['-table', crrejtab]
+        call_list += ["-table", crrejtab]
 
     if crmask:
-        call_list.append('-crmask')
+        call_list.append("-crmask")
 
     if scalense is not None:
         if scalense < 0 or scalense > 100:
-            raise ValueError('SCALENSE must be 0 to 100')
-        call_list += ['-scale', str(scalense)]
+            raise ValueError("SCALENSE must be 0 to 100")
+        call_list += ["-scale", str(scalense)]
 
     if initgues:
-        if initgues not in ('med', 'min'):
+        if initgues not in ("med", "min"):
             raise ValueError('INITGUES must be "med" or "min"')
-        call_list += ['-init', initgues]
+        call_list += ["-init", initgues]
 
     if skysub:
-        if skysub not in ('none', 'mode'):
+        if skysub not in ("none", "mode"):
             raise ValueError('SKYSUB must be "none" or "mode"')
-        call_list += ['-sky', skysub]
+        call_list += ["-sky", skysub]
 
     if crsigmas:
-        call_list += ['-sigmas', crsigmas]
+        call_list += ["-sigmas", crsigmas]
 
     if crradius is not None:
-        call_list += ['-radius', str(crradius)]
+        call_list += ["-radius", str(crradius)]
 
     if crthresh is not None:
-        call_list += ['-thresh ', str(crthresh)]
+        call_list += ["-thresh ", str(crthresh)]
 
     if badinpdq is not None:
-        call_list += ['-pdq', str(badinpdq)]
+        call_list += ["-pdq", str(badinpdq)]
 
     # Backward-compatibility for readnoise_only.
     # TODO: Remove this option entirely in a future release.
     if newbias:
-        warnings.warn('newbias is deprecated, use readnoise_only',
-                      ACSREJDeprecationWarning)
+        warnings.warn("newbias is deprecated, use readnoise_only", ACSREJDeprecationWarning)
         readnoise_only = newbias
 
     if readnoise_only:
-        call_list.append('-readnoise_only')
+        call_list.append("-readnoise_only")
 
     if exe_args:
         call_list.extend(exe_args)

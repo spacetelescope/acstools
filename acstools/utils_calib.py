@@ -16,10 +16,21 @@ except ImportError:
     # Falls back to Astropy
     from astropy.io import fits
 
-__all__ = ['extract_dark', 'extract_flash', 'extract_flatfield',
-           'from_irafpath', 'extract_ref', 'find_line', 'get_corner', 'get_lt',
-           'from_lt', 'hdr_vals_for_overscan', 'check_oscntab',
-           'check_overscan', 'SM4_MJD']
+__all__ = [
+    "extract_dark",
+    "extract_flash",
+    "extract_flatfield",
+    "from_irafpath",
+    "extract_ref",
+    "find_line",
+    "get_corner",
+    "get_lt",
+    "from_lt",
+    "hdr_vals_for_overscan",
+    "check_oscntab",
+    "check_overscan",
+    "SM4_MJD",
+]
 
 # The MJD date of the EVA during SM4 to restore ACS/WFC and ACS/HRC.
 # This value is also defined in header file, acs.h, for use by calacs.e in hstcal
@@ -44,33 +55,31 @@ def extract_dark(prihdr, scihdu):
         Superdark, if any. Subtract this to apply ``DARKCORR``.
 
     """
-    if prihdr.get('PCTECORR', 'OMIT') == 'COMPLETE':
-        darkfile = prihdr.get('DRKCFILE', 'N/A')
+    if prihdr.get("PCTECORR", "OMIT") == "COMPLETE":
+        darkfile = prihdr.get("DRKCFILE", "N/A")
     else:
-        darkfile = prihdr.get('DARKFILE', 'N/A')
+        darkfile = prihdr.get("DARKFILE", "N/A")
 
-    if darkfile == 'N/A':
+    if darkfile == "N/A":
         return None
 
     darkfile = from_irafpath(darkfile)
-    ampstring = prihdr['CCDAMP']
+    ampstring = prihdr["CCDAMP"]
 
     # Calculate DARKTIME
-    exptime = prihdr.get('EXPTIME', 0.0)
-    flashdur = prihdr.get('FLASHDUR', 0.0)
+    exptime = prihdr.get("EXPTIME", 0.0)
+    flashdur = prihdr.get("FLASHDUR", 0.0)
     darktime = exptime + flashdur
     if exptime > 0:  # Not BIAS
         darktime += 3.0
 
     with fits.open(darkfile) as hdudark:
-        if ampstring == 'ABCD':
-            dark = np.concatenate(
-                (hdudark['sci', 1].data,
-                 hdudark['sci', 2].data[::-1, :]), axis=1)
-        elif ampstring in ('A', 'B', 'AB'):
-            dark = extract_ref(scihdu, hdudark['sci', 2])
+        if ampstring == "ABCD":
+            dark = np.concatenate((hdudark["sci", 1].data, hdudark["sci", 2].data[::-1, :]), axis=1)
+        elif ampstring in ("A", "B", "AB"):
+            dark = extract_ref(scihdu, hdudark["sci", 2])
         else:
-            dark = extract_ref(scihdu, hdudark['sci', 1])
+            dark = extract_ref(scihdu, hdudark["sci", 1])
 
     dark = dark * darktime
 
@@ -95,28 +104,26 @@ def extract_flash(prihdr, scihdu):
         Postflash, if any. Subtract this to apply ``FLSHCORR``.
 
     """
-    flshfile = prihdr.get('FLSHFILE', 'N/A')
-    flashsta = prihdr.get('FLASHSTA', 'N/A')
-    flashdur = prihdr.get('FLASHDUR', 0.0)
+    flshfile = prihdr.get("FLSHFILE", "N/A")
+    flashsta = prihdr.get("FLASHSTA", "N/A")
+    flashdur = prihdr.get("FLASHDUR", 0.0)
 
-    if flshfile == 'N/A' or flashdur <= 0:
+    if flshfile == "N/A" or flashdur <= 0:
         return None
 
-    if flashsta != 'SUCCESSFUL':
-        warnings.warn(f'Flash status is {flashsta}', AstropyUserWarning)
+    if flashsta != "SUCCESSFUL":
+        warnings.warn(f"Flash status is {flashsta}", AstropyUserWarning)
 
     flshfile = from_irafpath(flshfile)
-    ampstring = prihdr['CCDAMP']
+    ampstring = prihdr["CCDAMP"]
 
     with fits.open(flshfile) as hduflash:
-        if ampstring == 'ABCD':
-            flash = np.concatenate(
-                (hduflash['sci', 1].data,
-                 hduflash['sci', 2].data[::-1, :]), axis=1)
-        elif ampstring in ('A', 'B', 'AB'):
-            flash = extract_ref(scihdu, hduflash['sci', 2])
+        if ampstring == "ABCD":
+            flash = np.concatenate((hduflash["sci", 1].data, hduflash["sci", 2].data[::-1, :]), axis=1)
+        elif ampstring in ("A", "B", "AB"):
+            flash = extract_ref(scihdu, hduflash["sci", 2])
         else:
-            flash = extract_ref(scihdu, hduflash['sci', 1])
+            flash = extract_ref(scihdu, hduflash["sci", 1])
 
     flash = flash * flashdur
 
@@ -141,29 +148,26 @@ def extract_flatfield(prihdr, scihdu):
         Inverse flatfield, if any. Multiply this to apply ``FLATCORR``.
 
     """
-    for ff in ['DFLTFILE', 'LFLTFILE']:
-        vv = prihdr.get(ff, 'N/A')
-        if vv != 'N/A':
-            warnings.warn(f'{ff}={vv} is not accounted for',
-                          AstropyUserWarning)
+    for ff in ["DFLTFILE", "LFLTFILE"]:
+        vv = prihdr.get(ff, "N/A")
+        if vv != "N/A":
+            warnings.warn(f"{ff}={vv} is not accounted for", AstropyUserWarning)
 
-    flatfile = prihdr.get('PFLTFILE', 'N/A')
+    flatfile = prihdr.get("PFLTFILE", "N/A")
 
-    if flatfile == 'N/A':
+    if flatfile == "N/A":
         return None
 
     flatfile = from_irafpath(flatfile)
-    ampstring = prihdr['CCDAMP']
+    ampstring = prihdr["CCDAMP"]
 
     with fits.open(flatfile) as hduflat:
-        if ampstring == 'ABCD':
-            invflat = np.concatenate(
-                (1 / hduflat['sci', 1].data,
-                 1 / hduflat['sci', 2].data[::-1, :]), axis=1)
-        elif ampstring in ('A', 'B', 'AB'):
-            invflat = 1 / extract_ref(scihdu, hduflat['sci', 2])
+        if ampstring == "ABCD":
+            invflat = np.concatenate((1 / hduflat["sci", 1].data, 1 / hduflat["sci", 2].data[::-1, :]), axis=1)
+        elif ampstring in ("A", "B", "AB"):
+            invflat = 1 / extract_ref(scihdu, hduflat["sci", 2])
         else:
-            invflat = 1 / extract_ref(scihdu, hduflat['sci', 1])
+            invflat = 1 / extract_ref(scihdu, hduflat["sci", 1])
 
     return invflat
 
@@ -188,7 +192,7 @@ def from_irafpath(irafpath):
         The required environment variable is undefined.
 
     """
-    s = irafpath.split('$')
+    s = irafpath.split("$")
 
     if len(s) != 2:
         return irafpath
@@ -198,7 +202,7 @@ def from_irafpath(irafpath):
     try:
         refdir = os.environ[s[0]]
     except KeyError:
-        raise ValueError(f'{s[0]} environment variable undefined')
+        raise ValueError(f"{s[0]} environment variable undefined")
 
     return os.path.join(refdir, s[1])
 
@@ -238,16 +242,14 @@ def extract_ref(scihdu, refhdu):
 
     # Binned data
     if rx != 1 or ry != 1:
-        raise NotImplementedError(
-            'Either science or reference data are binned')
+        raise NotImplementedError("Either science or reference data are binned")
 
     # Extract a view of the sub-section
     ny, nx = scihdu.data.shape
-    refdata = refhdu.data[y0:y0+ny, x0:x0+nx]
+    refdata = refhdu.data[y0 : y0 + ny, x0 : x0 + nx]
 
     if refdata.shape != (ny, nx):
-        raise ValueError(f'Extracted reference image is {refdata.shape} but '
-                         f'science image is ({ny}, {nx})')
+        raise ValueError(f"Extracted reference image is {refdata.shape} but science image is ({ny}, {nx})")
 
     return refdata
 
@@ -302,9 +304,13 @@ def find_line(scihdu, refhdu):
 
     # We can use the reference image directly, without binning
     # and without extracting a subset.
-    if (sci_corner[0] == ref_corner[0] and sci_corner[1] == ref_corner[1] and
-            sci_bin[0] == ref_bin[0] and sci_bin[1] == ref_bin[1] and
-            scihdu.data.shape[1] == refhdu.data.shape[1]):
+    if (
+        sci_corner[0] == ref_corner[0]
+        and sci_corner[1] == ref_corner[1]
+        and sci_bin[0] == ref_bin[0]
+        and sci_bin[1] == ref_bin[1]
+        and scihdu.data.shape[1] == refhdu.data.shape[1]
+    ):
         same_size = True
         rx = 1
         ry = 1
@@ -327,9 +333,8 @@ def find_line(scihdu, refhdu):
         ratiox = sci_bin[0] / ref_bin[0]
         ratioy = sci_bin[1] / ref_bin[1]
 
-        if (ratiox * ref_bin[0] != sci_bin[0] or
-                ratioy * ref_bin[1] != sci_bin[1]):
-            raise ValueError('Science and reference data size mismatch')
+        if ratiox * ref_bin[0] != sci_bin[0] or ratioy * ref_bin[1] != sci_bin[1]:
+            raise ValueError("Science and reference data size mismatch")
 
         # cshift is the offset in units of unbinned pixels.
         # Divide by ref_bin to convert to units of pixels in the ref image.
@@ -337,10 +342,8 @@ def find_line(scihdu, refhdu):
         xzero = cshift[0] / ref_bin[0]
         yzero = cshift[1] / ref_bin[1]
 
-        if (xzero * ref_bin[0] != cshift[0] or
-                yzero * ref_bin[1] != cshift[1]):
-            warnings.warn('Subimage offset not divisible by bin size',
-                          AstropyUserWarning)
+        if xzero * ref_bin[0] != cshift[0] or yzero * ref_bin[1] != cshift[1]:
+            warnings.warn("Subimage offset not divisible by bin size", AstropyUserWarning)
 
         rx = ratiox
         ry = ratioy
@@ -422,12 +425,12 @@ def get_lt(hdr):
         Invalid LTM* values.
 
     """
-    ltm = (hdr.get('LTM1_1', 1.0), hdr.get('LTM2_2', 1.0))
+    ltm = (hdr.get("LTM1_1", 1.0), hdr.get("LTM2_2", 1.0))
 
     if ltm[0] <= 0 or ltm[1] <= 0:
-        raise ValueError(f'(LTM1_1, LTM2_2) = {ltm} is invalid')
+        raise ValueError(f"(LTM1_1, LTM2_2) = {ltm} is invalid")
 
-    ltv = (hdr.get('LTV1', 0.0), hdr.get('LTV2', 0.0))
+    ltv = (hdr.get("LTV1", 0.0), hdr.get("LTV2", 0.0))
     return ltm, ltv
 
 
@@ -508,15 +511,15 @@ def hdr_vals_for_overscan(root):
         Number of rows in the readout.
 
     """
-    with fits.open(root + '_spt.fits') as hdu:
+    with fits.open(root + "_spt.fits") as hdu:
         spthdr = hdu[0].header
-    with fits.open(root + '_raw.fits') as hdu:
+    with fits.open(root + "_raw.fits") as hdu:
         prihdr = hdu[0].header
-    xstart = spthdr['SS_A1CRN']
-    ystart = spthdr['SS_A2CRN']
-    xsize = spthdr['SS_A1SZE']
-    ysize = spthdr['SS_A2SZE']
-    ccdamp = prihdr['CCDAMP']
+    xstart = spthdr["SS_A1CRN"]
+    ystart = spthdr["SS_A2CRN"]
+    xsize = spthdr["SS_A1SZE"]
+    ysize = spthdr["SS_A2SZE"]
+    ccdamp = prihdr["CCDAMP"]
 
     return ccdamp, xstart, ystart, xsize, ysize
 
@@ -562,15 +565,18 @@ def check_oscntab(oscntab, ccdamp, xsize, ysize, leading, trailing):
     tab = Table.read(oscntab)
     ccdamp = ccdamp.lower().rstrip()
     for row in tab:
-        if (row['CCDAMP'].lower().rstrip() in ccdamp and
-                row['NX'] == xsize and row['NY'] == ysize and
-                row['TRIMX1'] == leading and row['TRIMX2'] == trailing):
+        if (
+            row["CCDAMP"].lower().rstrip() in ccdamp
+            and row["NX"] == xsize
+            and row["NY"] == ysize
+            and row["TRIMX1"] == leading
+            and row["TRIMX2"] == trailing
+        ):
             return True
     return False
 
 
-def check_overscan(xstart, xsize, total_prescan_pixels=24,
-                   total_science_pixels=4096):
+def check_overscan(xstart, xsize, total_prescan_pixels=24, total_science_pixels=4096):
     """Check image for bias columns.
 
     Parameters
@@ -613,7 +619,6 @@ def check_overscan(xstart, xsize, total_prescan_pixels=24,
 
     if (xstart + xsize) > total_science_pixels:
         hasoverscan = True
-        trailing = abs(total_science_pixels -
-                       (xstart + xsize - total_prescan_pixels))
+        trailing = abs(total_science_pixels - (xstart + xsize - total_prescan_pixels))
 
     return hasoverscan, leading, trailing

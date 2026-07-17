@@ -21,6 +21,7 @@ Examples
 For help usage use ``exe_args=['--help']``
 
 """
+
 # STDLIB
 import os
 import subprocess  # nosec
@@ -28,11 +29,10 @@ import subprocess  # nosec
 __taskname__ = "acscteforwardmodel"
 __version__ = "1.0"
 __vdate__ = "19-Jul-2018"
-__all__ = ['acscteforwardmodel']
+__all__ = ["acscteforwardmodel"]
 
 
-def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
-                       quiet=False, single_core=False, exe_args=None):
+def acscteforwardmodel(input, exec_path="", time_stamps=False, verbose=False, quiet=False, single_core=False, exe_args=None):
     r"""
     Run the acscteforwardmodel.e executable as from the shell.
 
@@ -78,27 +78,27 @@ def acscteforwardmodel(input, exec_path='', time_stamps=False, verbose=False,
 
     if exec_path:
         if not os.path.exists(exec_path):
-            raise OSError('Executable not found: ' + exec_path)
+            raise OSError("Executable not found: " + exec_path)
         call_list = [exec_path]
     else:
-        call_list = ['acscteforwardmodel.e']
+        call_list = ["acscteforwardmodel.e"]
 
     # Parse input to get list of filenames to process.
     # acscte.e only takes 'file1,file2,...'
     infiles, dummy_out = parseinput.parseinput(input)
-    call_list.append(','.join(infiles))
+    call_list.append(",".join(infiles))
 
     if time_stamps:
-        call_list.append('-t')
+        call_list.append("-t")
 
     if verbose:
-        call_list.append('-v')
+        call_list.append("-v")
 
     if quiet:
-        call_list.append('-q')
+        call_list.append("-q")
 
     if single_core:
-        call_list.append('-1')
+        call_list.append("-1")
 
     if exe_args:
         call_list.extend(exe_args)
