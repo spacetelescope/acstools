@@ -1,0 +1,24 @@
+exclude = [
+    "doc",
+    ".tox",
+    ".eggs",
+    "build",
+    "__init__.py",
+]
+line-length = 127
+
+target-version = "py311"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+
+[lint]
+select = [
+    "F401", # Module imported but unused
+    "F811", # Redefinition of unused
+    "I",    # isort
+]
+
+[lint.isort]
+known-first-party = ["acstools"]

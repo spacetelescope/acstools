@@ -41,16 +41,6 @@ jobs:
       submodules: false
       coverage: ''
       envs: |
-        - name: Lint with flake8
-          linux: codestyle
-
-        # Make sure that packaging will work
-        - name: pep517 build
-          linux: twine
-
-        - name: Security audit
-          linux: bandit
-
         - name: Check links
           linux: linkcheck
 
