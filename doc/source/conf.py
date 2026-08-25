@@ -215,7 +215,8 @@ linkcheck_ignore = [
     'https://hst-docs.stsci.edu',
     'https://hsthelp.stsci.edu',
     'https://acszeropoints.stsci.edu',
-    'https://acspsf.stsci.edu']
+    'https://acspsf.stsci.edu',
+    'https://ui.adsabs.harvard.edu']
 linkcheck_timeout = 180
 linkcheck_anchors = False
 
