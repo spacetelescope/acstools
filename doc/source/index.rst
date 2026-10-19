@@ -30,7 +30,7 @@ To install the development version of this package::
 
 .. note::
 
-    Python 2 is no longer supported. Please use Python 3.10 or later.
+    Python 2 is no longer supported. Please use Python 3.11 or later.
 
 .. toctree::
    :maxdepth: 2
